@@ -1,6 +1,14 @@
 package com.example.ui.screens
 
 import android.content.Intent
+import android.Manifest
+import android.content.pm.PackageManager
+import android.provider.ContactsContract
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.ui.text.style.TextOverflow
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -81,6 +89,38 @@ fun ContactsScreen(
 ) {
     val context = LocalContext.current
     val contacts by viewModel.contacts.collectAsState()
+    var selectedTab by remember { mutableStateOf(0) }
+    var phoneContacts by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+    var searchQuery by remember { mutableStateOf("") }
+    var hasContactsPermission by remember {
+        mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED)
+    }
+    fun loadPhoneContacts() {
+        val result = mutableListOf<Pair<String, String>>()
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
+            context.contentResolver.query(
+                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                arrayOf(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, ContactsContract.CommonDataKinds.Phone.NUMBER),
+                null, null,
+                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " COLLATE LOCALIZED ASC"
+            )?.use { cursor ->
+                val nameIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                val numberIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                while (cursor.moveToNext()) {
+                    val name = cursor.getString(nameIndex).orEmpty()
+                    val number = cursor.getString(numberIndex).orEmpty()
+                    if (name.isNotBlank() && number.isNotBlank()) result.add(name to number)
+                }
+            }
+        }
+        phoneContacts = result.distinctBy { it.second }
+    }
+    val contactsPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasContactsPermission = granted
+        if (granted) loadPhoneContacts()
+    }
     var selectedCategory by remember { mutableStateOf<ContactCategory?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
 
@@ -130,6 +170,32 @@ fun ContactsScreen(
             }
         }
 
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth().background(Color(0xFF101B2D), RoundedCornerShape(14.dp)).padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                listOf("Mi agenda", "Directorio OMNI").forEachIndexed { index, label ->
+                    Surface(
+                        color = if (selectedTab == index) EmeraldPrimary else Color.Transparent,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.weight(1f).clickable {
+                            selectedTab = index
+                            if (index == 0) {
+                                if (hasContactsPermission) loadPhoneContacts()
+                                else contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+                            }
+                        }
+                    ) {
+                        Text(label, color = if (selectedTab == index) Color.White else Color(0xFFB8C7DA),
+                            fontWeight = FontWeight.Bold, fontSize = 12.sp,
+                            modifier = Modifier.padding(vertical = 11.dp).then(Modifier))
+                    }
+                }
+            }
+        }
+
+        if (selectedTab == 1) {
         // Barra de Categorías
         item {
             LazyRow(
@@ -191,9 +257,55 @@ fun ContactsScreen(
             )
         }
 
-        item {
-            Spacer(modifier = Modifier.height(20.dp))
+        } else {
+            item {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text("Buscar en mi agenda") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            if (!hasContactsPermission) {
+                item {
+                    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF101B2D)), modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Tus contactos, a tu alcance", color = Color.White, fontWeight = FontWeight.Bold)
+                            Text("OMNI necesita permiso para mostrar los nombres y teléfonos guardados en tu celular. La agenda se consulta localmente y no se sube a nuestros servidores.", color = Color(0xFFB8C7DA), fontSize = 12.sp)
+                            Button(onClick = { contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS) }) { Text("Permitir acceso a contactos") }
+                        }
+                    }
+                }
+            } else {
+                val visiblePhoneContacts = phoneContacts.filter {
+                    it.first.contains(searchQuery, true) || it.second.contains(searchQuery, true)
+                }
+                if (visiblePhoneContacts.isEmpty()) {
+                    item { Text(if (phoneContacts.isEmpty()) "No se encontraron contactos con teléfono." else "No hay coincidencias.", color = Color(0xFFB8C7DA), modifier = Modifier.padding(12.dp)) }
+                }
+                items(visiblePhoneContacts, key = { it.second }) { entry ->
+                    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF101B2D)), modifier = Modifier.fillMaxWidth()) {
+                        Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(entry.first, color = Color.White, fontWeight = FontWeight.Bold)
+                                Text(entry.second, color = Color(0xFFB8C7DA), fontSize = 12.sp)
+                            }
+                            IconButton(onClick = {
+                                val share = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, "¡Hola! Te comparto OMNI, una app para descubrir servicios, comercios y oportunidades de tu zona.")
+                                }
+                                context.startActivity(Intent.createChooser(share, "Compartir con ${entry.first}"))
+                            }) {
+                                Icon(Icons.Default.Call, contentDescription = "Compartir", tint = EmeraldPrimary)
+                            }
+                        }
+                    }
+                }
+            }
         }
+        item { Spacer(modifier = Modifier.height(20.dp)) }
     }
 
     // Modal para agendar contacto
