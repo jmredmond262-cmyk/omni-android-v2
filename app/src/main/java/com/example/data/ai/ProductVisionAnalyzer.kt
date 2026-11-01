@@ -5,7 +5,8 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import com.google.firebase.Firebase
-import com.google.firebase.ai.GenerativeBackend
+import com.google.firebase.ai.ai
+import com.google.firebase.ai.type.GenerativeBackend
 import com.google.firebase.ai.type.content
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -64,7 +65,7 @@ object ProductVisionAnalyzer {
             throw IllegalStateException("La IA no pudo estructurar los datos del producto. Intentá otra foto.")
         }
         val json = JSONObject(raw.substring(jsonStart, jsonEnd + 1))
-        ProductVisionDraft(
+        return ProductVisionDraft(
             name = json.optString("name").trim(),
             category = json.optString("category", "ALMACEN").trim().uppercase(),
             description = json.optString("description").trim(),
