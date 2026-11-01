@@ -38,7 +38,7 @@ object ProductVisionAnalyzer {
             } else decoded
         }
 
-        val model = Firebase.ai(backend = GenerativeBackend.googleAI())
+        val model = Firebase.ai(backend = GenerativeBackend.agentPlatform())
             .generativeModel("gemini-3.8-flash")
         val prompt = content {
             image(bitmap)
