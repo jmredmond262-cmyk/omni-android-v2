@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -523,6 +524,7 @@ fun CyberBottomDock(
         modifier = modifier
             .fillMaxWidth()
             .background(Color.Transparent)
+            .navigationBarsPadding()
             .padding(horizontal = 14.dp, vertical = 6.dp)
     ) {
         // Contenedor principal de la barra tipo Dock Neón
