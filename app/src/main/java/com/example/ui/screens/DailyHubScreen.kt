@@ -119,6 +119,7 @@ fun DailyHubScreen(
     val currentCity by viewModel.currentCity.collectAsState()
     val displayLocality = currentCity.ifBlank { "Malabrigo" }
     val stores by viewModel.stores.collectAsState()
+    val weather by viewModel.liveWeatherData.collectAsState()
 
     var showTrackingDetails by remember { mutableStateOf(false) }
     var showRedeemDialog by remember { mutableStateOf(false) }
@@ -208,6 +209,34 @@ fun DailyHubScreen(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 100.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        // Acceso directo al pronóstico extendido desde Inicio.
+        item {
+            Card(
+                shape = RoundedCornerShape(15.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF0E1B2E)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, CyberGlowCyan.copy(alpha = 0.42f)),
+                modifier = Modifier.fillMaxWidth().clickable { viewModel.navigateTo(Screen.Weather) }
+                    .testTag("home_weather_forecast_entry")
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 11.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text("🌤️", fontSize = 25.sp)
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("Clima y pronóstico extendido", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = weather?.let { "\${it.temperatureC.toInt()}° · \${it.weatherDescription} · \${it.locationName}" }
+                                ?: "Consultar condiciones y próximos 7 días en $displayLocality",
+                            color = Color(0xFF9AAAC2), fontSize = 10.sp, maxLines = 1
+                        )
+                    }
+                    Text("VER ›", color = CyberGlowCyan, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                }
+            }
+        }
+
         // ==========================================
         // 2. SERVICIOS PRINCIPALES
         // ==========================================
