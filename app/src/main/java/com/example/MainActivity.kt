@@ -534,7 +534,7 @@ fun OmniApp(viewModel: MainViewModel) {
                     Screen.MorningBriefing -> MorningBriefingScreen(
                         viewModel = viewModel,
                         onContinue = {
-                            getSharedPreferences("omni_session", android.content.Context.MODE_PRIVATE)
+                            context.getSharedPreferences("omni_session", android.content.Context.MODE_PRIVATE)
                                 .edit().putBoolean("morning_briefing_seen", true).apply()
                             viewModel.navigateTo(Screen.DailyHub)
                         }
