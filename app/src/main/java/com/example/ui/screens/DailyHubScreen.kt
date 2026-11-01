@@ -128,8 +128,6 @@ fun DailyHubScreen(
     var selectedExperience by remember { mutableStateOf<String?>(null) }
 
     val firstName = userProfile.fullName.trim().split(" ").firstOrNull()?.ifBlank { "Santiago" } ?: "Santiago"
-    val tempText = liveWeather?.let { "${it.temperatureC.toInt()}°C" } ?: "--°C"
-    val weatherDesc = liveWeather?.weatherDescription ?: "Datos no disponibles"
 
     // 8 Tarjetas de categorías en ESPAÑOL con el formato visual de la captura
     val categoryItems = listOf(
@@ -175,16 +173,6 @@ fun DailyHubScreen(
             }
         ),
         HomeCategoryItem(
-            id = "wallet",
-            title = "Billetera",
-            subtitle = "OmniPay, pagá y transferí",
-            icon = Icons.Default.AccountBalanceWallet,
-            accentColor = Color(0xFF00E6A0),
-            onClick = {
-                viewModel.navigateTo(Screen.Wallet)
-            }
-        ),
-        HomeCategoryItem(
             id = "health",
             title = "Salud",
             subtitle = "Farmacias y emergencias",
@@ -196,20 +184,9 @@ fun DailyHubScreen(
             }
         ),
         HomeCategoryItem(
-            id = "favorites",
-            title = "Favoritos",
-            subtitle = "Tus locales guardados",
-            icon = Icons.Default.Star,
-            accentColor = Color(0xFFFFD166),
-            onClick = {
-                viewModel.setScheduleFilter(StoreScheduleFilter.TODOS)
-                viewModel.navigateTo(Screen.StoresList)
-            }
-        ),
-        HomeCategoryItem(
             id = "more",
-            title = "Más",
-            subtitle = "Explorá comercios y mapas",
+            title = "Comercios",
+            subtitle = "Explorá locales de tu zona",
             icon = Icons.Default.GridView,
             accentColor = Color(0xFF54E5FF),
             onClick = {
@@ -270,34 +247,7 @@ fun DailyHubScreen(
                     )
                 }
 
-                // Campana de notificaciones con botón para abrir Omni AI
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF131B2E))
-                        .border(1.dp, Color(0xFF1E2D4A), CircleShape)
-                        .clickable {
-                            viewModel.navigateTo(Screen.OmniAi)
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    BadgedBox(
-                        badge = {
-                            Badge(
-                                containerColor = CyberGlowAmber,
-                                modifier = Modifier.size(8.dp)
-                            )
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = "Notificaciones",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
+
             }
         }
 
@@ -322,7 +272,7 @@ fun DailyHubScreen(
                     }
                 }
 
-                // Fila 2 (Billetera, Salud, Favoritos, Más)
+                // Fila 2 (Salud y Comercios)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
