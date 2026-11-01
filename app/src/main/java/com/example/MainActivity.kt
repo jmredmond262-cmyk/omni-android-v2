@@ -185,7 +185,7 @@ fun OmniApp(viewModel: MainViewModel) {
     var showThemeDialog by remember { mutableStateOf(false) }
 
     val currentCity by viewModel.currentCity.collectAsState()
-    val displayLocality = currentCity.ifBlank { "Córdoba" }
+    val displayLocality = currentCity.ifBlank { "Tu zona" }
     val currentTemp = liveWeather?.let { "${it.temperatureC.toInt()}°C" } ?: "--°C"
     val currentWeatherSymbol = liveWeather?.let { weather ->
         when {
@@ -474,7 +474,7 @@ fun OmniApp(viewModel: MainViewModel) {
                                     )
                                     Spacer(modifier = Modifier.width(7.dp))
                                     Text(
-                                        text = "$currentWeatherSymbol $currentTemp",
+                                        text = "$currentWeatherSymbol $currentTemp · ${liveWeather?.weatherDescription ?: "Clima local"}",
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.tertiary,
@@ -525,7 +525,7 @@ fun OmniApp(viewModel: MainViewModel) {
                                 )
                                 DropdownMenuItem(
                                     text = {
-                                        Text("📞 Directorio Telefónico Barrial")
+                                        Text("👥 Contactos y servicios del barrio")
                                     },
                                     onClick = {
                                         viewModel.navigateTo(Screen.Contacts)
