@@ -18,7 +18,9 @@ data class WeatherHour(
     val temperatureC: Double,
     val precipitationProbability: Int,
     val weatherCode: Int,
-    val windSpeedKmh: Double
+    val windSpeedKmh: Double,
+    val apparentTemperatureC: Double = temperatureC,
+    val uvIndex: Double = 0.0
 )
 
 data class WeatherDay(
@@ -57,7 +59,7 @@ object RealWeatherApi {
         try {
             val urlString = "https://api.open-meteo.com/v1/forecast?latitude=$latitude&longitude=$longitude" +
                      "&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,showers,weather_code,wind_speed_10m" +
-                    "&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m" +
+                    "&hourly=temperature_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m,uv_index" +
                     "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset" +
                     "&forecast_days=7&timezone=auto"
 
@@ -92,6 +94,8 @@ object RealWeatherApi {
                 val hourlyRain = hourlyJson?.optJSONArray("precipitation_probability")
                 val hourlyCodes = hourlyJson?.optJSONArray("weather_code")
                 val hourlyWind = hourlyJson?.optJSONArray("wind_speed_10m")
+                val hourlyApparent = hourlyJson?.optJSONArray("apparent_temperature")
+                val hourlyUv = hourlyJson?.optJSONArray("uv_index")
                 val hourly = mutableListOf<WeatherHour>()
                 val hourCount = minOf(hourlyTimes?.length() ?: 0, hourlyTemps?.length() ?: 0)
                 for (i in 0 until hourCount) {
@@ -100,7 +104,9 @@ object RealWeatherApi {
                         temperatureC = hourlyTemps?.optDouble(i) ?: temp,
                         precipitationProbability = hourlyRain?.optInt(i) ?: 0,
                         weatherCode = hourlyCodes?.optInt(i) ?: code,
-                        windSpeedKmh = hourlyWind?.optDouble(i) ?: wind
+                        windSpeedKmh = hourlyWind?.optDouble(i) ?: wind,
+                        apparentTemperatureC = hourlyApparent?.optDouble(i) ?: (hourlyTemps?.optDouble(i) ?: temp),
+                        uvIndex = hourlyUv?.optDouble(i) ?: 0.0
                     ))
                 }
                 val dailyTimes = dailyJson?.optJSONArray("time")
