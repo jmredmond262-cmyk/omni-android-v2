@@ -628,7 +628,7 @@ fun MerchantHubScreen(
                             Text(text = news.content, fontSize = 11.sp, color = Color.DarkGray)
                             TextButton(
                                 onClick = {
-                                    val message = "${news.badge}\n${news.title}\n${news.content}\n\nComercio: ${store.name}\n${store.address}\nAbrí la tienda en OMNI: omni://tienda/${store.id}"
+                                    val message = "${news.badge}\n${news.title}\n${news.content}\n\nComercio: ${store.name}\nDirección: ${store.address}\n\nCompartido desde OMNI. Próximamente estará disponible el enlace para descargar la aplicación."
                                     val intent = Intent(Intent.ACTION_SEND).apply {
                                         type = "text/plain"
                                         putExtra(Intent.EXTRA_SUBJECT, news.title)
@@ -804,7 +804,7 @@ fun MerchantHubScreen(
                                 appendLine("Precio: ${String.format("%,.0f", prod.price)}")
                                 prod.barcode?.let { appendLine("Código: $it") }
                                 appendLine("Dirección: ${store.address}")
-                                append("Abrí el comercio en OMNI: omni://tienda/${store.id}")
+                                append("Compartido desde OMNI. Próximamente estará disponible el enlace para descargar la aplicación.")
                             }
                             val imageUri = prod.photoUri?.let { raw ->
                                 runCatching {
@@ -890,7 +890,7 @@ fun MerchantHubScreen(
                     }
                     IconButton(
                         onClick = {
-                            val message = "🔥 ${combo.title}\n${combo.description}\nDescuento: ${combo.discountBadge}\n\nComercio: ${store.name}\n${store.description}\n${store.address}\nAbrí la tienda en OMNI: omni://tienda/${store.id}"
+                            val message = "🔥 ${combo.title}\n${combo.description}\nDescuento: ${combo.discountBadge}\n\nComercio: ${store.name}\n${store.description}\nDirección: ${store.address}\n\nCompartido desde OMNI. Próximamente estará disponible el enlace para descargar la aplicación."
                             val send = Intent(Intent.ACTION_SEND).apply {
                                 type = "text/plain"
                                 putExtra(Intent.EXTRA_SUBJECT, combo.title)
