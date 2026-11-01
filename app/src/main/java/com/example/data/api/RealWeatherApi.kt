@@ -83,7 +83,8 @@ object RealWeatherApi {
                 val code = current.optInt("weather_code", 0)
                 val isDay = current.optInt("is_day", 1) == 1
 
-                val desc = getWeatherDescription(code)
+                val rainNow = current.optDouble("rain", 0.0) + current.optDouble("showers", 0.0)
+                val desc = if (rainNow >= 0.1 || rain >= 0.1) "Lloviendo" else getWeatherDescription(code)
                 val hourlyJson = json.optJSONObject("hourly")
                 val dailyJson = json.optJSONObject("daily")
                 val hourlyTimes = hourlyJson?.optJSONArray("time")
@@ -131,7 +132,7 @@ object RealWeatherApi {
                         windSpeedKmh = wind,
                         weatherDescription = desc,
                         weatherCode = code,
-                        precipitationMm = rain,
+                        precipitationMm = maxOf(rain, rainNow),
                         isDay = isDay,
                         locationName = locationLabel,
                         observedAt = current.optString("time", ""),
