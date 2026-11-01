@@ -26,7 +26,7 @@ object ArgentinaAttractions {
         Point("Laguna El Cristal", "Calchaquí", -29.9000, -60.3000, "Naturaleza", "Medio día", "Complejo natural de laguna y espacios recreativos de la región."),
         Point("Costanera de Santa Fe", "Santa Fe", -31.6400, -60.7000, "Paseo", "1 h 30 min", "Recorrido urbano junto al río, con espacios verdes y vistas panorámicas."),
         Point("Puente Colgante", "Santa Fe", -31.6405, -60.6905, "Monumento", "45 min", "Emblema arquitectónico de la ciudad y uno de sus principales puntos fotográficos."),
-        Point("Parque Nacional a la Bandera", "Rosario", -32.9475, -60.6300, "Historia", "1 h", "Conjunto monumental junto al Paraná y espacio público de valor histórico.")
+        Point("Monumento Nacional a la Bandera", "Rosario", -32.9475, -60.6300, "Historia", "1 h", "Conjunto monumental junto al Paraná y espacio público de valor histórico.")
     )
 
     private fun distanceKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
