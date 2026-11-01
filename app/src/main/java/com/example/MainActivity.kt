@@ -190,7 +190,9 @@ fun OmniApp(viewModel: MainViewModel) {
                 currentScreen is Screen.MerchantHub ||
                 currentScreen is Screen.Wallet ||
                 currentScreen is Screen.Contacts ||
-                currentScreen is Screen.OmniAi
+                currentScreen is Screen.OmniAi ||
+                currentScreen is Screen.UserProfile ||
+                currentScreen is Screen.Weather
     ) {
         when (currentScreen) {
             is Screen.InteractiveRoute -> viewModel.navigateTo(Screen.StoreDetail)
