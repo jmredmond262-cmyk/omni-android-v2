@@ -192,7 +192,7 @@ fun StoresListScreen(
         item {
             Card(
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = EmeraldContainer),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
@@ -206,18 +206,18 @@ fun StoresListScreen(
                                 text = "Radar de Comercios en Vivo",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
-                                color = EmeraldDark
+                                color = MaterialTheme.colorScheme.primary
                             )
                             Text(
                                 text = "📍 Zona: $currentCity • Radio: ${if (searchRadius >= 1000) "${searchRadius / 1000} km" else "$searchRadius m"}",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = SlateNavy
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
 
                         Surface(
-                            color = EmeraldPrimary,
+                            color = MaterialTheme.colorScheme.primary,
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text(
@@ -325,7 +325,7 @@ fun StoresListScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Surface(
-                        color = Color.White.copy(alpha = 0.85f),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -423,8 +423,8 @@ fun StoresListScreen(
                             onClick = { viewModel.setScheduleFilter(filter) },
                             label = { Text(filter.label, fontSize = 11.sp) },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = EmeraldPrimary,
-                                selectedLabelColor = Color.White
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                             ),
                             modifier = Modifier.testTag("filter_schedule_${filter.name}")
                         )
@@ -624,252 +624,53 @@ fun StoreDirectoryCard(
     onOpenRoute: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val cardContext = LocalContext.current
+    val colors = MaterialTheme.colorScheme
     Card(
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable { onOpenDetail() }
-            .testTag("directory_store_${store.id}")
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outline.copy(alpha = 0.8f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = modifier.fillMaxWidth().clickable { onOpenDetail() }
+            .testTag("directory_store_\${store.id}")
     ) {
-        Column {
-            // Cabecera Visual estilo Booking con Fotos Reales de Google Places
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(130.dp)
-                    .background(getStoreGradient(store.type))
-            ) {
-                if (store.photoUrl != null) {
-                    AsyncImage(
-                        model = store.photoUrl,
-                        contentDescription = store.name,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                    // Capa gradiente para que los badges se lean perfectamente
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                androidx.compose.ui.graphics.Brush.verticalGradient(
-                                    colors = listOf(
-                                        Color.Black.copy(alpha = 0.45f),
-                                        Color.Transparent,
-                                        Color.Black.copy(alpha = 0.75f)
-                                    )
-                                )
-                            )
-                    )
-                }
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
-                ) {
-                    StoreTypeChip(type = store.type)
-                    if (store.hasVideoTour) {
-                        VideoTourTag(duration = store.videoTourDuration)
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text(store.name, color = colors.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                        maxLines = 1, modifier = Modifier.weight(1f))
+                    Surface(color = colors.surfaceVariant, shape = RoundedCornerShape(7.dp)) {
+                        Text(store.distanceText, color = colors.onSurfaceVariant, fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp))
                     }
                 }
-
-                // Info inferior de cabecera con Badge de estado y Pelotita Verde Parpadeando
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (store.hoursText == "Horario no informado") {
-                        Surface(color = Color.DarkGray.copy(alpha = 0.78f), shape = RoundedCornerShape(6.dp)) {
-                            Text("HORARIO SIN DATOS", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
-                        }
-                    } else {
-                        OpenStatusBadge(
-                            isOpen = store.isOpen,
-                            is24Hours = store.is24Hours,
-                            isOnDuty = store.isOnDuty,
-                            openOnHolidays = store.openOnHolidays
-                        )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Surface(color = colors.primary.copy(alpha = 0.13f), shape = RoundedCornerShape(6.dp)) {
+                        Text(store.type.name.replace("_", " "), color = colors.primary, fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp))
                     }
-
-                    if (store.photosCount > 0) {
-                        Surface(color = Color.Black.copy(alpha = 0.55f), shape = RoundedCornerShape(6.dp)) {
-                            Text(
-                                text = "📷 ${store.photosCount} fotos disponibles",
-                                color = Color.White,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                            )
-                        }
+                    val openLabel = when {
+                        store.isOnDuty -> "DE TURNO"
+                        store.is24Hours -> "24 HORAS"
+                        store.isEffectivelyOpen -> "ABIERTO"
+                        else -> "CERRADO"
                     }
-                }
-            }
-
-            // Cuerpo
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (store.isEffectivelyOpen) {
-                            PulsingStatusDot(color = Color(0xFF10B981), sizeDp = 8.dp)
-                            Spacer(modifier = Modifier.width(6.dp))
-                        }
-                        Text(
-                            text = store.name,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = SlateNavy
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    DistancePill(
-                        distanceMeters = store.distanceMeters,
-                        walkingMinutes = store.walkingTimeMin
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                    Text(openLabel,
+                        color = if (store.isEffectivelyOpen || store.isOnDuty || store.is24Hours) colors.primary else colors.onSurfaceVariant,
+                        fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                     if (store.rating > 0f && store.reviewsCount > 0) {
-                        RatingBadge(rating = store.rating, reviewsCount = store.reviewsCount)
-                        Spacer(modifier = Modifier.width(10.dp))
-                    }
-                    Text(
-                        text = store.hoursText,
-                        fontSize = 11.sp,
-                        fontWeight = if (store.isEffectivelyOpen) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (store.isEffectivelyOpen) EmeraldDark else Color.Gray
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = store.address,
-                    fontSize = 12.sp,
-                    color = SlateNavy.copy(alpha = 0.8f)
-                )
-
-                if (store.phone.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Phone,
-                            contentDescription = null,
-                            tint = EmeraldPrimary,
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = store.phone,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = SlateNavy
-                        )
+                        Text("★ \${"%.1f".format(store.rating)}", color = colors.tertiary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
                 }
-
-                if (store.scheduleNotes.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Surface(
-                        color = Color(0xFFF1F5F9),
-                        shape = RoundedCornerShape(6.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = "🔔 ${store.scheduleNotes}",
-                            fontSize = 10.sp,
-                            color = SlateNavy,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Promo banner
-                Surface(
-                    color = RosePromo.copy(alpha = 0.08f),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.LocalOffer,
-                            contentDescription = null,
-                            tint = RosePromo,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = store.specialOfferText,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = RosePromo
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Acciones: Ver Ficha, Botón Directo al Mapa interno y Google Maps oficial
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = onOpenDetail,
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.weight(0.35f)
-                    ) {
-                        Text(text = "Ficha", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                    }
-
-                    Button(
-                        onClick = onOpenRoute,
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
-                        modifier = Modifier
-                            .weight(0.42f)
-                            .testTag("btn_route_store_${store.id}")
-                    ) {
-                        Text(text = "Ruta (${store.distanceText})", fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    }
-
-                    Button(
-                        onClick = { GoogleMapsHelper.openSearchInGoogleMaps(cardContext, "${store.name}, ${store.address}") },
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A73E8)),
-                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
-                        modifier = Modifier.weight(0.28f)
-                    ) {
-                        Text(text = "Maps 📍", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                    }
-                }
+                Text(store.address, color = colors.onSurfaceVariant, fontSize = 11.sp, maxLines = 1)
+                Text("Ver perfil y toda la información  ›", color = colors.primary, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+            }
+            IconButton(onClick = onOpenRoute, modifier = Modifier.size(38.dp)) {
+                Icon(Icons.Default.Directions, contentDescription = "Trazar ruta a \${store.name}",
+                    tint = colors.primary, modifier = Modifier.size(21.dp))
             }
         }
     }
