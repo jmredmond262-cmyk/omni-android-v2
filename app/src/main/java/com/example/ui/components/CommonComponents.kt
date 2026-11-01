@@ -237,19 +237,10 @@ fun OpenStatusBadge(
 
 @Composable
 fun StoreTypeChip(type: StoreType, modifier: Modifier = Modifier) {
-    val bgColor = when (type) {
-        StoreType.SUPERMERCADO -> Color(0xFF0284C7)
-        StoreType.ALMACEN -> Color(0xFFD97706)
-        StoreType.KIOSCO -> Color(0xFFEF4444)
-        StoreType.PANADERIA -> Color(0xFFB45309)
-        StoreType.TIENDA_NATURAL -> Color(0xFF059669)
-        StoreType.FARMACIA -> Color(0xFF0D9488)
-        StoreType.GASTRONOMIA -> MaterialTheme.colorScheme.primary
-        StoreType.SERVICIOS -> MaterialTheme.colorScheme.secondary
-    }
+    val bgColor = MaterialTheme.colorScheme.primary
 
     Surface(
-        color = bgColor.copy(alpha = 0.12f),
+        color = MaterialTheme.colorScheme.primaryContainer,
         shape = RoundedCornerShape(6.dp),
         modifier = modifier
     ) {
@@ -257,21 +248,14 @@ fun StoreTypeChip(type: StoreType, modifier: Modifier = Modifier) {
             text = type.label,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
-            color = bgColor,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
         )
     }
 }
 
 fun getStoreGradient(type: StoreType): Brush {
-    return when (type) {
-        StoreType.SUPERMERCADO -> Brush.linearGradient(listOf(Color(0xFF0284C7), Color(0xFF0369A1)))
-        StoreType.ALMACEN -> Brush.linearGradient(listOf(Color(0xFFF59E0B), Color(0xFFD97706)))
-        StoreType.KIOSCO -> Brush.linearGradient(listOf(Color(0xFFEF4444), Color(0xFFB91C1C)))
-        StoreType.PANADERIA -> Brush.linearGradient(listOf(Color(0xFFD97706), Color(0xFF78350F)))
-        StoreType.TIENDA_NATURAL -> Brush.linearGradient(listOf(Color(0xFF10B981), Color(0xFF047857)))
-        StoreType.FARMACIA -> Brush.linearGradient(listOf(Color(0xFF0D9488), Color(0xFF047857)))
-        StoreType.GASTRONOMIA -> Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, Color(0xFF0757B8)))
-        StoreType.SERVICIOS -> Brush.linearGradient(listOf(Color(0xFFFF9100), Color(0xFFD97706)))
-    }
+    return Brush.linearGradient(
+        listOf(Color(0xFF168BFF), Color(0xFF00D9FF))
+    )
 }
