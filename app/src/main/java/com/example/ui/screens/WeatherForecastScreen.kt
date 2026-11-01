@@ -59,6 +59,7 @@ fun WeatherForecastScreen(viewModel: MainViewModel) {
             Column(modifier = Modifier.weight(1f)) {
                 Text("CLIMA EN VIVO", color = cyan, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
                 Text(city.ifBlank { weather?.locationName ?: "Tu ubicación" }, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                Text("Redcom · Titular: Juan Redmond", color = Color(0xFFB8C8D9), fontSize = 10.sp)
             }
             Button(onClick = { viewModel.refreshWeatherNow() }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF12334A))) {
                 Text("Actualizar", color = cyan, fontSize = 11.sp)
