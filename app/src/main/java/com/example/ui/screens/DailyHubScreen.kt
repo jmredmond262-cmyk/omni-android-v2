@@ -4,8 +4,16 @@ import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.drawBehind
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -67,6 +75,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -129,7 +138,7 @@ fun DailyHubScreen(
             title = "Comida",
             subtitle = "Pedí tus comidas favoritas",
             icon = Icons.Default.LunchDining,
-            accentColor = CyberGlowCyan,
+            accentColor = Color(0xFFFFA33A),
             onClick = {
                 viewModel.filterStoresByType(StoreType.GASTRONOMIA)
                 viewModel.navigateTo(Screen.StoresList)
@@ -140,7 +149,7 @@ fun DailyHubScreen(
             title = "Pedidos",
             subtitle = "Seguí y gestioná compras",
             icon = Icons.Default.ShoppingCart,
-            accentColor = CyberGlowCyan,
+            accentColor = Color(0xFF25D9FF),
             onClick = {
                 viewModel.navigateTo(Screen.SmartList)
             }
@@ -150,7 +159,7 @@ fun DailyHubScreen(
             title = "Remises",
             subtitle = "Pedí viajes y traslados",
             icon = Icons.Default.DirectionsCar,
-            accentColor = CyberGlowCyan,
+            accentColor = Color(0xFF438BFF),
             onClick = {
                 viewModel.navigateTo(Screen.TripPlanner)
             }
@@ -160,7 +169,7 @@ fun DailyHubScreen(
             title = "Servicios",
             subtitle = "Técnicos, oficios y gas",
             icon = Icons.Default.Build,
-            accentColor = CyberGlowCyan,
+            accentColor = Color(0xFFB879FF),
             onClick = {
                 viewModel.navigateTo(Screen.Contacts)
             }
@@ -170,7 +179,7 @@ fun DailyHubScreen(
             title = "Billetera",
             subtitle = "OmniPay, pagá y transferí",
             icon = Icons.Default.AccountBalanceWallet,
-            accentColor = CyberGlowCyan,
+            accentColor = Color(0xFF00E6A0),
             onClick = {
                 viewModel.navigateTo(Screen.Wallet)
             }
@@ -180,7 +189,7 @@ fun DailyHubScreen(
             title = "Salud",
             subtitle = "Farmacias y emergencias",
             icon = Icons.Default.Favorite,
-            accentColor = CyberGlowCyan,
+            accentColor = Color(0xFFFF5C9A),
             onClick = {
                 viewModel.setScheduleFilter(StoreScheduleFilter.FARMACIAS_TURNO)
                 viewModel.navigateTo(Screen.StoresList)
@@ -191,7 +200,7 @@ fun DailyHubScreen(
             title = "Favoritos",
             subtitle = "Tus locales guardados",
             icon = Icons.Default.Star,
-            accentColor = CyberGlowCyan,
+            accentColor = Color(0xFFFFD166),
             onClick = {
                 viewModel.setScheduleFilter(StoreScheduleFilter.TODOS)
                 viewModel.navigateTo(Screen.StoresList)
@@ -838,61 +847,50 @@ fun DailyHubScreen(
 }
 
 /**
- * Tarjeta individual para la grilla de 8 categorías neón en español
+ * Tarjeta compacta Cyber Neon: doble contorno, halo pulsante y acento luminoso.
+ * Conserva las dimensiones originales para no alterar la grilla.
  */
 @Composable
-fun CyberCategoryCard(
-    item: HomeCategoryItem,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF0E1626)),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF1A263D)),
-        modifier = modifier
-            .height(106.dp)
-            .clickable { item.onClick() }
-            .testTag("home_category_${item.id}")
+fun CyberCategoryCard(item: HomeCategoryItem, modifier: Modifier = Modifier) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val transition = rememberInfiniteTransition(label = "category_neon")
+    val pulse by transition.animateFloat(
+        initialValue = 0.48f, targetValue = 0.82f,
+        animationSpec = infiniteRepeatable(tween(2200), repeatMode = RepeatMode.Reverse),
+        label = "category_glow"
+    )
+    val glow = if (pressed) 1f else pulse
+    val shape = RoundedCornerShape(14.dp)
+    Box(
+        modifier = modifier.height(106.dp).clip(shape)
+            .background(Brush.radialGradient(listOf(item.accentColor.copy(alpha = 0.16f), Color(0xFF101B30), Color(0xFF080F1D))))
+            .drawBehind {
+                val radius = androidx.compose.ui.geometry.CornerRadius(14.dp.toPx())
+                drawRoundRect(item.accentColor.copy(alpha = 0.10f + glow * 0.10f), style = Stroke(9.dp.toPx()), cornerRadius = radius)
+                drawRoundRect(item.accentColor.copy(alpha = 0.42f + glow * 0.38f), style = Stroke(1.35.dp.toPx()), cornerRadius = radius)
+                drawRoundRect(Color.White.copy(alpha = 0.10f + glow * 0.08f), topLeft = Offset(2.dp.toPx(), 2.dp.toPx()),
+                    size = androidx.compose.ui.geometry.Size(size.width - 4.dp.toPx(), size.height - 4.dp.toPx()),
+                    style = Stroke(0.65.dp.toPx()), cornerRadius = androidx.compose.ui.geometry.CornerRadius(12.dp.toPx()))
+                drawRoundRect(brush = Brush.horizontalGradient(listOf(Color.Transparent, item.accentColor.copy(alpha = 0.62f * glow), Color.Transparent)),
+                    topLeft = Offset(size.width * 0.24f, 1.dp.toPx()), size = androidx.compose.ui.geometry.Size(size.width * 0.52f, 1.2.dp.toPx()),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()))
+            }
+            .clickable(interactionSource = interaction, indication = null) { item.onClick() }
+            .testTag("home_category_${item.id}"),
+        contentAlignment = Alignment.Center
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 4.dp, vertical = 7.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Icon(
-                imageVector = item.icon,
-                contentDescription = item.title,
-                tint = item.accentColor,
-                modifier = Modifier.size(26.dp)
-            )
-
-            Text(
-                text = item.title,
-                fontSize = 11.5.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                maxLines = 1
-            )
-
-            Text(
-                text = item.subtitle,
-                fontSize = 8.sp,
-                lineHeight = 10.sp,
-                color = Color(0xFF8896AB),
-                maxLines = 2,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 2.dp)
-            )
-
-            Box(
-                modifier = Modifier
-                    .width(18.dp)
-                    .height(2.5.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(item.accentColor)
-            )
+        Column(Modifier.fillMaxSize().padding(horizontal = 4.dp, vertical = 7.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.SpaceBetween) {
+            Box(Modifier.size(29.dp).drawBehind {
+                drawCircle(item.accentColor.copy(alpha = 0.18f + glow * 0.20f), radius = size.minDimension * 0.48f)
+                drawCircle(item.accentColor.copy(alpha = 0.10f + glow * 0.12f), radius = size.minDimension * 0.62f)
+            }, contentAlignment = Alignment.Center) {
+                Icon(item.icon, contentDescription = item.title, tint = item.accentColor, modifier = Modifier.size(23.dp))
+            }
+            Text(item.title, fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1)
+            Text(item.subtitle, fontSize = 8.sp, lineHeight = 10.sp, color = Color(0xFF9AAAC2), maxLines = 2,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(horizontal = 2.dp))
+            Box(Modifier.width(18.dp).height(2.dp).clip(RoundedCornerShape(2.dp)).background(Brush.horizontalGradient(listOf(item.accentColor.copy(alpha = 0.55f), item.accentColor))))
         }
     }
 }
