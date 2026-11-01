@@ -128,8 +128,8 @@ fun DailyHubScreen(
     var showRedeemDialog by remember { mutableStateOf(false) }
 
     val firstName = userProfile.fullName.trim().split(" ").firstOrNull()?.ifBlank { "Santiago" } ?: "Santiago"
-    val tempText = liveWeather?.let { "${it.temperatureC.toInt()}°C" } ?: "24°C"
-    val weatherDesc = liveWeather?.weatherDescription ?: "Cielo claro en la región"
+    val tempText = liveWeather?.let { "${it.temperatureC.toInt()}°C" } ?: "--°C"
+    val weatherDesc = liveWeather?.weatherDescription ?: "Datos no disponibles"
 
     // 8 Tarjetas de categorías en ESPAÑOL con el formato visual de la captura
     val categoryItems = listOf(
@@ -322,11 +322,19 @@ fun DailyHubScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = if (liveWeather?.isDay == false) Icons.Default.NightsStay else Icons.Default.WbSunny,
-                                contentDescription = if (liveWeather?.isDay == false) "Noche" else "Día",
-                                tint = if (liveWeather?.isDay == false) CyberGlowCyan else CyberGlowAmber,
-                                modifier = Modifier.size(20.dp)
+                            Text(
+                                text = when {
+                                    liveWeather == null -> "…"
+                                    liveWeather!!.precipitationMm >= 0.1 -> "🌧️"
+                                    liveWeather!!.weatherCode in listOf(95, 96, 99) -> "⛈️"
+                                    liveWeather!!.weatherCode in listOf(51, 53, 55, 61, 63, 65, 80, 81, 82) -> "🌧️"
+                                    liveWeather!!.weatherCode in listOf(45, 48) -> "🌫️"
+                                    liveWeather!!.weatherCode == 3 -> "☁️"
+                                    liveWeather!!.weatherCode in listOf(1, 2) -> "🌤️"
+                                    liveWeather!!.isDay -> "☀️"
+                                    else -> "🌙"
+                                },
+                                fontSize = 19.sp
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
