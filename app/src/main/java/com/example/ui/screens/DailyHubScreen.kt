@@ -129,7 +129,7 @@ fun DailyHubScreen(
             title = "Comida",
             subtitle = "Pedí tus comidas favoritas",
             icon = Icons.Default.LunchDining,
-            accentColor = CyberGlowGreen,
+            accentColor = CyberGlowCyan,
             onClick = {
                 viewModel.filterStoresByType(StoreType.GASTRONOMIA)
                 viewModel.navigateTo(Screen.StoresList)
@@ -140,7 +140,7 @@ fun DailyHubScreen(
             title = "Pedidos",
             subtitle = "Seguí y gestioná compras",
             icon = Icons.Default.ShoppingCart,
-            accentColor = CyberGlowPurple,
+            accentColor = CyberGlowCyan,
             onClick = {
                 viewModel.navigateTo(Screen.SmartList)
             }
@@ -160,7 +160,7 @@ fun DailyHubScreen(
             title = "Servicios",
             subtitle = "Técnicos, oficios y gas",
             icon = Icons.Default.Build,
-            accentColor = CyberGlowAmber,
+            accentColor = CyberGlowCyan,
             onClick = {
                 viewModel.navigateTo(Screen.Contacts)
             }
@@ -170,7 +170,7 @@ fun DailyHubScreen(
             title = "Billetera",
             subtitle = "OmniPay, pagá y transferí",
             icon = Icons.Default.AccountBalanceWallet,
-            accentColor = CyberGlowPink,
+            accentColor = CyberGlowCyan,
             onClick = {
                 viewModel.navigateTo(Screen.Wallet)
             }
@@ -180,7 +180,7 @@ fun DailyHubScreen(
             title = "Salud",
             subtitle = "Farmacias y emergencias",
             icon = Icons.Default.Favorite,
-            accentColor = CyberGlowRose,
+            accentColor = CyberGlowCyan,
             onClick = {
                 viewModel.setScheduleFilter(StoreScheduleFilter.FARMACIAS_TURNO)
                 viewModel.navigateTo(Screen.StoresList)
@@ -191,7 +191,7 @@ fun DailyHubScreen(
             title = "Favoritos",
             subtitle = "Tus locales guardados",
             icon = Icons.Default.Star,
-            accentColor = CyberGlowGold,
+            accentColor = CyberGlowCyan,
             onClick = {
                 viewModel.setScheduleFilter(StoreScheduleFilter.TODOS)
                 viewModel.navigateTo(Screen.StoresList)
@@ -202,7 +202,7 @@ fun DailyHubScreen(
             title = "Más",
             subtitle = "Explorá comercios y mapas",
             icon = Icons.Default.GridView,
-            accentColor = CyberGlowTeal,
+            accentColor = CyberGlowCyan,
             onClick = {
                 viewModel.setScheduleFilter(StoreScheduleFilter.TODOS)
                 viewModel.navigateTo(Screen.StoresList)
