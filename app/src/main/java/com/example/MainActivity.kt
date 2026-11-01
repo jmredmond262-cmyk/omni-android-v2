@@ -87,6 +87,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.MainViewModel
+import com.example.data.auth.AuthRepository
+import com.example.ui.screens.AuthScreen
+import com.google.firebase.auth.FirebaseAuth
+import androidx.compose.runtime.DisposableEffect
 import com.example.ui.Screen
 import com.example.ui.screens.ComparisonScreen
 import com.example.ui.screens.ContactsScreen
@@ -123,10 +127,47 @@ class MainActivity : ComponentActivity() {
 
             MyApplicationTheme(themeMode = themeMode) {
                 Crossfade(targetState = showSplash, label = "omni-launch-transition") { splash ->
-                    if (splash) OmniSplashScreen() else OmniApp(viewModel = viewModel)
+                    if (splash) OmniSplashScreen() else AuthGate(activity = this@MainActivity, viewModel = viewModel)
                 }
             }
         }
+    }
+}
+
+
+@Composable
+private fun AuthGate(activity: ComponentActivity, viewModel: MainViewModel) {
+    val auth = remember { FirebaseAuth.getInstance() }
+    var currentUser by remember { mutableStateOf(auth.currentUser) }
+    var authReady by remember { mutableStateOf(false) }
+
+    DisposableEffect(auth) {
+        val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+            currentUser = firebaseAuth.currentUser
+            authReady = true
+        }
+        auth.addAuthStateListener(listener)
+        onDispose { auth.removeAuthStateListener(listener) }
+    }
+
+    LaunchedEffect(currentUser?.uid) {
+        currentUser?.let { user ->
+            viewModel.applyAuthenticatedIdentity(
+                uid = user.uid,
+                name = user.displayName.orEmpty(),
+                email = user.email.orEmpty(),
+                phone = user.phoneNumber.orEmpty(),
+                photoUrl = user.photoUrl?.toString().orEmpty()
+            )
+        }
+    }
+
+    when {
+        !authReady -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            androidx.compose.material3.CircularProgressIndicator()
+        }
+        currentUser != null -> OmniApp(viewModel = viewModel)
+        else -> AuthScreen(activity = activity, repository = remember { AuthRepository() })
     }
 }
 
