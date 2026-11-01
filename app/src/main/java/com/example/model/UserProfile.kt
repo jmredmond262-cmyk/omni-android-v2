@@ -30,25 +30,25 @@ data class SavedCard(
 )
 
 data class UserProfile(
-    val id: String = "user_omni_01",
+    val id: String = "",
     // --- RED SOCIAL & IDENTIDAD ---
-    val fullName: String = "Santiago Rossi",
-    val username: String = "santi.rossi",
-    val bio: String = "Explorador barrial, cazador de ofertas y amante de la buena comida local 🌿🛒",
-    val statusMood: String = "Buscando ofertas de fin de semana 🏷️",
-    val email: String = "santiago.rossi@email.com",
-    val phone: String = "+54 11 5521-9988",
+    val fullName: String = "",
+    val username: String = "",
+    val bio: String = "",
+    val statusMood: String = "",
+    val email: String = "",
+    val phone: String = "",
     val avatarUrl: String = "",
     val birthDate: String = "14/08/1994",
     val pronouns: String = "Él / He",
     val gender: String = "Masculino",
-    val isVerified: Boolean = true,
+    val isVerified: Boolean = false,
     val preferredLanguage: String = "Español (Latinoamérica)",
     val privacyLevel: String = "Público (Vecinos del Barrio)",
-    val instagramHandle: String = "@santi.rossi",
-    val whatsappNumber: String = "+54 9 11 5521-9988",
-    val twitterHandle: String = "@santi_omni",
-    val tiktokHandle: String = "@santi.explora",
+    val instagramHandle: String = "",
+    val whatsappNumber: String = "",
+    val twitterHandle: String = "",
+    val tiktokHandle: String = "",
 
     // --- BILLETERA VIRTUAL (OMNIPAY) ---
     val walletAlias: String = "omni.santi.ar",
