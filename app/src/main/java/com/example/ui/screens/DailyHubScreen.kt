@@ -206,52 +206,6 @@ fun DailyHubScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         // ==========================================
-        // 1. TOP HEADER EN ESPAÑOL (¡Hola, Santiago! 📍 [Ubicación])
-        // ==========================================
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "¡Hola, $firstName!",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = "Ubicación",
-                            tint = CyberGlowCyan,
-                            modifier = Modifier.size(19.dp)
-                        )
-                        Text(
-                            text = displayLocality,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = CyberGlowCyan
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "¿Qué te gustaría hacer hoy en tu ciudad?",
-                        fontSize = 12.5.sp,
-                        fontWeight = FontWeight.Normal,
-                        color = Color(0xFF94A3B8)
-                    )
-                }
-
-
-            }
-        }
-
-        // ==========================================
         // 2. SERVICIOS PRINCIPALES
         // ==========================================
         item {
