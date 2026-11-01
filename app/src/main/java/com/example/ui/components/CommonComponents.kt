@@ -62,13 +62,13 @@ fun RatingBadge(rating: Float, reviewsCount: Int, modifier: Modifier = Modifier)
                 text = String.format("%.1f", rating),
                 fontWeight = FontWeight.Bold,
                 fontSize = 12.sp,
-                color = SlateNavy
+                color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.width(3.dp))
             Text(
                 text = "($reviewsCount)",
                 fontSize = 11.sp,
-                color = SlateNavy.copy(alpha = 0.65f)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
             )
         }
     }
@@ -88,7 +88,7 @@ fun DistancePill(distanceMeters: Int, walkingMinutes: Int, modifier: Modifier = 
             Icon(
                 imageVector = Icons.Default.DirectionsWalk,
                 contentDescription = null,
-                tint = EmeraldDark,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(14.dp)
             )
             Spacer(modifier = Modifier.width(4.dp))
@@ -96,7 +96,7 @@ fun DistancePill(distanceMeters: Int, walkingMinutes: Int, modifier: Modifier = 
                 text = if (distanceMeters < 1000) "${distanceMeters}m ($walkingMinutes min)" else "${String.format("%.1f", distanceMeters / 1000f)}km",
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 11.sp,
-                color = EmeraldDark
+                color = MaterialTheme.colorScheme.primary
             )
         }
     }
@@ -244,8 +244,8 @@ fun StoreTypeChip(type: StoreType, modifier: Modifier = Modifier) {
         StoreType.PANADERIA -> Color(0xFFB45309)
         StoreType.TIENDA_NATURAL -> Color(0xFF059669)
         StoreType.FARMACIA -> Color(0xFF0D9488)
-        StoreType.GASTRONOMIA -> Color(0xFF00E676)
-        StoreType.SERVICIOS -> Color(0xFFFF9100)
+        StoreType.GASTRONOMIA -> MaterialTheme.colorScheme.primary
+        StoreType.SERVICIOS -> MaterialTheme.colorScheme.secondary
     }
 
     Surface(
@@ -271,7 +271,7 @@ fun getStoreGradient(type: StoreType): Brush {
         StoreType.PANADERIA -> Brush.linearGradient(listOf(Color(0xFFD97706), Color(0xFF78350F)))
         StoreType.TIENDA_NATURAL -> Brush.linearGradient(listOf(Color(0xFF10B981), Color(0xFF047857)))
         StoreType.FARMACIA -> Brush.linearGradient(listOf(Color(0xFF0D9488), Color(0xFF047857)))
-        StoreType.GASTRONOMIA -> Brush.linearGradient(listOf(Color(0xFF00E676), Color(0xFF059669)))
+        StoreType.GASTRONOMIA -> Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, Color(0xFF0757B8)))
         StoreType.SERVICIOS -> Brush.linearGradient(listOf(Color(0xFFFF9100), Color(0xFFD97706)))
     }
 }
