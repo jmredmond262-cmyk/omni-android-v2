@@ -51,6 +51,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.WbSunny
 import com.example.ui.screens.OmniAiScreen
@@ -694,7 +695,17 @@ fun CyberBottomDock(
                     testTag = "nav_wallet"
                 )
 
-                // 5. Perfil (Perfil / Omni Business)
+                // 5. Contactos y servicios del barrio
+                CyberDockItem(
+                    icon = Icons.Default.People,
+                    label = "Contactos",
+                    selected = currentScreen is Screen.Contacts,
+                    onClick = { onNavigate(Screen.Contacts) },
+                    modifier = Modifier.weight(1f),
+                    testTag = "nav_contacts"
+                )
+
+                // 6. Perfil (Perfil / Omni Business)
                 CyberDockItem(
                     icon = Icons.Default.Person,
                     label = "Perfil",
