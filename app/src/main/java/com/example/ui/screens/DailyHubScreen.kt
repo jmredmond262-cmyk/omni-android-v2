@@ -120,6 +120,7 @@ fun DailyHubScreen(
     val displayLocality = currentCity.ifBlank { "Malabrigo" }
     val stores by viewModel.stores.collectAsState()
     val weather by viewModel.liveWeatherData.collectAsState()
+    val touristAttractions by viewModel.touristAttractions.collectAsState()
 
     var showTrackingDetails by remember { mutableStateOf(false) }
     var showRedeemDialog by remember { mutableStateOf(false) }
@@ -640,16 +641,40 @@ fun DailyHubScreen(
             containerColor = Color(0xFF101B30),
             title = { Text(experience, color = Color.White, fontWeight = FontWeight.ExtraBold) },
             text = {
-                Text(
-                    when (experience) {
-                        "OMNI Joven" -> "Beneficios para estudiantes: descuentos, promociones, cupones y recompensas en comercios adheridos."
-                        "OMNI Turista" -> "Ofertas de bienvenida, gastronomía, alojamientos y actividades para quienes visitan una localidad."
-                        "OMNI Flash" -> "Promociones de duración limitada y oportunidades cercanas publicadas por comercios."
-                        else -> "Un espacio para consultar puntos, beneficios acumulados y futuras opciones de canje."
-                    } + "\n\nMódulo en etapa de prototipo. Sus funciones se incorporarán progresivamente.",
-                    color = Color(0xFFD2DCEC)
-                )
+                if (experience == "OMNI Turista") {
+                    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Text("Descubrí lugares para visitar cerca de $displayLocality. Las distancias se calculan desde la ubicación guardada en OMNI.", color = Color(0xFFD2DCEC), fontSize = 12.sp)
+                        if (touristAttractions.isEmpty()) {
+                            Text("Todavía no tenemos atractivos cargados dentro del radio cercano. Actualizá tu ubicación desde el perfil para consultar otros destinos.", color = Color(0xFFD2DCEC), fontSize = 11.sp)
+                        } else {
+                            touristAttractions.take(5).forEach { attraction ->
+                                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF172943)), shape = RoundedCornerShape(12.dp)) {
+                                    Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text(attraction.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                        Text("${attraction.category} · ${String.format("%.1f", attraction.distanceKm)} km · ${attraction.estimatedVisitTime}", color = CyberGlowCyan, fontSize = 10.sp)
+                                        Text(attraction.description, color = Color(0xFFB8C8D9), fontSize = 10.sp)
+                                        TextButton(onClick = {
+                                            viewModel.searchTrip(displayLocality, attraction.name)
+                                            viewModel.navigateTo(Screen.TripPlanner)
+                                            selectedExperience = null
+                                        }) { Text("Planificar visita →", color = CyberGlowAmber, fontSize = 11.sp) }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Text(
+                        when (experience) {
+                            "OMNI Joven" -> "Beneficios para estudiantes: descuentos, promociones, cupones y recompensas en comercios adheridos."
+                            "OMNI Flash" -> "Promociones de duración limitada y oportunidades cercanas publicadas por comercios."
+                            else -> "Un espacio para consultar puntos, beneficios acumulados y futuras opciones de canje."
+                        } + "\n\nEste módulo se encuentra en desarrollo.",
+                        color = Color(0xFFD2DCEC)
+                    )
+                }
             },
+
             confirmButton = { TextButton(onClick = { selectedExperience = null }) { Text("Entendido", color = CyberGlowCyan) } }
         )
     }
