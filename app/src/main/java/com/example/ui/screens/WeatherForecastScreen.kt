@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
@@ -20,6 +21,10 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -27,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.MainViewModel
@@ -36,7 +42,9 @@ import java.util.Locale
 
 @Composable
 fun WeatherForecastScreen(viewModel: MainViewModel) {
+    val context = LocalContext.current
     val weather by viewModel.liveWeatherData.collectAsState()
+    val alerts by viewModel.weatherAlerts.collectAsState()
     val city by viewModel.currentCity.collectAsState()
     val background = Color(0xFF07111F)
     val panel = Color(0xFF101F33)
@@ -53,6 +61,40 @@ fun WeatherForecastScreen(viewModel: MainViewModel) {
             }
             Button(onClick = { viewModel.refreshWeatherNow() }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF12334A))) {
                 Text("Actualizar", color = cyan, fontSize = 11.sp)
+            }
+        }
+
+        if (alerts.isNotEmpty()) {
+            Text("ALERTAS ACTIVAS", color = Color(0xFFFF8B8B), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+            alerts.forEach { alert ->
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = panel),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(13.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(alert.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("${alert.severity.label} · ${alert.validUntil}", color = Color(0xFFFFC078), fontSize = 10.sp)
+                            Text(alert.description, color = Color(0xFFB8C8D9), fontSize = 11.sp)
+                            Text(alert.instructions, color = Color(0xFFB8C8D9), fontSize = 10.sp)
+                        }
+                        IconButton(onClick = {
+                            val message = "⚠️ ${alert.title}\n\n${alert.description}\n\nIndicaciones: ${alert.instructions}\nVálido hasta: ${alert.validUntil}\n\nCompartido desde OMNI"
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_SUBJECT, alert.title)
+                                putExtra(Intent.EXTRA_TEXT, message)
+                            }
+                            context.startActivity(Intent.createChooser(intent, "Compartir alerta OMNI"))
+                        }) {
+                            Icon(Icons.Default.Share, contentDescription = "Compartir alerta", tint = cyan)
+                        }
+                    }
+                }
             }
         }
 
