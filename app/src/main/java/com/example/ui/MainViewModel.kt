@@ -224,7 +224,25 @@ class MainViewModel : ViewModel() {
 
     // Perfil de Usuario Completo (Red Social, Billetera, Mapas, Salud)
     private val _userProfile = MutableStateFlow(UserProfile())
+
     val userProfile: StateFlow<UserProfile> = _userProfile.asStateFlow()
+
+    /** Applies only verified Firebase identity fields; demo wallet, health and address data are never uploaded. */
+    fun applyAuthenticatedIdentity(
+        uid: String,
+        name: String,
+        email: String,
+        phone: String,
+        photoUrl: String
+    ) {
+        _userProfile.value = _userProfile.value.copy(
+            id = uid,
+            fullName = name.ifBlank { _userProfile.value.fullName },
+            email = email.ifBlank { _userProfile.value.email },
+            phone = phone.ifBlank { _userProfile.value.phone },
+            avatarUrl = photoUrl.ifBlank { _userProfile.value.avatarUrl }
+        )
+    }
 
     // Modo Negocio / Comerciante (Mi Comercio Administrado: Redcom Romang)
     private val _managedStore = MutableStateFlow(SampleData.sampleStores.first())
