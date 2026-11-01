@@ -53,6 +53,7 @@ import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -126,6 +127,7 @@ fun DailyHubScreen(
 
     var showTrackingDetails by remember { mutableStateOf(false) }
     var showRedeemDialog by remember { mutableStateOf(false) }
+    var selectedExperience by remember { mutableStateOf<String?>(null) }
 
     val firstName = userProfile.fullName.trim().split(" ").firstOrNull()?.ifBlank { "Santiago" } ?: "Santiago"
     val tempText = liveWeather?.let { "${it.temperatureC.toInt()}°C" } ?: "--°C"
@@ -549,7 +551,55 @@ fun DailyHubScreen(
         }
 
         // ==========================================
-        // 5. TARJETA DE SEGUIMIENTO EN VIVO (En español)
+        // 5. OMNI EXPERIENCE - NUEVO ESPACIO DE BENEFICIOS
+        // ==========================================
+        item {
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF0B1629)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, CyberGlowPurple.copy(alpha = 0.48f)),
+                modifier = Modifier.fillMaxWidth().testTag("home_omni_experience_card")
+            ) {
+                Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(34.dp).clip(CircleShape).background(Color(0xFF292044)), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = CyberGlowPurple, modifier = Modifier.size(19.dp))
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("OMNI EXPERIENCE", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                            Text("Experiencias, oportunidades y beneficios", fontSize = 10.sp, color = Color(0xFF9AAAC2))
+                        }
+                        Surface(shape = RoundedCornerShape(7.dp), color = Color(0xFF211B39)) {
+                            Text("NUEVO", color = CyberGlowPurple, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp))
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        val experiences = listOf(
+                            Triple("🎓", "OMNI Joven", "Estudiantes"),
+                            Triple("🧳", "OMNI Turista", "Visitantes"),
+                            Triple("⚡", "OMNI Flash", "Ofertas rápidas"),
+                            Triple("⭐", "OMNI Puntos", "Recompensas")
+                        )
+                        experiences.forEach { experience ->
+                            Surface(
+                                modifier = Modifier.weight(1f).clickable { selectedExperience = experience.second }.testTag("home_experience_${experience.second.lowercase().replace(" ", "_")}"),
+                                shape = RoundedCornerShape(11.dp), color = Color(0xFF111F35),
+                                border = androidx.compose.foundation.BorderStroke(0.8.dp, CyberGlowPurple.copy(alpha = 0.28f))
+                            ) {
+                                Column(Modifier.padding(vertical = 9.dp, horizontal = 2.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(experience.first, fontSize = 17.sp)
+                                    Text(experience.second.removePrefix("OMNI "), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // 6. TARJETA DE SEGUIMIENTO EN VIVO (En español)
         // ==========================================
         item {
             Card(
@@ -859,6 +909,26 @@ fun DailyHubScreen(
                 }
             }
         }
+    }
+
+    selectedExperience?.let { experience ->
+        AlertDialog(
+            onDismissRequest = { selectedExperience = null },
+            containerColor = Color(0xFF101B30),
+            title = { Text(experience, color = Color.White, fontWeight = FontWeight.ExtraBold) },
+            text = {
+                Text(
+                    when (experience) {
+                        "OMNI Joven" -> "Beneficios para estudiantes: descuentos, promociones, cupones y recompensas en comercios adheridos."
+                        "OMNI Turista" -> "Ofertas de bienvenida, gastronomía, alojamientos y actividades para quienes visitan una localidad."
+                        "OMNI Flash" -> "Promociones de duración limitada y oportunidades cercanas publicadas por comercios."
+                        else -> "Un espacio para consultar puntos, beneficios acumulados y futuras opciones de canje."
+                    } + "\n\nMódulo en etapa de prototipo. Sus funciones se incorporarán progresivamente.",
+                    color = Color(0xFFD2DCEC)
+                )
+            },
+            confirmButton = { TextButton(onClick = { selectedExperience = null }) { Text("Entendido", color = CyberGlowCyan) } }
+        )
     }
 }
 
