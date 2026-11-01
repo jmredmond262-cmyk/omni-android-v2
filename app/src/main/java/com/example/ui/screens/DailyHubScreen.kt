@@ -50,6 +50,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
@@ -322,9 +323,9 @@ fun DailyHubScreen(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                imageVector = Icons.Default.WbSunny,
-                                contentDescription = null,
-                                tint = CyberGlowAmber,
+                                imageVector = if (liveWeather?.isDay == false) Icons.Default.NightsStay else Icons.Default.WbSunny,
+                                contentDescription = if (liveWeather?.isDay == false) "Noche" else "Día",
+                                tint = if (liveWeather?.isDay == false) CyberGlowCyan else CyberGlowAmber,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
