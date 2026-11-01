@@ -38,6 +38,7 @@ import com.example.ui.theme.AppThemeMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -348,12 +349,25 @@ class MainViewModel : ViewModel() {
         }
 
     init {
-        // Carga inicial en vivo de clima y datos para Romang
+        // Primera consulta y actualización automática del clima cada 15 minutos.
         fetchLiveWeatherAndAlerts(
             _userProfile.value.currentLatitude,
             _userProfile.value.currentLongitude,
-            "Romang, Santa Fe"
+            _userProfile.value.currentGpsAddress
         )
+        viewModelScope.launch {
+            while (true) {
+                delay(15 * 60 * 1000L)
+                if (_isLiveRealTimeMode.value) {
+                    val profile = _userProfile.value
+                    fetchLiveWeatherAndAlerts(
+                        profile.currentLatitude,
+                        profile.currentLongitude,
+                        profile.currentGpsAddress
+                    )
+                }
+            }
+        }
     }
 
     // ==========================================
