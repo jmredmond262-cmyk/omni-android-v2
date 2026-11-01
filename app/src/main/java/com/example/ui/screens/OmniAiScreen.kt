@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -101,7 +102,8 @@ fun OmniAiScreen(
         modifier = modifier
             .fillMaxSize()
             .background(Color(0xFF070A14))
-            .padding(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 92.dp)
+            .padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 8.dp)
+            .imePadding()
     ) {
         // Top Banner / Header Omni AI
         Card(
@@ -180,7 +182,7 @@ fun OmniAiScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(7.dp))
 
         // Quick Suggestion Chips
         LazyRow(
@@ -207,7 +209,7 @@ fun OmniAiScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
         // Messages List
         LazyColumn(
@@ -215,7 +217,7 @@ fun OmniAiScreen(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(9.dp)
         ) {
             items(messages, key = { it.id }) { msg ->
                 AiMessageItem(
@@ -252,11 +254,11 @@ fun OmniAiScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
         // Input Dock
         Card(
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF0F1829)),
             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF1E2D4A)),
             modifier = Modifier.fillMaxWidth()
@@ -264,7 +266,7 @@ fun OmniAiScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 OutlinedTextField(
@@ -285,7 +287,7 @@ fun OmniAiScreen(
                         cursorColor = CyberGlowCyan
                     ),
                     singleLine = false,
-                    maxLines = 3,
+                    maxLines = 4,
                     modifier = Modifier
                         .weight(1f)
                         .testTag("ai_input_field")
@@ -361,7 +363,7 @@ fun AiMessageItem(
                 width = 1.dp,
                 color = if (isUser) Color(0xFF8B5CF6).copy(alpha = 0.4f) else Color(0xFF00E5FF).copy(alpha = 0.3f)
             ),
-            modifier = Modifier.fillMaxWidth(0.92f)
+            modifier = Modifier.fillMaxWidth(if (isUser) 0.88f else 0.96f)
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
                 // Header of message if Omni AI
