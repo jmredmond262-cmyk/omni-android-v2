@@ -155,14 +155,14 @@ fun ContactsScreen(
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
                     Text(
-                        text = "Libreta Barrial & Servicios",
+                        text = "Mi Agenda y Directorio OMNI",
                         color = Color.White,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Remises de confianza, taxis, farmacias de turno, fletes y números de urgencia siempre a mano con llamada directa.",
+                        text = "Tus contactos personales y los servicios de tu zona, organizados en un solo lugar.",
                         color = Color.White.copy(alpha = 0.8f),
                         fontSize = 12.sp,
                         lineHeight = 17.sp
@@ -188,9 +188,11 @@ fun ContactsScreen(
                             }
                         }
                     ) {
-                        Text(label, color = if (selectedTab == index) Color.White else Color(0xFFB8C7DA),
-                            fontWeight = FontWeight.Bold, fontSize = 12.sp,
-                            modifier = Modifier.padding(vertical = 11.dp).then(Modifier))
+                        Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text(if (index == 0) "👤" else "🏪", fontSize = 19.sp)
+                            Text(label, color = if (selectedTab == index) Color.White else Color(0xFFB8C7DA), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Text(if (index == 0) "Contactos del teléfono" else "Servicios y comercios", color = if (selectedTab == index) Color.White.copy(alpha = 0.85f) else Color(0xFF8FA1B7), fontSize = 9.sp)
+                        }
                     }
                 }
             }
