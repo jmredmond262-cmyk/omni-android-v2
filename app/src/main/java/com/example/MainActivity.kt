@@ -532,6 +532,13 @@ fun OmniApp(viewModel: MainViewModel) {
                                         overflowMenuExpanded = false
                                     }
                                 )
+                                DropdownMenuItem(
+                                    text = { Text("↪ Cerrar sesión") },
+                                    onClick = {
+                                        FirebaseAuth.getInstance().signOut()
+                                        overflowMenuExpanded = false
+                                    }
+                                )
                             }
                         }
                     },
