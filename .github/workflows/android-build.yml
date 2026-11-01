@@ -53,10 +53,28 @@ jobs:
         run: |
           GEMINI_VALUE="${GEMINI_API_KEY:-NOT_CONFIGURED}"
           printf 'GEMINI_API_KEY=%s\nGOOGLE_MAPS_API_KEY=%s\n' "$GEMINI_VALUE" "$GOOGLE_MAPS_API_KEY" > .env
-      - name: Generate temporary debug signing key
-        run: keytool -genkeypair -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
+      - name: Configure stable debug signing key
+        env:
+          OMNI_DEBUG_KEYSTORE_BASE64: ${{ secrets.OMNI_DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$OMNI_DEBUG_KEYSTORE_BASE64" ]; then
+            printf '%s' "$OMNI_DEBUG_KEYSTORE_BASE64" | base64 --decode > debug.keystore
+            echo "Using the persistent OMNI debug signing key."
+          else
+            keytool -genkeypair -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
+            echo "A one-time debug key was generated. Save the keystore artifact and configure OMNI_DEBUG_KEYSTORE_BASE64 to keep this signing identity."
+          fi
+          keytool -list -v -keystore debug.keystore -storepass android -alias androiddebugkey | grep -E 'SHA1:|SHA256:'
       - name: Build debug APK
         run: gradle :app:assembleDebug
+      - name: Upload one-time signing keystore
+        if: ${{ !secrets.OMNI_DEBUG_KEYSTORE_BASE64 }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: omni-debug-signing-keystore
+          path: debug.keystore
+          if-no-files-found: error
+          retention-days: 1
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
