@@ -1,34 +1,63 @@
 package com.example.data
+
 import com.example.model.TouristAttraction
 import kotlin.math.*
+
+/**
+ * Curated regional points of interest. Results are always distance-filtered:
+ * OMNI must not suggest national destinations as if they were nearby.
+ */
 object ArgentinaAttractions {
- private data class P(val n:String,val city:String,val lat:Double,val lon:Double,val cat:String,val time:String,val desc:String)
- private val places=listOf(
- P("Monumento a la Bandera","Rosario",-32.9475,-60.6300,"Historia","1 h","Monumento emblemático junto al río Paraná."),
- P("Parque Nacional Iguazú","Puerto Iguazú",-25.6953,-54.4367,"Naturaleza","Medio día","Senderos y miradores de las Cataratas."),
- P("Ruinas de San Ignacio Miní","San Ignacio",-27.2558,-55.5331,"Historia","2 h","Antiguas misiones jesuíticas."),
- P("Cerro de los Siete Colores","Purmamarca",-23.7467,-65.4995,"Naturaleza","1 h","Paisaje de cerros multicolores."),
- P("Quebrada de Humahuaca","Humahuaca",-23.2050,-65.3500,"Paisaje","Medio día","Valle andino Patrimonio de la Humanidad."),
- P("Parque General San Martín","Mendoza",-32.8895,-68.8770,"Paseo","2 h","Gran parque urbano con lago y vistas a la montaña."),
- P("Centro Cívico","Bariloche",-41.1335,-71.3103,"Arquitectura","1 h","Punto clásico junto al lago Nahuel Huapi."),
- P("Circuito Chico","Bariloche",-41.0880,-71.5350,"Naturaleza","3 h","Recorrido panorámico por lagos y montañas."),
- P("Glaciar Perito Moreno","El Calafate",-50.4960,-73.1370,"Naturaleza","Medio día","Frente glaciar en el Parque Nacional Los Glaciares."),
- P("Canal Beagle","Ushuaia",-54.8070,-68.3030,"Naturaleza","3 h","Paisajes australes y navegación."),
- P("Parque Nacional Tierra del Fuego","Ushuaia",-54.6660,-68.5000,"Naturaleza","Medio día","Bosques, costas y senderos australes."),
- P("Teatro Colón","Buenos Aires",-34.6011,-58.3831,"Cultura","1 h 30 min","Teatro lírico de arquitectura y acústica reconocidas."),
- P("Obelisco","Buenos Aires",-34.6037,-58.3816,"Monumento","45 min","Monumento icónico sobre la avenida 9 de Julio."),
- P("Parque Nacional Talampaya","Villa Unión",-29.8000,-67.8500,"Naturaleza","Medio día","Cañones rojizos y formaciones geológicas."),
- P("Casa Histórica","Tucumán",-26.8320,-65.2030,"Historia","1 h","Sitio donde se declaró la independencia argentina."),
- P("Parque Sarmiento","Córdoba",-31.4260,-64.1810,"Paseo","2 h","Espacio verde tradicional con lagos y museos."),
- P("Esteros del Iberá","Colonia Carlos Pellegrini",-28.5360,-57.1780,"Naturaleza","Medio día","Humedales con gran diversidad de fauna."),
- P("Monumento a Güemes","Salta",-24.7820,-65.4140,"Historia","45 min","Monumento dedicado al héroe gaucho.")
- )
- fun nearby(lat:Double,lon:Double,limit:Int=6):List<TouristAttraction> = places.map { p ->
-  val d1=Math.toRadians(p.lat-lat); val d2=Math.toRadians(p.lon-lon)
-  val h=sin(d1/2).pow(2.0)+cos(Math.toRadians(lat))*cos(Math.toRadians(p.lat))*sin(d2/2).pow(2.0)
-  p to (6371.0*2.0*atan2(sqrt(h),sqrt(1-h)))
- }.sortedBy{it.second}.take(limit).mapIndexed{i,pair ->
-  val p=pair.first
-  TouristAttraction("ar_att_"+i,p.n,p.cat,pair.second,p.time,p.desc+" · "+p.city,4.7f,0.5f,0.5f)
- }
+    private data class Point(
+        val name: String,
+        val city: String,
+        val latitude: Double,
+        val longitude: Double,
+        val category: String,
+        val duration: String,
+        val description: String
+    )
+
+    private val places = listOf(
+        Point("Balneario Municipal de Romang", "Romang", -29.5052, -59.7562, "Naturaleza", "2 h", "Área recreativa junto al río San Javier, ideal para disfrutar del entorno natural."),
+        Point("Jaaukanigás – Sitio Ramsar", "Reconquista", -29.1450, -59.6430, "Naturaleza", "Medio día", "Humedales del Paraná con gran biodiversidad y oportunidades de observación de aves."),
+        Point("Puerto de Reconquista", "Reconquista", -29.2500, -59.6000, "Paseo", "1 h 30 min", "Paseo ribereño y acceso al paisaje de islas del Paraná."),
+        Point("Camping y balneario La Lola", "Reconquista", -29.2050, -59.6100, "Naturaleza", "2 h", "Entorno de río e islas para actividades recreativas al aire libre."),
+        Point("Laguna El Cristal", "Calchaquí", -29.9000, -60.3000, "Naturaleza", "Medio día", "Complejo natural de laguna y espacios recreativos de la región."),
+        Point("Costanera de Santa Fe", "Santa Fe", -31.6400, -60.7000, "Paseo", "1 h 30 min", "Recorrido urbano junto al río, con espacios verdes y vistas panorámicas."),
+        Point("Puente Colgante", "Santa Fe", -31.6405, -60.6905, "Monumento", "45 min", "Emblema arquitectónico de la ciudad y uno de sus principales puntos fotográficos."),
+        Point("Parque Nacional a la Bandera", "Rosario", -32.9475, -60.6300, "Historia", "1 h", "Conjunto monumental junto al Paraná y espacio público de valor histórico.")
+    )
+
+    private fun distanceKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val a = sin(dLat / 2).pow(2.0) +
+            cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) * sin(dLon / 2).pow(2.0)
+        return 6371.0 * 2.0 * atan2(sqrt(a), sqrt(1.0 - a))
+    }
+
+    fun nearby(
+        latitude: Double,
+        longitude: Double,
+        limit: Int = 6,
+        radiusKm: Double = 80.0
+    ): List<TouristAttraction> = places
+        .map { point -> point to distanceKm(latitude, longitude, point.latitude, point.longitude) }
+        .filter { (_, distance) -> distance <= radiusKm }
+        .sortedBy { it.second }
+        .take(limit)
+        .mapIndexed { index, (point, distance) ->
+            TouristAttraction(
+                "regional_att_${index}_${point.name.hashCode()}",
+                point.name,
+                point.category,
+                distance,
+                point.duration,
+                "${point.description} · ${point.city}",
+                4.7f,
+                0.5f,
+                0.5f
+            )
+        }
 }
