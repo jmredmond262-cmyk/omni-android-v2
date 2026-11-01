@@ -104,6 +104,7 @@ fun UserProfileScreen(
 ) {
     val context = LocalContext.current
     val profile by viewModel.userProfile.collectAsState()
+    val userRewards by viewModel.userRewards.collectAsState()
     val activeTheme by viewModel.themeMode.collectAsState()
     val isLoadingGps by viewModel.isLoadingLiveLocation.collectAsState()
 
@@ -162,6 +163,30 @@ fun UserProfileScreen(
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            }
+        }
+
+        // Puntos y recompensas: ubicados en Perfil, fuera de Inicio
+        item {
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF17243A)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("⭐ OMNI PUNTOS", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFFFD166))
+                    Text("${userRewards.points} puntos", fontSize = 24.sp, fontWeight = FontWeight.Black, color = Color.White)
+                    Text("${userRewards.levelName} • ${userRewards.stars} estrellas acumuladas", fontSize = 11.sp, color = Color(0xFFFFD166))
+                    Button(
+                        onClick = { viewModel.redeemPointsForBalance(500) },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF243B5C))
+                    ) {
+                        Text("Canjear 500 puntos por $500")
+                    }
                 }
             }
         }
