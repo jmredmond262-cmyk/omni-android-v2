@@ -1239,7 +1239,7 @@ class MainViewModel : ViewModel() {
                 }
 
                 lower.contains("comida") || lower.contains("comer") || lower.contains("cenar") || lower.contains("almorzar") || lower.contains("pizza") || lower.contains("hamburguesa") || lower.contains("rotiser") || lower.contains("restaurante") -> {
-                    val foodStores = storesList.filter { it.type == StoreType.GASTRONOMIA || it.type == StoreType.PANADERIA || it.type == StoreType.SUPERMERCADO }
+                    val foodStores = storesList.filter { it.type == StoreType.GASTRONOMIA || it.type == StoreType.PANADERIA }
                     val reply = if (foodStores.isNotEmpty()) {
                         val top = foodStores.take(3).joinToString("\n") {
                             "• **${it.name}** ⭐ ${it.rating} — ${it.address}"
