@@ -12,21 +12,21 @@ val CyberDarkSurfaceVariant = Color(0xFF162038)
 val CyberCardBg = Color(0xFF0E1626)
 val CyberBorder = Color(0xFF1E2D4A)
 val CyberGlowCyan = Color(0xFF00E5FF)
-val CyberGlowAmber = Color(0xFFFF9100)
-val CyberGlowGreen = Color(0xFF00E676)
-val CyberGlowPurple = Color(0xFFE040FB)
-val CyberGlowPink = Color(0xFFFF4081)
-val CyberGlowRose = Color(0xFFFF1744)
-val CyberGlowGold = Color(0xFFFFD600)
-val CyberGlowTeal = Color(0xFF1DE9B6)
+val CyberGlowAmber = Color(0xFF38BDF8)
+val CyberGlowGreen = Color(0xFF00D9FF)
+val CyberGlowPurple = Color(0xFF168BFF)
+val CyberGlowPink = Color(0xFF38BDF8)
+val CyberGlowRose = Color(0xFF38BDF8)
+val CyberGlowGold = Color(0xFF00E5FF)
+val CyberGlowTeal = Color(0xFF00B8D9)
 
 // Gradientes Cyber Neón
 val CyberOrbGradient = Brush.radialGradient(
     colors = listOf(
-        Color(0xFFFFD54F),
-        Color(0xFFFF9100),
-        Color(0xFFFF6D00),
-        Color(0xFFDD2C00)
+        Color(0xFF00E5FF),
+        Color(0xFF168BFF),
+        Color(0xFF0757B8),
+        Color(0xFF07162D)
     )
 )
 
