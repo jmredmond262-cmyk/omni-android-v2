@@ -67,6 +67,7 @@ fun OmniDirectoryPanel(
     var category by remember { mutableStateOf("all") }
     var radius by remember(savedRadius) { mutableStateOf((savedRadius / 1000f).coerceIn(1f, 20f)) }
     var soloAbiertos by remember { mutableStateOf(false) }
+    var expandedPlaceId by remember { mutableStateOf<String?>(null) }
 
     val lugares = remember(results) {
         results.map { place ->
@@ -187,39 +188,52 @@ fun OmniDirectoryPanel(
                     } else {
                         String.format(java.util.Locale.getDefault(), "%.1f km", item.distanciaMetros / 1000f)
                     }
+                    val isExpanded = expandedPlaceId == place.id
                     Card(
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                        shape = RoundedCornerShape(11.dp),
+                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp).clickable {
+                            expandedPlaceId = if (isExpanded) null else place.id
+                        },
+                        shape = RoundedCornerShape(10.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                     ) {
-                        Column(Modifier.padding(11.dp)) {
-                            Text(place.name, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Text(
-                                "${place.category} · ${place.typeLabel} · $distanceText",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Text(place.address, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            if (place.phone.isNotBlank()) Text("Tel. ${place.phone}", fontSize = 11.sp)
-                            Text(
-                                if (place.openingHours.isNotBlank()) "Horario informado: ${place.openingHours}" else "Horario no informado",
-                                fontSize = 11.sp
-                            )
-                            Text(
-                                when (item.lugar.estaAbierto) {
-                                    true -> "Abierto 24/7 (según OpenStreetMap)"
-                                    false -> "Cerrado"
-                                    null -> "Estado de apertura no verificado"
-                                },
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                "Ver ficha y ubicación en OpenStreetMap",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(top = 5.dp).clickable { uriHandler.openUri(place.osmUrl) }
-                            )
+                        Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(place.name, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
+                                    Text(
+                                        "${place.category} · $distanceText",
+                                        fontSize = 10.sp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        maxLines = 1
+                                    )
+                                }
+                                Text(if (isExpanded) "Menos ▲" else "Detalles ▼", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary)
+                            }
+                            if (isExpanded) {
+                                Spacer(Modifier.height(6.dp))
+                                Text(place.typeLabel, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                Text(place.address, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                if (place.phone.isNotBlank()) Text("Tel. ${place.phone}", fontSize = 11.sp)
+                                Text(
+                                    if (place.openingHours.isNotBlank()) "Horario informado: ${place.openingHours}" else "Horario no informado",
+                                    fontSize = 11.sp
+                                )
+                                Text(
+                                    when (item.lugar.estaAbierto) {
+                                        true -> "Abierto 24/7 (según OpenStreetMap)"
+                                        false -> "Cerrado"
+                                        null -> "Estado de apertura no verificado"
+                                    },
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    "Abrir ficha y ubicación en OpenStreetMap ↗",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(top = 5.dp).clickable { uriHandler.openUri(place.osmUrl) }
+                                )
+                            }
                         }
                     }
                 }
