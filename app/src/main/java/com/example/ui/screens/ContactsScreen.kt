@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -298,7 +299,7 @@ fun ContactsScreen(
                                 }
                                 context.startActivity(Intent.createChooser(share, "Compartir con ${entry.first}"))
                             }) {
-                                Icon(Icons.Default.Call, contentDescription = "Compartir", tint = EmeraldPrimary)
+                                Icon(Icons.Default.Share, contentDescription = "Compartir", tint = EmeraldPrimary)
                             }
                         }
                     }
