@@ -1253,7 +1253,7 @@ class MainViewModel : ViewModel() {
             try {
                 val recentConversation = _aiMessages.value.takeLast(6).joinToString("\n") { message ->
                     val role = if (message.sender == AiSender.USER) "Usuario" else "Omni AI"
-                    "$role: \${message.text.take(900)}"
+                    "$role: ${message.text.take(900)}"
                 }
                 val city = _currentCity.value.ifBlank { "localidad no confirmada" }
                 val managed = _managedStore.value
@@ -1274,7 +1274,7 @@ class MainViewModel : ViewModel() {
                     de descarga. Las funciones en prototipo deben identificarse como tales.
 
                     Localidad: $city
-                    Comercio administrado: \${managed.name}
+                    Comercio administrado: ${managed.name}
                     Conversación reciente:
                     $recentConversation
 
@@ -1336,7 +1336,7 @@ class MainViewModel : ViewModel() {
                 if (_aiMessages.value.any { it.id == responseId }) {
                     _aiMessages.value = _aiMessages.value.map { item ->
                         if (item.id == responseId) item.copy(
-                            text = if (item.text.isNotBlank()) "\${item.text}\n\n[La respuesta se interrumpió: $detail]"
+                            text = if (item.text.isNotBlank()) "${item.text}\n\n[La respuesta se interrumpió: $detail]"
                                 else "No pude completar la respuesta: $detail",
                             tag = "AVISO"
                         ) else item
