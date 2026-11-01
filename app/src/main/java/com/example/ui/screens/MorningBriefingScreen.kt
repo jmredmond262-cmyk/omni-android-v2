@@ -55,11 +55,12 @@ fun MorningBriefingScreen(
     val city by viewModel.currentCity.collectAsState()
     val weather by viewModel.liveWeatherData.collectAsState()
     val tasks by viewModel.tasks.collectAsState()
+    val profile by viewModel.userProfile.collectAsState()
     val activeDeals = briefing.activeDealsCount
-
-    val greeting = briefing.greeting.replace("Santiago", "¡Hola").let {
-        if (it.startsWith("¡Hola")) it else it
-    }
+    val displayName = profile.fullName.trim()
+        .takeUnless { it.isBlank() || it.equals("Usuario OMNI", ignoreCase = true) }
+    val greeting = displayName?.let { "¡Buen día, $it! Esperamos que tengas una excelente jornada." }
+        ?: "¡Buen día! Esperamos que tengas una excelente jornada."
     val weatherLine = weather?.let {
         "${it.temperatureC.toInt()}°C · ${it.weatherDescription}"
     } ?: briefing.weatherSummary
@@ -98,7 +99,7 @@ fun MorningBriefingScreen(
                     }
                 }
                 Text(
-                    briefing.greeting,
+                    greeting,
                     color = Color.White,
                     fontSize = 25.sp,
                     lineHeight = 32.sp,
