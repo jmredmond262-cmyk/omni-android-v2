@@ -235,12 +235,18 @@ class MainViewModel : ViewModel() {
         phone: String,
         photoUrl: String
     ) {
+        val emailName = email.substringBefore("@")
+            .replace(Regex("[._-]+"), " ")
+            .split(" ").filter { it.isNotBlank() }
+            .joinToString(" ") { part -> part.replaceFirstChar { it.uppercase() } }
+        val resolvedName = name.trim().ifBlank { emailName }.ifBlank { "Usuario OMNI" }
         _userProfile.value = _userProfile.value.copy(
             id = uid,
-            fullName = name.ifBlank { _userProfile.value.fullName },
-            email = email.ifBlank { _userProfile.value.email },
-            phone = phone.ifBlank { _userProfile.value.phone },
-            avatarUrl = photoUrl.ifBlank { _userProfile.value.avatarUrl }
+            fullName = resolvedName,
+            username = email.substringBefore("@").lowercase().ifBlank { uid.take(10) },
+            email = email.trim(),
+            phone = phone.trim(),
+            avatarUrl = photoUrl.trim()
         )
     }
 
