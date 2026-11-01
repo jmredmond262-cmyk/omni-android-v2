@@ -44,6 +44,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.MainViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun MorningBriefingScreen(
@@ -57,6 +60,10 @@ fun MorningBriefingScreen(
     val tasks by viewModel.tasks.collectAsState()
     val profile by viewModel.userProfile.collectAsState()
     val activeDeals = briefing.activeDealsCount
+    val todayDateText = remember {
+        val raw = SimpleDateFormat("EEEE d 'de' MMMM", Locale("es", "AR")).format(Date())
+        raw.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("es", "AR")) else it.toString() } + " • Comienzo de día"
+    }
     val displayName = profile.fullName.trim()
         .takeUnless { it.isBlank() || it.equals("Usuario OMNI", ignoreCase = true) }
     val greeting = displayName?.let { "¡Buen día, $it! Esperamos que tengas una excelente jornada." }
@@ -70,12 +77,12 @@ fun MorningBriefingScreen(
 
     val shareMessage = buildString {
         appendLine("🌅 OMNI BUENOS DÍAS")
-        appendLine(briefing.dateText)
+        appendLine(todayDateText)
         appendLine("📍 ${city.ifBlank { "Tu ciudad" }}")
         appendLine("🌤️ $weatherLine")
         appendLine("💬 ${briefing.motivationalQuote}")
         appendLine()
-        append("Descubrí tu día con OMNI.")
+        append("Descubrí tu día con OMNI. Muy pronto vas a poder descargar la app.")
     }
 
     Column(
@@ -105,7 +112,7 @@ fun MorningBriefingScreen(
                     lineHeight = 32.sp,
                     fontWeight = FontWeight.Bold
                 )
-                Text(briefing.dateText, color = Color(0xFFB9D4EB), fontSize = 12.sp)
+                Text(todayDateText, color = Color(0xFFB9D4EB), fontSize = 12.sp)
             }
         }
 
