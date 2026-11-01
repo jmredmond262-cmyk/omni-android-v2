@@ -64,6 +64,7 @@ sealed class Screen(val title: String) {
     object MerchantHub : Screen("Panel de Comercio")
     object TripPlanner : Screen("Buscador de Viaje")
     object OmniAi : Screen("Omni AI Assistant")
+    object MorningBriefing : Screen("OMNI Buenos Días")
 }
 
 data class CommunityAlert(
