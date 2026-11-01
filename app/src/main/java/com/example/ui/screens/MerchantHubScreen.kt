@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Store
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Visibility
 import com.example.ui.components.PulsingStatusDot
@@ -71,6 +72,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalContext
+import android.content.Intent
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -91,6 +94,7 @@ fun MerchantHubScreen(
     viewModel: MainViewModel,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val store by viewModel.managedStore.collectAsState()
     val newsList by viewModel.storeNews.collectAsState()
 
@@ -561,6 +565,22 @@ fun MerchantHubScreen(
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(text = news.title, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = SlateNavy)
                             Text(text = news.content, fontSize = 11.sp, color = Color.DarkGray)
+                            TextButton(
+                                onClick = {
+                                    val message = "${news.badge}\n${news.title}\n${news.content}\n\nCompartido desde OMNI"
+                                    val intent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_SUBJECT, news.title)
+                                        putExtra(Intent.EXTRA_TEXT, message)
+                                    }
+                                    context.startActivity(Intent.createChooser(intent, "Compartir desde OMNI"))
+                                },
+                                modifier = Modifier.align(Alignment.End)
+                            ) {
+                                Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Compartir", fontSize = 11.sp)
+                            }
                         }
                         Spacer(modifier = Modifier.height(6.dp))
                     }
