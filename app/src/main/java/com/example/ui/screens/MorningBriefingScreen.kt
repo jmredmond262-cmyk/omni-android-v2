@@ -30,6 +30,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -61,6 +62,12 @@ fun MorningBriefingScreen(
     val tasks by viewModel.tasks.collectAsState()
     val profile by viewModel.userProfile.collectAsState()
     val activeDeals = briefing.activeDealsCount
+    val preferences = remember { context.getSharedPreferences("omni_morning_briefing", android.content.Context.MODE_PRIVATE) }
+    var showWeather by remember { mutableStateOf(preferences.getBoolean("show_weather", true)) }
+    var showMetrics by remember { mutableStateOf(preferences.getBoolean("show_metrics", true)) }
+    var showQuote by remember { mutableStateOf(preferences.getBoolean("show_quote", true)) }
+    var showYesterday by remember { mutableStateOf(preferences.getBoolean("show_yesterday", true)) }
+    val dailyQuote = remember { listOf("Lo importante no es correr, sino avanzar con dirección.", "Cada día trae una oportunidad para empezar mejor.", "Las pequeñas decisiones construyen grandes cambios.", "No hace falta tener todo resuelto para dar el próximo paso.", "La constancia convierte las ideas en resultados.", "Hacé espacio para lo que realmente importa.").random() }
     val todayDateText = remember {
         val raw = SimpleDateFormat("EEEE d 'de' MMMM", Locale("es", "AR")).format(Date())
         raw.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("es", "AR")) else it.toString() } + " • Comienzo de día"
@@ -80,6 +87,7 @@ fun MorningBriefingScreen(
         appendLine("🌅 OMNI BUENOS DÍAS")
         appendLine(todayDateText)
         appendLine("📍 ${city.ifBlank { "Tu ciudad" }}")
+        appendLine("🏪 Redcom · Titular: Juan Redmond")
         appendLine("🌤️ $weatherLine")
         appendLine("💬 ${briefing.motivationalQuote}")
         appendLine()
@@ -114,10 +122,11 @@ fun MorningBriefingScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Text(todayDateText, color = Color(0xFFB9D4EB), fontSize = 12.sp)
+                Text("🏪 Redcom · Titular: Juan Redmond", color = Color(0xFFB9D4EB), fontSize = 11.sp)
             }
         }
 
-        Card(
+        if (showWeather) Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF10243A)),
             shape = RoundedCornerShape(20.dp)
@@ -129,10 +138,21 @@ fun MorningBriefingScreen(
                 }
                 Text(weatherLine, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 Text(temperatureLine, color = Color(0xFFB5C7D9), fontSize = 12.sp)
+                weather?.daily?.firstOrNull()?.let { day ->
+                    Text("Hoy: ${day.minC.toInt()}° / ${day.maxC.toInt()}° · ${day.precipitationProbability}% prob. de lluvia", color = Color(0xFFB5C7D9), fontSize = 11.sp)
+                    Text("🌅 ${day.sunrise.takeLast(5)}  ·  🌇 ${day.sunset.takeLast(5)}", color = Color(0xFFB5C7D9), fontSize = 11.sp)
+                }
+                val forecast = weather?.hourly?.take(24).orEmpty()
+                val maxTemp = forecast.maxOfOrNull { it.apparentTemperatureC } ?: weather?.apparentTemperatureC ?: 20.0
+                val minTemp = forecast.minOfOrNull { it.apparentTemperatureC } ?: weather?.apparentTemperatureC ?: 20.0
+                val rainChance = forecast.maxOfOrNull { it.precipitationProbability } ?: 0
+                val clothing = when { maxTemp <= 10 -> "Abrigo y varias capas."; minTemp <= 13 -> "Llevá una campera o buzo."; maxTemp >= 29 -> "Ropa liviana, fresca y clara."; else -> "Ropa cómoda de media estación." }
+                Text("👕 Para hoy: $clothing", color = Color(0xFF72E4FF), fontSize = 11.sp)
+                if (rainChance >= 40) Text("☔ Conviene llevar paraguas (hasta $rainChance% de probabilidad).", color = Color(0xFFFFC978), fontSize = 11.sp)
             }
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+        if (showMetrics) Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
             BriefingMetric(
                 modifier = Modifier.weight(1f),
                 icon = { Icon(Icons.Default.LocalOffer, contentDescription = null, tint = Color(0xFFFFC857)) },
@@ -147,7 +167,7 @@ fun MorningBriefingScreen(
             )
         }
 
-        Card(
+        if (showQuote) Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF10243A)),
             shape = RoundedCornerShape(20.dp)
@@ -155,7 +175,7 @@ fun MorningBriefingScreen(
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("UNA IDEA PARA HOY", color = Color(0xFFFFC857), fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.4.sp)
                 Text(
-                    "“${briefing.motivationalQuote}”",
+                    "“$dailyQuote”",
                     color = Color.White,
                     fontSize = 18.sp,
                     lineHeight = 25.sp,
@@ -164,6 +184,33 @@ fun MorningBriefingScreen(
             }
         }
 
+        if (showYesterday) Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF10243A)),
+            shape = RoundedCornerShape(18.dp)
+        ) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text("AYER EN OMNI", color = Color(0xFF72E4FF), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text("Todavía no hay un historial diario consolidado para mostrar un resumen real de ayer. Cuando OMNI registre actividad histórica, este espacio podrá mostrarla.", color = Color(0xFFB5C7D9), fontSize = 11.sp)
+            }
+        }
+
+        Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF10243A)), shape = RoundedCornerShape(18.dp)) {
+            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text("PERSONALIZAR OMNI BUENOS DÍAS", color = Color(0xFF72E4FF), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                listOf(
+                    "Mostrar clima" to (showWeather to { v: Boolean -> showWeather = v; preferences.edit().putBoolean("show_weather", v).apply() }),
+                    "Mostrar indicadores" to (showMetrics to { v: Boolean -> showMetrics = v; preferences.edit().putBoolean("show_metrics", v).apply() }),
+                    "Mostrar frase diaria" to (showQuote to { v: Boolean -> showQuote = v; preferences.edit().putBoolean("show_quote", v).apply() }),
+                    "Mostrar resumen de ayer" to (showYesterday to { v: Boolean -> showYesterday = v; preferences.edit().putBoolean("show_yesterday", v).apply() })
+                ).forEach { (label, setting) ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text(label, color = Color.White, fontSize = 12.sp)
+                        Switch(checked = setting.first, onCheckedChange = setting.second)
+                    }
+                }
+            }
+        }
         Spacer(Modifier.height(4.dp))
         OutlinedButton(
             onClick = {
