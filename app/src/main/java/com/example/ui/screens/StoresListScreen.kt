@@ -631,7 +631,7 @@ fun StoreDirectoryCard(
         border = androidx.compose.foundation.BorderStroke(1.dp, colors.outline.copy(alpha = 0.8f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         modifier = modifier.fillMaxWidth().clickable { onOpenDetail() }
-            .testTag("directory_store_\${store.id}")
+            .testTag("directory_store_${store.id}")
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
@@ -662,14 +662,14 @@ fun StoreDirectoryCard(
                         color = if (store.isEffectivelyOpen || store.isOnDuty || store.is24Hours) colors.primary else colors.onSurfaceVariant,
                         fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                     if (store.rating > 0f && store.reviewsCount > 0) {
-                        Text("★ \${"%.1f".format(store.rating)}", color = colors.tertiary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text("★ ${"%.1f".format(store.rating)}", color = colors.tertiary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
                 }
                 Text(store.address, color = colors.onSurfaceVariant, fontSize = 11.sp, maxLines = 1)
                 Text("Ver perfil y toda la información  ›", color = colors.primary, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
             }
             IconButton(onClick = onOpenRoute, modifier = Modifier.size(38.dp)) {
-                Icon(Icons.Default.Directions, contentDescription = "Trazar ruta a \${store.name}",
+                Icon(Icons.Default.Directions, contentDescription = "Trazar ruta a ${store.name}",
                     tint = colors.primary, modifier = Modifier.size(21.dp))
             }
         }
