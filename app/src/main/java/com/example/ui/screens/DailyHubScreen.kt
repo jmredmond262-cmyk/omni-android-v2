@@ -83,7 +83,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -116,20 +115,15 @@ fun DailyHubScreen(
     viewModel: MainViewModel,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
     val currentCity by viewModel.currentCity.collectAsState()
     val displayLocality = currentCity.ifBlank { "Malabrigo" }
-    val userProfile by viewModel.userProfile.collectAsState()
     val stores by viewModel.stores.collectAsState()
-    val liveWeather by viewModel.liveWeatherData.collectAsState()
 
     var showTrackingDetails by remember { mutableStateOf(false) }
     var showRedeemDialog by remember { mutableStateOf(false) }
     var selectedExperience by remember { mutableStateOf<String?>(null) }
 
-    val firstName = userProfile.fullName.trim().split(" ").firstOrNull()?.ifBlank { "Santiago" } ?: "Santiago"
-
-    // 8 Tarjetas de categorías en ESPAÑOL con el formato visual de la captura
+    // Servicios principales, sin accesos duplicados con el dock inferior
     val categoryItems = listOf(
         HomeCategoryItem(
             id = "food",
