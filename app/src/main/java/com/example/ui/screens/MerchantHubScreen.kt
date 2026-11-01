@@ -74,6 +74,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
 import android.content.Intent
+import android.graphics.Bitmap
+import android.net.Uri
+import java.io.File
+import java.io.FileOutputStream
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -130,6 +134,22 @@ fun MerchantHubScreen(
     ) { uri ->
         if (uri != null) {
             prodPhotoUri = uri.toString()
+        }
+    }
+
+    // Captura real desde la cámara del dispositivo y copia la imagen al almacenamiento privado de OMNI.
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        if (bitmap != null) {
+            runCatching {
+                val photoDir = File(context.filesDir, "product_photos").apply { mkdirs() }
+                val photoFile = File(photoDir, "product_${System.currentTimeMillis()}.jpg")
+                FileOutputStream(photoFile).use { output ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 92, output)
+                }
+                prodPhotoUri = Uri.fromFile(photoFile).toString()
+            }
         }
     }
 
@@ -647,11 +667,7 @@ fun MerchantHubScreen(
                     Button(
                         onClick = {
                             showAddProductDialog = true
-                            try {
-                                photoPickerLauncher.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                )
-                            } catch (_: Exception) {}
+                            cameraLauncher.launch(null)
                         },
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = AmberDeal),
@@ -729,11 +745,30 @@ fun MerchantHubScreen(
                     }
 
                     Text(
-                        text = "$${String.format("%,.0f", prod.price)}",
+                        text = "${String.format("%,.0f", prod.price)}",
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
                         color = EmeraldPrimary
                     )
+                    IconButton(
+                        onClick = {
+                            val message = buildString {
+                                appendLine("🛍️ ${prod.name}")
+                                appendLine("Categoría: ${prod.category.displayName}")
+                                appendLine("Precio: ${String.format("%,.0f", prod.price)}")
+                                prod.barcode?.let { appendLine("Código: $it") }
+                                append("Consultá en el comercio. Compartido desde OMNI.")
+                            }
+                            val send = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_SUBJECT, prod.name)
+                                putExtra(Intent.EXTRA_TEXT, message)
+                            }
+                            context.startActivity(Intent.createChooser(send, "Compartir producto"))
+                        }
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = "Compartir producto", tint = EmeraldPrimary, modifier = Modifier.size(18.dp))
+                    }
                 }
             }
         }
@@ -786,6 +821,19 @@ fun MerchantHubScreen(
                     }
                     Surface(color = AmberDealContainer, shape = RoundedCornerShape(6.dp)) {
                         Text(text = combo.discountBadge, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = AmberDeal, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                    }
+                    IconButton(
+                        onClick = {
+                            val message = "🔥 ${combo.title}\n${combo.description}\nDescuento: ${combo.discountBadge}\n\nCompartido desde OMNI"
+                            val send = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_SUBJECT, combo.title)
+                                putExtra(Intent.EXTRA_TEXT, message)
+                            }
+                            context.startActivity(Intent.createChooser(send, "Compartir promoción"))
+                        }
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = "Compartir promoción", tint = AmberDeal, modifier = Modifier.size(18.dp))
                     }
                 }
             }
@@ -851,31 +899,27 @@ fun MerchantHubScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Button(
-                                onClick = {
-                                    try {
-                                        photoPickerLauncher.launch(
-                                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                        )
-                                    } catch (_: Exception) {}
-                                },
+                                onClick = { cameraLauncher.launch(null) },
                                 shape = RoundedCornerShape(10.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Icon(imageVector = Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Tomar Foto", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text("Abrir cámara", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
 
                             Button(
                                 onClick = {
-                                    prodPhotoUri = "https://images.unsplash.com/photo-1542838132-92c53300491e?w=500"
+                                    photoPickerLauncher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    )
                                 },
                                 shape = RoundedCornerShape(10.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF64748B)),
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("Foto de Muestra", fontSize = 11.sp)
+                                Text("Elegir de galería", fontSize = 11.sp)
                             }
                         }
                     }
