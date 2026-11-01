@@ -67,6 +67,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -79,10 +80,14 @@ import android.graphics.Bitmap
 import android.net.Uri
 import java.io.File
 import java.io.FileOutputStream
+import kotlinx.coroutines.launch
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.ProductCategory
+import com.example.data.ai.ProductVisionAnalyzer
 import com.example.ui.MainViewModel
 import com.example.ui.Screen
 import com.example.ui.theme.AmberDeal
@@ -104,7 +109,6 @@ fun MerchantHubScreen(
     val newsList by viewModel.storeNews.collectAsState()
 
     var showAddProductDialog by remember { mutableStateOf(false) }
-    var showCameraAiDialog by remember { mutableStateOf(false) }
     var showAddComboDialog by remember { mutableStateOf(false) }
     var showPublishNewsDialog by remember { mutableStateOf(false) }
     var showThresholdDialog by remember { mutableStateOf(false) }
@@ -123,6 +127,10 @@ fun MerchantHubScreen(
     // Campos formulario producto
     val merchantBenefits by viewModel.merchantBenefits.collectAsState()
     var prodName by remember { mutableStateOf("") }
+    var prodDescription by remember { mutableStateOf("") }
+    var isAiAnalyzing by remember { mutableStateOf(false) }
+    var aiAnalysisMessage by remember { mutableStateOf("") }
+    val screenScope = rememberCoroutineScope()
     var prodCategory by remember { mutableStateOf(ProductCategory.ALMACEN) }
     var prodPrice by remember { mutableStateOf("") }
     var prodOriginalPrice by remember { mutableStateOf("") }
@@ -140,11 +148,32 @@ fun MerchantHubScreen(
         Uri.fromFile(photoFile).toString()
     }.getOrNull()
 
+    fun analyzeProductPhoto(uri: String) {
+        isAiAnalyzing = true
+        aiAnalysisMessage = "Gemini está leyendo la etiqueta y preparando la ficha del producto…"
+        screenScope.launch {
+            runCatching {
+                ProductVisionAnalyzer.analyze(context, Uri.parse(uri))
+            }.onSuccess { draft ->
+                prodName = draft.name
+                prodDescription = draft.description
+                ProductCategory.values().firstOrNull { it.name == draft.category }?.let { prodCategory = it }
+                if (draft.barcode.isNotBlank()) prodBarcode = draft.barcode
+                aiAnalysisMessage = "Ficha sugerida por IA. Revisá los datos antes de publicar."
+            }.onFailure { error ->
+                aiAnalysisMessage = error.localizedMessage
+                    ?: "No se pudo analizar la foto. Podés completar los datos manualmente."
+            }
+            isAiAnalyzing = false
+        }
+    }
+
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         if (uri != null) {
             prodPhotoUri = copyImageToPrivateStorage(uri) ?: uri.toString()
+            analyzeProductPhoto(prodPhotoUri!!)
         }
     }
 
@@ -160,6 +189,7 @@ fun MerchantHubScreen(
                     bitmap.compress(Bitmap.CompressFormat.JPEG, 92, output)
                 }
                 prodPhotoUri = Uri.fromFile(photoFile).toString()
+                analyzeProductPhoto(prodPhotoUri!!)
             }
         }
     }
@@ -687,7 +717,7 @@ fun MerchantHubScreen(
                     ) {
                         Icon(imageVector = Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("📷 Tomar Foto", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("📷 Foto + IA", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
 
                     Button(
@@ -735,6 +765,9 @@ fun MerchantHubScreen(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(text = prod.name, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = SlateNavy)
+                        if (prod.description.isNotBlank()) {
+                            Text(text = prod.description, fontSize = 10.sp, color = Color(0xFF64748B), maxLines = 2)
+                        }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(text = "${prod.category.displayName} • En stock", fontSize = 11.sp, color = Color.Gray)
                             if (prod.barcode != null) {
@@ -765,10 +798,13 @@ fun MerchantHubScreen(
                         onClick = {
                             val message = buildString {
                                 appendLine("🛍️ ${prod.name}")
+                                appendLine("Comercio: ${store.name}")
                                 appendLine("Categoría: ${prod.category.displayName}")
+                                if (prod.description.isNotBlank()) appendLine(prod.description)
                                 appendLine("Precio: ${String.format("%,.0f", prod.price)}")
                                 prod.barcode?.let { appendLine("Código: $it") }
-                                append("Consultá en el comercio. Compartido desde OMNI.")
+                                appendLine("Dirección: ${store.address}")
+                                append("Abrí el comercio en OMNI: omni://tienda/${store.id}")
                             }
                             val imageUri = prod.photoUri?.let { raw ->
                                 runCatching {
@@ -959,8 +995,26 @@ fun MerchantHubScreen(
                         onValueChange = { prodName = it },
                         label = { Text("Nombre del producto") },
                         placeholder = { Text("Ej: Facturas surtidas x docena") },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
                     )
+
+                    OutlinedTextField(
+                        value = prodDescription,
+                        onValueChange = { prodDescription = it },
+                        label = { Text("Descripción profesional") },
+                        placeholder = { Text("Características y presentación del producto") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 2,
+                        maxLines = 4
+                    )
+                    if (isAiAnalyzing || aiAnalysisMessage.isNotBlank()) {
+                        Text(
+                            text = aiAnalysisMessage,
+                            fontSize = 11.sp,
+                            color = if (isAiAnalyzing) EmeraldDark else SlateNavy
+                        )
+                    }
 
                     ExposedDropdownMenuBox(
                         expanded = categoryExpanded,
@@ -998,15 +1052,19 @@ fun MerchantHubScreen(
                     ) {
                         OutlinedTextField(
                             value = prodPrice,
-                            onValueChange = { prodPrice = it },
+                            onValueChange = { value -> prodPrice = value.filter(Char::isDigit) },
                             label = { Text("Precio ($)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
                             modifier = Modifier.weight(1f)
                         )
 
                         OutlinedTextField(
                             value = prodOriginalPrice,
-                            onValueChange = { prodOriginalPrice = it },
+                            onValueChange = { value -> prodOriginalPrice = value.filter(Char::isDigit) },
                             label = { Text("Tachado ($)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -1047,9 +1105,12 @@ fun MerchantHubScreen(
                                 price = price,
                                 originalPrice = orig,
                                 photoUri = prodPhotoUri,
-                                barcode = prodBarcode.ifBlank { null }
+                                barcode = prodBarcode.ifBlank { null },
+                                description = prodDescription.trim()
                             )
                             prodName = ""
+                            prodDescription = ""
+                            aiAnalysisMessage = ""
                             prodPrice = ""
                             prodOriginalPrice = ""
                             prodPhotoUri = null
@@ -1212,163 +1273,6 @@ fun MerchantHubScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showThresholdDialog = false }) { Text("Cancelar") }
-            }
-        )
-    }
-
-    // Modal de Carga con Cámara y Reconocimiento IA
-    if (showCameraAiDialog) {
-        var scannedName by remember { mutableStateOf("Yerba Mate Piporé Tradicional 1kg") }
-        var scannedCategory by remember { mutableStateOf(ProductCategory.ALMACEN) }
-        var scannedPrice by remember { mutableStateOf("3450") }
-        var scannedOriginalPrice by remember { mutableStateOf("3900") }
-        var scannedDescription by remember { mutableStateOf("Estacionamiento natural de 12 meses, molienda equilibrada y libre de gluten.") }
-        var isAiAnalyzing by remember { mutableStateOf(false) }
-
-        AlertDialog(
-            onDismissRequest = { showCameraAiDialog = false },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.Default.CameraAlt, contentDescription = null, tint = AmberDeal)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Carga Rápida con Cámara & IA", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                }
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        text = "Apunta la cámara al producto o empaque. La IA detectará marca, categoría y precio promedio de mercado en segundos.",
-                        fontSize = 11.sp,
-                        color = Color.DarkGray
-                    )
-
-                    // Visor de Cámara Simulado con retículo de enfoque
-                    Card(
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = SlateNavy),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(110.dp)
-                    ) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(
-                                    imageVector = Icons.Default.AutoAwesome,
-                                    contentDescription = null,
-                                    tint = AmberDeal,
-                                    modifier = Modifier.size(32.dp)
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = if (isAiAnalyzing) "Analizando etiqueta y código de barras con IA..." else "Enfocando producto en góndola...",
-                                    fontSize = 11.sp,
-                                    color = Color.White,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                            Surface(
-                                color = EmeraldPrimary,
-                                shape = RoundedCornerShape(6.dp),
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(8.dp)
-                            ) {
-                                Text(
-                                    text = "Gemini Vision IA",
-                                    color = Color.White,
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    Text(text = "Probar muestras de góndola:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = SlateNavy)
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Surface(
-                            color = Color(0xFFF1F5F9),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable {
-                                    scannedName = "Yerba Mate Piporé 1kg"
-                                    scannedCategory = ProductCategory.ALMACEN
-                                    scannedPrice = "3450"
-                                    scannedOriginalPrice = "3900"
-                                    scannedDescription = "Estacionamiento natural de 12 meses, molienda equilibrada."
-                                }
-                        ) {
-                            Text(text = "🌿 Yerba 1kg", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(6.dp), color = SlateNavy)
-                        }
-
-                        Surface(
-                            color = Color(0xFFF1F5F9),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable {
-                                    scannedName = "Café Tostado Colombia 500g"
-                                    scannedCategory = ProductCategory.ALMACEN
-                                    scannedPrice = "5200"
-                                    scannedOriginalPrice = "5900"
-                                    scannedDescription = "Granos Arábica de alta montaña tostado medio."
-                                }
-                        ) {
-                            Text(text = "☕ Café 500g", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(6.dp), color = SlateNavy)
-                        }
-
-                        Surface(
-                            color = Color(0xFFF1F5F9),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable {
-                                    scannedName = "Aceite de Oliva Extra 500ml"
-                                    scannedCategory = ProductCategory.ALMACEN
-                                    scannedPrice = "4800"
-                                    scannedOriginalPrice = "5400"
-                                    scannedDescription = "Primera prensada en frío de olivares riojanos."
-                                }
-                        ) {
-                            Text(text = "🫒 Oliva 500ml", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(6.dp), color = SlateNavy)
-                        }
-                    }
-
-                    // Datos auto-completados por la IA
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color(0xFFF8FAFC), RoundedCornerShape(10.dp))
-                            .padding(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(text = "Detectado por IA:", fontSize = 10.sp, color = AmberDeal, fontWeight = FontWeight.Bold)
-                        Text(text = scannedName, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = SlateNavy)
-                        Text(text = "Categoría: ${scannedCategory.displayName} • Precio sugerido: $$scannedPrice (Reg: $$scannedOriginalPrice)", fontSize = 11.sp, color = EmeraldDark, fontWeight = FontWeight.SemiBold)
-                        Text(text = scannedDescription, fontSize = 10.sp, color = Color.Gray)
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val price = scannedPrice.toDoubleOrNull() ?: 0.0
-                        val orig = scannedOriginalPrice.toDoubleOrNull()
-                        viewModel.addProductToManagedStore(scannedName, scannedCategory, price, orig)
-                        showCameraAiDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
-                ) {
-                    Text("Guardar Producto Escaneado")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showCameraAiDialog = false }) { Text("Cerrar") }
             }
         )
     }
