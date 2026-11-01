@@ -28,11 +28,11 @@ object OmniDirectorySearch {
 
     private val groups = linkedMapOf(
         "education" to listOf(TagFilter("amenity","school|kindergarten|college|university|language_school"),TagFilter("building","school")),
-        "health" to listOf(TagFilter("amenity","hospital|clinic|doctors|dentist|pharmacy|veterinary"),TagFilter("healthcare"),TagFilter("building","hospital")),
+        "health" to listOf(TagFilter("amenity","hospital|clinic|doctors|dentist|pharmacy|veterinary"),TagFilter("healthcare"),TagFilter("shop","chemist|medical_supply"),TagFilter("building","hospital")),
         "commerce" to listOf(TagFilter("shop"),TagFilter("amenity","marketplace"),TagFilter("craft")),
         "services" to listOf(TagFilter("office"),TagFilter("amenity","community_centre|social_facility"),TagFilter("social_facility"),TagFilter("club")),
         "government" to listOf(TagFilter("office","government"),TagFilter("amenity","townhall|courthouse|police|fire_station|post_office"),TagFilter("government")),
-        "food" to listOf(TagFilter("amenity","restaurant|cafe|fast_food|bar|pub"),TagFilter("shop","bakery")),
+        "food" to listOf(TagFilter("amenity","restaurant|cafe|fast_food|food_court|ice_cream"),TagFilter("shop","bakery|butcher|seafood|cheese|confectionery")),
         "transport" to listOf(TagFilter("amenity","bus_station|taxi|fuel"),TagFilter("public_transport"),TagFilter("railway","station"),TagFilter("aeroway","aerodrome")),
         "tourism" to listOf(TagFilter("tourism"),TagFilter("leisure"),TagFilter("historic"),TagFilter("amenity","arts_centre|theatre")),
         "finance" to listOf(TagFilter("amenity","bank|atm|bureau_de_change"),TagFilter("office","financial")),
@@ -51,11 +51,11 @@ object OmniDirectorySearch {
             val selected = if (category == "all" || category !in groups) groups.keys.toList() else listOf(category)
             val filters = selected.flatMap { groups[it].orEmpty() }.distinct()
             val query = buildQuery(latitude, longitude, radius, filters)
-            val key = "v2_${String.format(java.util.Locale.US,"%.4f",latitude)}_${String.format(java.util.Locale.US,"%.4f",longitude)}_${radius}_${category}"
+            val key = "v3_${String.format(java.util.Locale.US,"%.4f",latitude)}_${String.format(java.util.Locale.US,"%.4f",longitude)}_${radius}_${category}"
             val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             val cached = prefs.getString(key, null)
             if (cached != null && System.currentTimeMillis() - prefs.getLong(key+"_at",0L) < CACHE_TTL_MS) {
-                try { return@withContext parseResults(JSONObject(cached), latitude, longitude) }
+                try { return@withContext parseResults(JSONObject(cached), latitude, longitude, category) }
                 catch (e: Exception) { Log.w(TAG, "Caché inválida: ${e.message}") }
             }
             val endpoints = listOf("https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter","https://overpass.private.coffee/api/interpreter")
@@ -76,7 +76,7 @@ object OmniDirectorySearch {
                     if(remark.isNotBlank()){lastError="Consulta incompleta del servidor: $remark";conn.disconnect();continue}
                     prefs.edit().putString(key,body).putLong(key+"_at",System.currentTimeMillis()).apply()
                     conn.disconnect()
-                    return@withContext parseResults(json,latitude,longitude)
+                    return@withContext parseResults(json,latitude,longitude,category)
                 } catch(e:Exception){lastError=e.message ?: "Error de conexión.";Log.w(TAG,"Falló $endpoint: $lastError")}
             }
             Log.w(TAG, "OmniDirectorySearch finalizó sin resultados: $lastError")
@@ -91,7 +91,7 @@ object OmniDirectorySearch {
         return "[out:json][timeout:15];(${clauses.joinToString("")});out center tags;"
     }
 
-    private fun parseResults(json:JSONObject,originLat:Double,originLon:Double):List<OmniDirectoryPlace>{
+    private fun parseResults(json:JSONObject,originLat:Double,originLon:Double,requestedCategory:String):List<OmniDirectoryPlace>{
         val elements=json.optJSONArray("elements")?:return emptyList()
         val seen=HashSet<String>();val results=ArrayList<OmniDirectoryPlace>(elements.length())
         for(i in 0 until elements.length()){
@@ -105,6 +105,7 @@ object OmniDirectorySearch {
             if(!lat.isFinite()||!lon.isFinite())continue
             val name=tags.optString("name").ifBlank{tags.optString("name:es")}.ifBlank{tags.optString("brand")}.ifBlank{tags.optString("operator")}.ifBlank{"Lugar sin nombre"}
             val group=classify(tags)
+            if(requestedCategory != "all" && group != requestedCategory) continue
             val type=listOf("amenity","shop","office","healthcare","tourism","leisure","craft","social_facility","government","railway","public_transport","historic")
                 .firstNotNullOfOrNull{key->tags.optString(key).takeIf{it.isNotBlank()}}?.replace('_',' ')?: "lugar o servicio"
             val street=tags.optString("addr:street");val number=tags.optString("addr:housenumber");val place=tags.optString("addr:place");val city=tags.optString("addr:city")
@@ -119,7 +120,10 @@ object OmniDirectorySearch {
         return results.sortedBy{it.distanceMeters}
     }
     private fun classify(tags:JSONObject):String{
-        for((group,filters) in groups)if(filters.any{f->val v=tags.optString(f.key);v.isNotBlank()&&(f.values==null||f.values.split("|").contains(v))})return group
+        // Prioridad semántica: salud y gastronomía antes del genérico shop=commerce.
+        val priority = listOf("health", "food", "education", "government", "transport", "finance", "auto", "tourism", "services", "commerce")
+        for(group in priority){
+            val filters = groups[group].orEmpty()if(filters.any{f->val v=tags.optString(f.key);v.isNotBlank()&&(f.values==null||f.values.split("|").contains(v))})return group
         return "services"
     }
     private fun distanceMeters(a:Double,b:Double,c:Double,d:Double):Double{
