@@ -415,6 +415,15 @@ fun OmniApp(viewModel: MainViewModel) {
                                     }
                                 }
                                 Row(verticalAlignment = Alignment.CenterVertically) {
+                                    val firstName = userProfile.fullName.trim().split(" ").firstOrNull().orEmpty().ifBlank { "Hola" }
+                                    Text(
+                                        text = "Hola, $firstName",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
                                     Text(
                                         text = "📍 $displayLocality",
                                         fontSize = 10.sp,
