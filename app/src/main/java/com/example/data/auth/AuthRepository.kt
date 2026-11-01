@@ -33,9 +33,9 @@ class AuthRepository(
                 val user = auth.currentUser
                 val cleanName = name.trim()
                 if (user != null && cleanName.isNotBlank()) {
-                    val request = com.google.firebase.auth.userProfileChangeRequest {
-                        displayName = cleanName
-                    }
+                    val request = com.google.firebase.auth.UserProfileChangeRequest.Builder()
+                        .setDisplayName(cleanName)
+                        .build()
                     user.updateProfile(request).addOnCompleteListener {
                         persistProfile(done)
                     }
@@ -60,6 +60,10 @@ class AuthRepository(
     fun verifyPhoneCode(verificationId: String, code: String, done: (Result<Unit>) -> Unit) {
         val credential: PhoneAuthCredential =
             PhoneAuthProvider.getCredential(verificationId, code.trim())
+        completePhoneCredential(credential, done)
+    }
+
+    fun completePhoneCredential(credential: PhoneAuthCredential, done: (Result<Unit>) -> Unit) {
         auth.signInWithCredential(credential).addOnCompleteListener { task ->
             if (task.isSuccessful) persistProfile(done)
             else done(Result.failure(task.exception ?: Exception("El código no es válido.")))
