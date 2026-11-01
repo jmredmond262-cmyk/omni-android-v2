@@ -185,7 +185,7 @@ fun UserProfileScreen(
                         onClick = { viewModel.redeemPointsForBalance(500) },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF243B5C))
                     ) {
-                        Text("Canjear 500 puntos por $500")
+                        Text("Canjear 500 puntos por \\$500")
                     }
                 }
             }
