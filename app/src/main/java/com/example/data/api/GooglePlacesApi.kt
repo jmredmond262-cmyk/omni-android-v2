@@ -264,7 +264,7 @@ object GooglePlacesApi {
         return when {
             all.any { it.contains("pharmacy") || it.contains("drugstore") } -> StoreType.FARMACIA
             all.any { it.contains("bakery") } -> StoreType.PANADERIA
-            all.any { it.contains("restaurant") || it.contains("food") || it.contains("meal") || it.contains("bar") || it.contains("cafe") } -> StoreType.GASTRONOMIA
+            all.any { it in setOf("restaurant", "restaurant", "fast_food_restaurant", "meal_takeaway", "meal_delivery", "cafe", "bar", "pub", "pizza_restaurant", "hamburger_restaurant", "sandwich_shop", "ice_cream_shop", "food_court") } -> StoreType.GASTRONOMIA
             all.any { it.contains("service") || it.contains("repair") || it.contains("hair") || it.contains("beauty") } -> StoreType.SERVICIOS
             all.any { it.contains("kiosk") || it.contains("convenience") || it.contains("newsagent") } -> StoreType.KIOSCO
             all.any { it.contains("supermarket") || it.contains("grocery") } -> StoreType.SUPERMERCADO
