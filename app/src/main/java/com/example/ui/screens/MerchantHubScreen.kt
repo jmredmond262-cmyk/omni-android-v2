@@ -73,6 +73,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.FileProvider
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
@@ -129,11 +130,21 @@ fun MerchantHubScreen(
     var prodBarcode by remember { mutableStateOf("") }
     var categoryExpanded by remember { mutableStateOf(false) }
 
+    fun copyImageToPrivateStorage(source: Uri): String? = runCatching {
+        val photoDir = File(context.filesDir, "product_photos").apply { mkdirs() }
+        val photoFile = File(photoDir, "product_${System.currentTimeMillis()}.jpg")
+        context.contentResolver.openInputStream(source).use { input ->
+            requireNotNull(input) { "No se pudo leer la imagen seleccionada" }
+            FileOutputStream(photoFile).use { output -> input.copyTo(output) }
+        }
+        Uri.fromFile(photoFile).toString()
+    }.getOrNull()
+
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         if (uri != null) {
-            prodPhotoUri = uri.toString()
+            prodPhotoUri = copyImageToPrivateStorage(uri) ?: uri.toString()
         }
     }
 
@@ -759,10 +770,29 @@ fun MerchantHubScreen(
                                 prod.barcode?.let { appendLine("Código: $it") }
                                 append("Consultá en el comercio. Compartido desde OMNI.")
                             }
+                            val imageUri = prod.photoUri?.let { raw ->
+                                runCatching {
+                                    val parsed = Uri.parse(raw)
+                                    if (parsed.scheme == "file") {
+                                        FileProvider.getUriForFile(
+                                            context,
+                                            "${context.packageName}.fileprovider",
+                                            File(requireNotNull(parsed.path))
+                                        )
+                                    } else parsed
+                                }.getOrNull()
+                            }
                             val send = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
                                 putExtra(Intent.EXTRA_SUBJECT, prod.name)
                                 putExtra(Intent.EXTRA_TEXT, message)
+                                if (imageUri != null) {
+                                    type = "image/jpeg"
+                                    putExtra(Intent.EXTRA_STREAM, imageUri)
+                                    clipData = android.content.ClipData.newUri(context.contentResolver, prod.name, imageUri)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                } else {
+                                    type = "text/plain"
+                                }
                             }
                             context.startActivity(Intent.createChooser(send, "Compartir producto"))
                         }
