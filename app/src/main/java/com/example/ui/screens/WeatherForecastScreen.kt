@@ -86,7 +86,7 @@ fun WeatherForecastScreen(viewModel: MainViewModel) {
 
             Text("PRÓXIMAS HORAS", color = cyan, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                w.hourly.filter { it.time.length >= 16 }.take(24).forEach { hour ->
+                w.hourly.filter { it.time.length >= 16 && it.time >= w.observedAt.take(13) }.take(24).forEach { hour ->
                     Card(colors = CardDefaults.cardColors(containerColor = panel), shape = RoundedCornerShape(13.dp)) {
                         Column(Modifier.padding(horizontal = 12.dp, vertical = 11.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(hour.time.substring(11,16), color = Color(0xFFB8C8D9), fontSize = 11.sp)
