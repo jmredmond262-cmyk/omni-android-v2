@@ -48,6 +48,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.WbSunny
 import com.example.ui.screens.OmniAiScreen
+import com.example.ui.screens.MorningBriefingScreen
 import com.example.ui.screens.OmniSplashScreen
 import com.example.ui.theme.CyberGlowAmber
 import com.example.ui.theme.CyberGlowCyan
@@ -114,6 +115,10 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(Unit) {
                 delay(2600)
                 showSplash = false
+                val briefingPrefs = getSharedPreferences("omni_session", android.content.Context.MODE_PRIVATE)
+                if (!briefingPrefs.getBoolean("morning_briefing_seen", false)) {
+                    viewModel.navigateTo(Screen.MorningBriefing)
+                }
             }
 
             MyApplicationTheme(themeMode = themeMode) {
@@ -192,7 +197,8 @@ fun OmniApp(viewModel: MainViewModel) {
                 currentScreen is Screen.Contacts ||
                 currentScreen is Screen.OmniAi ||
                 currentScreen is Screen.UserProfile ||
-                currentScreen is Screen.Weather
+                currentScreen is Screen.Weather ||
+                currentScreen is Screen.MorningBriefing
     ) {
         when (currentScreen) {
             is Screen.InteractiveRoute -> viewModel.navigateTo(Screen.StoreDetail)
@@ -203,6 +209,7 @@ fun OmniApp(viewModel: MainViewModel) {
             is Screen.Contacts -> viewModel.navigateTo(Screen.DailyHub)
             is Screen.OmniAi -> viewModel.navigateTo(Screen.DailyHub)
             is Screen.Weather -> viewModel.navigateTo(Screen.DailyHub)
+            is Screen.MorningBriefing -> viewModel.navigateTo(Screen.DailyHub)
             else -> viewModel.navigateTo(Screen.DailyHub)
         }
     }
@@ -478,6 +485,13 @@ fun OmniApp(viewModel: MainViewModel) {
                                     }
                                 )
                                 DropdownMenuItem(
+                                    text = { Text("🌅 OMNI Buenos Días · Ver presentación") },
+                                    onClick = {
+                                        viewModel.navigateTo(Screen.MorningBriefing)
+                                        overflowMenuExpanded = false
+                                    }
+                                )
+                                DropdownMenuItem(
                                     text = {
                                         Text("📞 Directorio Telefónico Barrial")
                                     },
@@ -517,6 +531,14 @@ fun OmniApp(viewModel: MainViewModel) {
                     Screen.DailyHub -> DailyHubScreen(viewModel = viewModel)
                     Screen.Weather -> WeatherForecastScreen(viewModel = viewModel)
                     Screen.OmniAi -> OmniAiScreen(viewModel = viewModel)
+                    Screen.MorningBriefing -> MorningBriefingScreen(
+                        viewModel = viewModel,
+                        onContinue = {
+                            getSharedPreferences("omni_session", android.content.Context.MODE_PRIVATE)
+                                .edit().putBoolean("morning_briefing_seen", true).apply()
+                            viewModel.navigateTo(Screen.DailyHub)
+                        }
+                    )
                     Screen.SmartList -> SmartListScreen(viewModel = viewModel)
                     Screen.StoresList -> StoresListScreen(viewModel = viewModel)
                     Screen.Comparison -> ComparisonScreen(viewModel = viewModel)
