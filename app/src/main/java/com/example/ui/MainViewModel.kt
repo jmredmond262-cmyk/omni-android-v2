@@ -52,6 +52,7 @@ enum class StoreScheduleFilter(val label: String, val iconDescription: String) {
 
 sealed class Screen(val title: String) {
     object DailyHub : Screen("Tu Día")
+    object Weather : Screen("Clima")
     object SmartList : Screen("Mi Lista")
     object StoresList : Screen("Comercios")
     object Comparison : Screen("Comparador")
@@ -744,16 +745,24 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    fun refreshWeatherNow() {
+        val profile = _userProfile.value
+        fetchLiveWeatherAndAlerts(
+            profile.currentLatitude,
+            profile.currentLongitude,
+            profile.currentGpsAddress
+        )
+    }
+
     fun fetchLiveWeatherAndAlerts(lat: Double, lon: Double, label: String) {
         viewModelScope.launch {
             val weatherResult = RealWeatherApi.fetchCurrentWeather(lat, lon, label)
             weatherResult.onSuccess { weather ->
                 _liveWeatherData.value = weather
                 val liveAlerts = RealWeatherApi.fetchLiveAlerts(weather, lat, lon)
-                val filteredAlerts = liveAlerts.filter { !dismissedAlertIds.value.contains(it.id) }
-                if (filteredAlerts.isNotEmpty()) {
-                    _weatherAlerts.value = filteredAlerts
-                }
+                _weatherAlerts.value = liveAlerts.filter { !dismissedAlertIds.value.contains(it.id) }
+            }.onFailure { error ->
+                android.util.Log.e("MainViewModel", "No se pudo actualizar el clima", error)
             }
         }
     }
