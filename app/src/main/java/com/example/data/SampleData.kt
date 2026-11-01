@@ -392,48 +392,17 @@ object SampleData {
         return stores.mapIndexed { storeIdx, store ->
             val storeRandFactor = 1.0 + (((storeIdx * 7 + variationSeed * 13) % 15 - 7) / 100.0) // ±7% fluctuación de mercado
             val matchedItems = needs.map { need ->
-                var match = store.inventory.firstOrNull { prod ->
-                    prod.name.lowercase().contains(need.name.lowercase().split(" ").firstOrNull() ?: "") ||
-                    need.name.lowercase().contains(prod.name.lowercase().split(" ").firstOrNull() ?: "")
-                }
-                // Si la tienda aún no tiene este ítem cargado en su inventario manual, calculamos cotización de mercado según perfil del comercio
-                if (match == null) {
-                    val catMatch = predefinedCatalog.firstOrNull { it.name.lowercase().contains(need.name.lowercase().split(" ").firstOrNull() ?: "") }
-                    val baseP = catMatch?.basePrice ?: 1800.0
-                    val multiplier = when (store.type) {
-                        StoreType.SUPERMERCADO -> when (need.category) {
-                            ProductCategory.LIMPIEZA, ProductCategory.ALMACEN -> 0.90
-                            else -> 0.96
-                        }
-                        StoreType.ALMACEN -> when (need.category) {
-                            ProductCategory.LACTEOS, ProductCategory.ALMACEN -> 0.94
-                            else -> 1.05
-                        }
-                        StoreType.KIOSCO -> 1.20
-                        StoreType.TIENDA_NATURAL -> when (need.category) {
-                            ProductCategory.FRESCOS, ProductCategory.ALMACEN -> 0.98
-                            else -> 1.10
-                        }
-                        StoreType.PANADERIA -> when (need.category) {
-                            ProductCategory.ALMACEN -> 0.88
-                            else -> 1.08
-                        }
-                        StoreType.FARMACIA -> when (need.category) {
-                            ProductCategory.FARMACIA -> 0.89
-                            else -> 1.12
-                        }
-                        StoreType.GASTRONOMIA -> 1.05
-                        StoreType.SERVICIOS -> 1.10
-                    } * storeRandFactor
-                    val price = Math.round(baseP * multiplier / 10.0) * 10.0
-                    match = StoreProduct(
-                        id = "auto_${store.id}_${need.id}_$variationSeed",
-                        name = need.name,
-                        category = need.category,
-                        price = price,
-                        originalPrice = Math.round(price * 1.18 / 10.0) * 10.0,
-                        inStock = true
-                    )
+                val requestedTerms = need.name.lowercase()
+                    .split(Regex("[^\\p{L}\\p{N}]+"))
+                    .filter { it.length >= 3 }
+                val match = store.inventory.firstOrNull { product ->
+                    if (!product.inStock || product.category != need.category) {
+                        false
+                    } else {
+                        val productName = product.name.lowercase()
+                        requestedTerms.isNotEmpty() &&
+                            requestedTerms.any { term -> productName.contains(term) }
+                    }
                 }
                 com.example.model.MatchedItem(
                     need = need,
