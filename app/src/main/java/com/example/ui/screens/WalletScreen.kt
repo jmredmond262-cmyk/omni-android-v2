@@ -70,6 +70,9 @@ import com.example.ui.theme.EmeraldContainer
 import com.example.ui.theme.EmeraldDark
 import com.example.ui.theme.EmeraldPrimary
 import com.example.ui.theme.RosePromo
+import com.example.ui.theme.CyberGlowCyan
+import com.example.ui.theme.CyberDarkSurface
+import com.example.ui.theme.CyberDarkBg
 import com.example.ui.theme.SlateNavy
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -104,7 +107,7 @@ fun WalletScreen(
         item {
             Card(
                 shape = RoundedCornerShape(22.dp),
-                colors = CardDefaults.cardColors(containerColor = SlateNavy),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF081A35)),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -121,7 +124,7 @@ fun WalletScreen(
                             fontWeight = FontWeight.Medium
                         )
                         Surface(
-                            color = EmeraldPrimary,
+                            color = CyberGlowCyan,
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text(
@@ -184,7 +187,7 @@ fun WalletScreen(
                         Button(
                             onClick = { showPayQrDialog = true },
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
+                            colors = ButtonDefaults.buttonColors(containerColor = CyberGlowCyan),
                             modifier = Modifier
                                 .weight(1f)
                                 .testTag("btn_pay_qr")
@@ -323,7 +326,7 @@ fun WalletScreen(
                                 text = "$${String.format("%,.2f", receipt.total)}",
                                 fontWeight = FontWeight.ExtraBold,
                                 fontSize = 15.sp,
-                                color = EmeraldDark
+                                color = Color(0xFF9CEEFF)
                             )
                         }
 
@@ -371,7 +374,7 @@ fun WalletScreen(
                             Button(
                                 onClick = { selectedReceiptForModal = receipt },
                                 shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = EmeraldContainer),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF06364A)),
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                                 modifier = Modifier.height(28.dp)
                             ) {
@@ -572,7 +575,7 @@ fun WalletScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color(0xFFF8FAFC), RoundedCornerShape(12.dp))
+                        .background(CyberDarkBg, RoundedCornerShape(12.dp))
                         .padding(14.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
