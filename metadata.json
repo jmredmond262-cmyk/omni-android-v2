@@ -1,0 +1,6 @@
+{
+  "name": "Omni",
+  "description": "Tu asistente diario inteligente todo en uno con compras locales, clima en tiempo real, mapas satelitales, billetera y comunidad.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
