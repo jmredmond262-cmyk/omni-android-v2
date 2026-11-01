@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.LunchDining
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Redeem
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Savings
@@ -165,6 +166,14 @@ fun DailyHubScreen(
             onClick = {
                 viewModel.navigateTo(Screen.Contacts)
             }
+        ),
+        HomeCategoryItem(
+            id = "contacts",
+            title = "Contactos",
+            subtitle = "Agenda y servicios del barrio",
+            icon = Icons.Default.People,
+            accentColor = Color(0xFF54E5FF),
+            onClick = { viewModel.navigateTo(Screen.Contacts) }
         ),
         HomeCategoryItem(
             id = "health",
