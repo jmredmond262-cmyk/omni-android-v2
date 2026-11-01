@@ -97,6 +97,7 @@ import com.example.ui.screens.StoreDetailScreen
 import com.example.ui.screens.StoresListScreen
 import com.example.ui.screens.TripPlannerScreen
 import com.example.ui.screens.UserProfileScreen
+import com.example.ui.screens.WeatherForecastScreen
 import com.example.ui.screens.WalletScreen
 import com.example.ui.theme.AppThemeMode
 import com.example.ui.theme.MyApplicationTheme
@@ -139,7 +140,19 @@ fun OmniApp(viewModel: MainViewModel) {
 
     val currentCity by viewModel.currentCity.collectAsState()
     val displayLocality = currentCity.ifBlank { "Córdoba" }
-    val currentTemp = liveWeather?.let { "${it.temperatureC.toInt()}°C" } ?: "22°C"
+    val currentTemp = liveWeather?.let { "${it.temperatureC.toInt()}°C" } ?: "--°C"
+    val currentWeatherSymbol = liveWeather?.let { weather ->
+        when {
+            weather.precipitationMm >= 0.1 -> "🌧"
+            weather.weatherCode in listOf(95, 96, 99) -> "⛈"
+            weather.weatherCode in listOf(51, 53, 55, 61, 63, 65, 80, 81, 82) -> "🌧"
+            weather.weatherCode in listOf(45, 48) -> "🌫"
+            weather.weatherCode == 3 -> "☁"
+            weather.weatherCode in listOf(1, 2) -> "🌤"
+            weather.isDay -> "☀"
+            else -> "🌙"
+        }
+    } ?: "🌡"
 
     var showLocationDialog by remember { mutableStateOf(false) }
     var customCityInput by remember(displayLocality) { mutableStateOf(displayLocality) }
@@ -187,6 +200,7 @@ fun OmniApp(viewModel: MainViewModel) {
             is Screen.Wallet -> viewModel.navigateTo(Screen.DailyHub)
             is Screen.Contacts -> viewModel.navigateTo(Screen.DailyHub)
             is Screen.OmniAi -> viewModel.navigateTo(Screen.DailyHub)
+            is Screen.Weather -> viewModel.navigateTo(Screen.DailyHub)
             else -> viewModel.navigateTo(Screen.DailyHub)
         }
     }
@@ -401,11 +415,12 @@ fun OmniApp(viewModel: MainViewModel) {
                                     )
                                     Spacer(modifier = Modifier.width(7.dp))
                                     Text(
-                                        text = "☀ $currentTemp",
+                                        text = "$currentWeatherSymbol $currentTemp",
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.tertiary,
-                                        maxLines = 1
+                                        maxLines = 1,
+                                        modifier = Modifier.clickable { viewModel.navigateTo(Screen.Weather) }
                                     )
                                 }
                             }
@@ -498,6 +513,7 @@ fun OmniApp(viewModel: MainViewModel) {
             Crossfade(targetState = currentScreen, label = "screen_crossfade") { screen ->
                 when (screen) {
                     Screen.DailyHub -> DailyHubScreen(viewModel = viewModel)
+                    Screen.Weather -> WeatherForecastScreen(viewModel = viewModel)
                     Screen.OmniAi -> OmniAiScreen(viewModel = viewModel)
                     Screen.SmartList -> SmartListScreen(viewModel = viewModel)
                     Screen.StoresList -> StoresListScreen(viewModel = viewModel)
