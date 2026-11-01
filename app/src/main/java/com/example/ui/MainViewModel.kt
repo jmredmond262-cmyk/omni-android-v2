@@ -893,6 +893,14 @@ class MainViewModel : ViewModel() {
         _currentScreen.value = screen
     }
 
+    fun openStoreById(storeId: String) {
+        val target = _stores.value.firstOrNull { it.id == storeId }
+            ?: _managedStore.value.takeIf { it.id == storeId }
+            ?: return
+        _selectedStore.value = target
+        _currentScreen.value = Screen.StoreDetail
+    }
+
     fun selectStoreAndOpenDetail(store: Store) {
         _selectedStore.value = store
         _currentScreen.value = Screen.StoreDetail
@@ -1219,12 +1227,7 @@ class MainViewModel : ViewModel() {
                 sender = AiSender.OMNI_AI,
                 text = "¡Hola! Soy **Omni AI**, tu asistente inteligente local. Conozco los comercios de tu zona, farmacias de turno, remises, horarios y las mejores ofertas en tiempo real.\n\n¿En qué te puedo ayudar hoy?",
                 timestamp = "Ahora",
-                actions = listOf(
-                    AiAction("💊 Farmacias de Turno", targetScreen = Screen.StoresList, filterCategory = "FARMACIAS_TURNO"),
-                    AiAction("🍔 Dónde comer hoy", targetScreen = Screen.StoresList, filterCategory = "Gastronomía"),
-                    AiAction("🚕 Pedir Remis / Taxi", targetScreen = Screen.TripPlanner),
-                    AiAction("💳 Mi Saldo OmniPay", targetScreen = Screen.Wallet)
-                ),
+                actions = emptyList(),
                 tag = "BIENVENIDA"
             )
         )
@@ -1390,12 +1393,7 @@ class MainViewModel : ViewModel() {
                 sender = AiSender.OMNI_AI,
                 text = "Conversación reiniciada. ¿En qué te puedo asesorar hoy en tu ciudad?",
                 timestamp = "Ahora",
-                actions = listOf(
-                    AiAction("💊 Farmacias de Turno", targetScreen = Screen.StoresList, filterCategory = "FARMACIAS_TURNO"),
-                    AiAction("🍔 Dónde comer hoy", targetScreen = Screen.StoresList, filterCategory = "Gastronomía"),
-                    AiAction("🚕 Pedir Remis", targetScreen = Screen.TripPlanner),
-                    AiAction("💳 Mi Billetera", targetScreen = Screen.Wallet)
-                )
+                actions = emptyList()
             )
         )
     }
