@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -76,7 +78,7 @@ fun MorningBriefingScreen(
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().background(Color(0xFF07111F)).padding(18.dp),
+        modifier = Modifier.fillMaxSize().background(Color(0xFF07111F)).verticalScroll(rememberScrollState()).padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Box(
@@ -153,7 +155,7 @@ fun MorningBriefingScreen(
             }
         }
 
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(4.dp))
         OutlinedButton(
             onClick = {
                 val intent = Intent(Intent.ACTION_SEND).apply {
@@ -161,7 +163,7 @@ fun MorningBriefingScreen(
                     putExtra(Intent.EXTRA_SUBJECT, "OMNI Buenos Días")
                     putExtra(Intent.EXTRA_TEXT, shareMessage)
                 }
-                context.startActivity(Intent.createChooser(intent, "Compartir OMNI Buenos Días"))
+                runCatching { context.startActivity(Intent.createChooser(intent, "Compartir OMNI Buenos Días")) }
             },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF66E4FF))
