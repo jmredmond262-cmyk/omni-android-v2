@@ -2,6 +2,11 @@ package com.example
 
 import android.os.Bundle
 import android.content.Intent
+import com.google.firebase.Firebase
+import com.google.firebase.initialize
+import com.google.firebase.appcheck.appCheck
+import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
+import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -121,6 +126,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Firebase.initialize(context = this)
+        Firebase.appCheck.installAppCheckProviderFactory(
+            if (BuildConfig.DEBUG) DebugAppCheckProviderFactory.getInstance()
+            else PlayIntegrityAppCheckProviderFactory.getInstance()
+        )
         pendingStoreDeepLink = intent?.data?.takeIf {
             it.scheme == "omni" && it.host == "tienda"
         }?.lastPathSegment
