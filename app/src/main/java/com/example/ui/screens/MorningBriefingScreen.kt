@@ -34,6 +34,8 @@ import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -89,7 +91,7 @@ fun MorningBriefingScreen(
         appendLine("📍 ${city.ifBlank { "Tu ciudad" }}")
         appendLine("🏪 Redcom · Titular: Juan Redmond")
         appendLine("🌤️ $weatherLine")
-        appendLine("💬 ${briefing.motivationalQuote}")
+        appendLine("💬 $dailyQuote")
         appendLine()
         append("Descubrí tu día con OMNI. Muy pronto vas a poder descargar la app.")
     }
@@ -198,17 +200,10 @@ fun MorningBriefingScreen(
         Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF10243A)), shape = RoundedCornerShape(18.dp)) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text("PERSONALIZAR OMNI BUENOS DÍAS", color = Color(0xFF72E4FF), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                listOf(
-                    "Mostrar clima" to (showWeather to { v: Boolean -> showWeather = v; preferences.edit().putBoolean("show_weather", v).apply() }),
-                    "Mostrar indicadores" to (showMetrics to { v: Boolean -> showMetrics = v; preferences.edit().putBoolean("show_metrics", v).apply() }),
-                    "Mostrar frase diaria" to (showQuote to { v: Boolean -> showQuote = v; preferences.edit().putBoolean("show_quote", v).apply() }),
-                    "Mostrar resumen de ayer" to (showYesterday to { v: Boolean -> showYesterday = v; preferences.edit().putBoolean("show_yesterday", v).apply() })
-                ).forEach { (label, setting) ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text(label, color = Color.White, fontSize = 12.sp)
-                        Switch(checked = setting.first, onCheckedChange = setting.second)
-                    }
-                }
+                BriefingSettingRow("Mostrar clima", showWeather) { showWeather = it; preferences.edit().putBoolean("show_weather", it).apply() }
+                BriefingSettingRow("Mostrar indicadores", showMetrics) { showMetrics = it; preferences.edit().putBoolean("show_metrics", it).apply() }
+                BriefingSettingRow("Mostrar frase diaria", showQuote) { showQuote = it; preferences.edit().putBoolean("show_quote", it).apply() }
+                BriefingSettingRow("Mostrar resumen de ayer", showYesterday) { showYesterday = it; preferences.edit().putBoolean("show_yesterday", it).apply() }
             }
         }
         Spacer(Modifier.height(4.dp))
@@ -243,6 +238,15 @@ fun MorningBriefingScreen(
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
+    }
+}
+
+
+@Composable
+private fun BriefingSettingRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Text(label, color = Color.White, fontSize = 12.sp)
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
