@@ -121,11 +121,7 @@ fun DailyHubScreen(
     val displayLocality = currentCity.ifBlank { "Malabrigo" }
     val userProfile by viewModel.userProfile.collectAsState()
     val stores by viewModel.stores.collectAsState()
-    val userWallet by viewModel.wallet.collectAsState()
-    val userRewards by viewModel.userRewards.collectAsState()
     val liveWeather by viewModel.liveWeatherData.collectAsState()
-    val weatherAlerts by viewModel.weatherAlerts.collectAsState()
-    val communityAlerts by viewModel.communityAlerts.collectAsState()
 
     var showTrackingDetails by remember { mutableStateOf(false) }
     var showRedeemDialog by remember { mutableStateOf(false) }
@@ -306,232 +302,7 @@ fun DailyHubScreen(
         }
 
         // ==========================================
-        // 2. ALERTAS DE CLIMA, CATÁSTROFES & EMERGENCIAS (Recuperado y prioritario)
-        // ==========================================
-        item {
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F182A)),
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    if (weatherAlerts.isNotEmpty()) Color(0xFFEF4444).copy(alpha = 0.6f) else Color(0xFF1E2D4A)
-                ),
-                modifier = Modifier.fillMaxWidth().clickable { viewModel.navigateTo(Screen.Weather) }
-            ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    // Estado del clima local en vivo
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = when {
-                                    liveWeather == null -> "…"
-                                    liveWeather!!.precipitationMm >= 0.1 -> "🌧️"
-                                    liveWeather!!.weatherCode in listOf(95, 96, 99) -> "⛈️"
-                                    liveWeather!!.weatherCode in listOf(51, 53, 55, 61, 63, 65, 80, 81, 82) -> "🌧️"
-                                    liveWeather!!.weatherCode in listOf(45, 48) -> "🌫️"
-                                    liveWeather!!.weatherCode == 3 -> "☁️"
-                                    liveWeather!!.weatherCode in listOf(1, 2) -> "🌤️"
-                                    liveWeather!!.isDay -> "☀️"
-                                    else -> "🌙"
-                                },
-                                fontSize = 19.sp
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "$tempText • $weatherDesc",
-                                fontSize = 12.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
-
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFF16253D)
-                        ) {
-                            Text(
-                                text = "EN VIVO",
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = CyberGlowCyan,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-
-                    Text(
-                        text = "Ver pronóstico por hora y 7 días  ›",
-                        color = CyberGlowCyan,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-
-                    // Si hay alertas climáticas o avisos de catástrofe activa
-                    if (weatherAlerts.isNotEmpty()) {
-                        val alert = weatherAlerts.first()
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Surface(
-                            color = Color(0xFF7F1D1D).copy(alpha = 0.25f),
-                            shape = RoundedCornerShape(10.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Warning,
-                                    contentDescription = null,
-                                    tint = Color(0xFFF87171),
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = alert.title,
-                                        fontSize = 11.5.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFFFCA5A5)
-                                    )
-                                    Text(
-                                        text = "${alert.severity.label} • Válido hasta: ${alert.validUntil}",
-                                        fontSize = 10.sp,
-                                        color = Color(0xFFE2E8F0)
-                                    )
-                                }
-                                IconButton(
-                                    onClick = {
-                                        val message = "⚠️ ${alert.title}\n\n${alert.description}\n\nIndicaciones: ${alert.instructions}\nVálido hasta: ${alert.validUntil}\n\nCompartido desde OMNI"
-                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                            type = "text/plain"
-                                            putExtra(Intent.EXTRA_SUBJECT, alert.title)
-                                            putExtra(Intent.EXTRA_TEXT, message)
-                                        }
-                                        context.startActivity(Intent.createChooser(shareIntent, "Compartir alerta OMNI"))
-                                    },
-                                    modifier = Modifier.size(30.dp)
-                                ) {
-                                    Icon(Icons.Default.Share, contentDescription = "Compartir alerta", tint = CyberGlowCyan, modifier = Modifier.size(16.dp))
-                                }
-                                IconButton(
-                                    onClick = { viewModel.dismissAlert(alert.id) },
-                                    modifier = Modifier.size(26.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = "Descartar",
-                                        tint = Color(0xFF94A3B8),
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // ==========================================
-        // 3. WIDGET DE OMNI PUNTOS, RENDIMIENTO Y RECOMPENSAS
-        // ==========================================
-        item {
-            Card(
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF0D172A)),
-                border = androidx.compose.foundation.BorderStroke(1.dp, CyberGlowGold.copy(alpha = 0.35f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF332705)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(text = "⭐", fontSize = 16.sp)
-                            }
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column {
-                                Text(
-                                    text = "${userRewards.points} Puntos Omni",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                                Text(
-                                    text = "${userRewards.levelName} • ${userRewards.stars} estrellas acumuladas",
-                                    fontSize = 10.5.sp,
-                                    color = CyberGlowGold
-                                )
-                            }
-                        }
-
-                        Button(
-                            onClick = {
-                                viewModel.redeemPointsForBalance(500)
-                            },
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E2D4A)),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, CyberGlowGold.copy(alpha = 0.4f)),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                            modifier = Modifier.height(30.dp)
-                        ) {
-                            Icon(Icons.Default.Redeem, contentDescription = null, tint = CyberGlowGold, modifier = Modifier.size(13.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Canjear ($500)", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // Rendimiento diario de saldo en la app
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = Color(0xFF09111F)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 10.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(text = "📈", fontSize = 13.sp)
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "Rendimiento diario de saldo OmniPay (TNA ${userRewards.annualYieldPercent}%):",
-                                    fontSize = 10.5.sp,
-                                    color = Color(0xFFCBD5E1)
-                                )
-                            }
-                            Text(
-                                text = "+$${String.format("%.1f", userRewards.dailyYieldEstimate)}/día",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = CyberGlowGreen
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        // ==========================================
-        // 4. GRILLA NEÓN DE 8 CATEGORÍAS (Idéntica a captura)
+        // 2. SERVICIOS PRINCIPALES
         // ==========================================
         item {
             Column(
@@ -567,7 +338,7 @@ fun DailyHubScreen(
         }
 
         // ==========================================
-        // 5. OMNI EXPERIENCE - NUEVO ESPACIO DE BENEFICIOS
+        // 3. OMNI EXPERIENCE
         // ==========================================
         item {
             Card(
@@ -615,7 +386,7 @@ fun DailyHubScreen(
         }
 
         // ==========================================
-        // 6. TARJETA DE SEGUIMIENTO EN VIVO (En español)
+        // 4. TARJETA DE SEGUIMIENTO EN VIVO (En español)
         // ==========================================
         item {
             Card(
@@ -771,7 +542,7 @@ fun DailyHubScreen(
         }
 
         // ==========================================
-        // 6. HERO BANNER OMNI AI
+        // 5. HERO BANNER OMNI AI
         // ==========================================
         item {
             Card(
@@ -842,7 +613,7 @@ fun DailyHubScreen(
         }
 
         // ==========================================
-        // 7. OMNI PLACES: COMERCIOS DE TU ZONA
+        // 6. OMNI PLACES: COMERCIOS DE TU ZONA
         // ==========================================
         item {
             Row(
