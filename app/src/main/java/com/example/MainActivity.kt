@@ -436,24 +436,6 @@ fun OmniApp(viewModel: MainViewModel) {
                         }
                     },
                     actions = {
-                        // Comparador Inteligente de Canasta
-                        IconButton(onClick = { viewModel.navigateTo(Screen.Comparison) }) {
-                            Icon(
-                                imageVector = Icons.Default.AutoAwesome,
-                                contentDescription = "Comparador de Canasta",
-                                tint = if (currentScreen is Screen.Comparison) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        // Acceso rápido a Billetera Virtual OmniPay
-                        IconButton(onClick = { viewModel.navigateTo(Screen.Wallet) }) {
-                            Icon(
-                                imageVector = Icons.Default.AccountBalanceWallet,
-                                contentDescription = "Billetera Virtual",
-                                tint = if (currentScreen is Screen.Wallet) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
                         // Menú camuflado para Modo En Vivo / Simulación y Selección de Tema
                         Box {
                             IconButton(onClick = { overflowMenuExpanded = true }) {
