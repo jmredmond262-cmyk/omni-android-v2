@@ -47,7 +47,9 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
         run: |
-          printf 'GEMINI_API_KEY=%s\nGOOGLE_MAPS_API_KEY=%s\n' "$GEMINI_API_KEY" "$GOOGLE_MAPS_API_KEY" > .env
+          # El plugin Secrets no genera BuildConfig correctamente si la variable está vacía.
+          GEMINI_VALUE="${GEMINI_API_KEY:-NOT_CONFIGURED}"
+          printf 'GEMINI_API_KEY=%s\nGOOGLE_MAPS_API_KEY=%s\n' "$GEMINI_VALUE" "$GOOGLE_MAPS_API_KEY" > .env
 
       - name: Generate temporary debug signing key
         run: |
