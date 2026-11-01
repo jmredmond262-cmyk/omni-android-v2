@@ -223,16 +223,19 @@ fun OmniApp(viewModel: MainViewModel) {
     val currentTemp = liveWeather?.let { "${it.temperatureC.toInt()}°C" } ?: "--°C"
     val currentWeatherSymbol = liveWeather?.let { weather ->
         when {
-            weather.precipitationMm >= 0.1 -> "🌧"
             weather.weatherCode in listOf(95, 96, 99) -> "⛈"
-            weather.weatherCode in listOf(51, 53, 55, 61, 63, 65, 80, 81, 82) -> "🌧"
+            weather.weatherCode in listOf(71, 73, 75, 77, 85, 86) -> "❄️"
+            weather.weatherCode in listOf(51, 53, 55, 61, 63, 65, 80, 81, 82) ||
+                weather.precipitationMm >= 0.1 -> "🌧"
             weather.weatherCode in listOf(45, 48) -> "🌫"
             weather.weatherCode == 3 -> "☁"
             weather.weatherCode in listOf(1, 2) -> "🌤"
+            weather.weatherCode == 0 && weather.isDay -> "☀"
+            weather.weatherCode == 0 -> "🌙"
             weather.isDay -> "☀"
             else -> "🌙"
         }
-    } ?: "🌡"
+    } ?: "⛅"
 
     var showLocationDialog by remember { mutableStateOf(false) }
     var customCityInput by remember(displayLocality) { mutableStateOf(displayLocality) }
