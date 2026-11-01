@@ -142,39 +142,8 @@ object RealWeatherApi {
             )
         }
 
-        // 4. Feed Global Sísmico USGS en tiempo real
-        try {
-            val usgsUrl = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_month.geojson"
-            val usgsConn = (URL(usgsUrl).openConnection() as HttpURLConnection).apply {
-                connectTimeout = 4000
-                readTimeout = 4000
-                setRequestProperty("User-Agent", "OmniAndroidApp/1.0")
-            }
-            if (usgsConn.responseCode == HttpURLConnection.HTTP_OK) {
-                val reader = BufferedReader(InputStreamReader(usgsConn.inputStream))
-                val json = JSONObject(reader.use { it.readText() })
-                val features = json.optJSONArray("features")
-                if (features != null && features.length() > 0) {
-                    val first = features.getJSONObject(0)
-                    val props = first.getJSONObject("properties")
-                    val mag = props.optDouble("mag", 6.0)
-                    val place = props.optString("place", "Región Sísmica")
-                    alerts.add(
-                        WeatherAlert(
-                            id = "alert_quake_${UUID.randomUUID().toString().take(6)}",
-                            type = AlertType.SISMO_TERREMOTO,
-                            severity = AlertSeverity.AMARILLO,
-                            title = "Monitoreo Sísmico Global Activo (M$mag)",
-                            description = "Red sismológica USGS reporta evento de magnitud $mag en $place. Sensores locales en estado normal.",
-                            instructions = "Mantener linterna y vías de evacuación despejadas.",
-                            validUntil = "Monitoreo continuo 24hs"
-                        )
-                    )
-                }
-            }
-        } catch (_: Exception) {
-            // Non-critical fallback
-        }
+        // No consultar el feed sísmico global: provocaba avisos de eventos lejanos sin impacto local.
+        // Las alertas de clima se calculan con las condiciones meteorológicas de las coordenadas recibidas.
 
         // Si no hay catástrofes ni clima extremo, la lista permanece limpia (sin alarmas innecesarias)
         alerts
