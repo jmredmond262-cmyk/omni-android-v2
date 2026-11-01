@@ -86,9 +86,22 @@ class AuthRepository(
             done(Result.failure(Exception("Firebase no devolvió un usuario autenticado.")))
             return
         }
+        val emailName = user.email.orEmpty().substringBefore("@")
+            .replace(Regex("[._-]+"), " ")
+            .split(" ").filter { it.isNotBlank() }
+            .joinToString(" ") { part -> part.replaceFirstChar { it.uppercase() } }
+        val resolvedName = user.displayName?.takeIf { it.isNotBlank() }
+            ?: emailName.takeIf { it.isNotBlank() }
+            ?: "Usuario OMNI"
+        if (user.displayName.isNullOrBlank() && resolvedName != "Usuario OMNI") {
+            user.updateProfile(
+                com.google.firebase.auth.UserProfileChangeRequest.Builder()
+                    .setDisplayName(resolvedName).build()
+            )
+        }
         val profile = hashMapOf<String, Any?>(
             "uid" to user.uid,
-            "displayName" to (user.displayName ?: ""),
+            "displayName" to resolvedName,
             "email" to (user.email ?: ""),
             "phoneNumber" to (user.phoneNumber ?: ""),
             "photoUrl" to user.photoUrl?.toString(),
