@@ -1,6 +1,7 @@
 package com.example
 
 import android.os.Bundle
+import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -108,11 +109,31 @@ import com.example.ui.theme.AppThemeMode
 import com.example.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
+    private var pendingStoreDeepLink by mutableStateOf<String?>(null)
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        pendingStoreDeepLink = intent.data?.takeIf {
+            it.scheme == "omni" && it.host == "tienda"
+        }?.lastPathSegment
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        pendingStoreDeepLink = intent?.data?.takeIf {
+            it.scheme == "omni" && it.host == "tienda"
+        }?.lastPathSegment
         enableEdgeToEdge()
         setContent {
             val viewModel: MainViewModel = viewModel()
+            val deepLinkStoreId = pendingStoreDeepLink
+            LaunchedEffect(deepLinkStoreId) {
+                deepLinkStoreId?.let { storeId ->
+                    viewModel.openStoreById(storeId)
+                    pendingStoreDeepLink = null
+                }
+            }
             val themeMode by viewModel.themeMode.collectAsState()
             var showSplash by rememberSaveable { mutableStateOf(true) }
 
