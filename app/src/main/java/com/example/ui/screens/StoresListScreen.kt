@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.LocalOffer
@@ -191,29 +192,17 @@ fun StoresListScreen(
     ) {
         // Buscador principal compacto y visible
         item {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                placeholder = { Text("Buscar comercios, farmacias, kioscos...") },
-                leadingIcon = {
-                    Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = EmeraldPrimary)
-                },
-                trailingIcon = {
-                    if (searchQuery.isNotBlank()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(imageVector = Icons.Default.Clear, contentDescription = "Borrar")
-                        }
+            Surface(modifier = Modifier.fillMaxWidth().height(46.dp), color = MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(12.dp)) {
+                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Icon(Icons.Default.Search, contentDescription = null, tint = EmeraldPrimary, modifier = Modifier.size(19.dp))
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                        if (searchQuery.isBlank()) Text("Buscar comercios o servicios...", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                        BasicTextField(value = searchQuery, onValueChange = { searchQuery = it }, singleLine = true, textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp), modifier = Modifier.fillMaxWidth().testTag("input_search_stores"))
                     }
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp)
-                    .testTag("input_search_stores")
-            )
+                    if (searchQuery.isNotBlank()) IconButton(onClick = { searchQuery = "" }, modifier = Modifier.size(30.dp)) { Icon(Icons.Default.Clear, contentDescription = "Borrar búsqueda", modifier = Modifier.size(17.dp)) }
+                }
+            }
         }
-
 
         // Banner de Detección GPS en Vivo con Radio Configurable y Botón Buscar Nuevamente
         item {
@@ -235,9 +224,7 @@ fun StoresListScreen(
                             Text("${filteredAndRankedStores.size}", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color.White, modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp))
                         }
                         Icon(Icons.Default.Map, contentDescription = "Configurar radar", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(17.dp))
-                    }
-                    TextButton(onClick = { showRadarControls = !showRadarControls }, modifier = Modifier.align(Alignment.End), contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)) {
-                        Text(if (showRadarControls) "Ocultar controles del radar ▲" else "Configurar radar y búsqueda avanzada ▼", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(if (showRadarControls) "▲" else "▼", color = MaterialTheme.colorScheme.primary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                     if (showRadarControls) {
                         val activeKey = viewModel.getGoogleApiKey(context)
