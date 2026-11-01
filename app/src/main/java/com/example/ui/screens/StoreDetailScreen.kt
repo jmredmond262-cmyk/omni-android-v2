@@ -514,6 +514,15 @@ fun StoreDetailScreen(
                                 fontSize = 13.sp,
                                 color = SlateNavy
                             )
+                            if (product.description.isNotBlank()) {
+                                Text(
+                                    text = product.description,
+                                    fontSize = 11.sp,
+                                    lineHeight = 15.sp,
+                                    color = Color(0xFF64748B),
+                                    maxLines = 3
+                                )
+                            }
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     text = "$${String.format("%,.0f", product.price)}",
