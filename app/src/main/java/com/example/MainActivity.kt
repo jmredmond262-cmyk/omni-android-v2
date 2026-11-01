@@ -531,11 +531,11 @@ fun CyberBottomDock(
         Surface(
             shape = RoundedCornerShape(26.dp),
             color = Color(0xFF0D1627),
-            border = androidx.compose.foundation.BorderStroke(1.2.dp, Color(0xFF1E2F4E)),
+            border = androidx.compose.foundation.BorderStroke(1.4.dp, CyberGlowCyan.copy(alpha = 0.72f)),
             shadowElevation = 14.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(64.dp)
+                .height(68.dp)
         ) {
             Row(
                 modifier = Modifier
@@ -597,7 +597,7 @@ fun CyberBottomDock(
                 .size(62.dp)
                 .clip(CircleShape)
                 .background(Color(0xFF080E1C))
-                .border(2.dp, CyberGlowAmber.copy(alpha = 0.7f), CircleShape)
+                .border(2.dp, CyberGlowCyan.copy(alpha = 0.95f), CircleShape)
                 .clickable { onNavigate(Screen.OmniAi) }
                 .testTag("nav_central_ai_orb"),
             contentAlignment = Alignment.Center
@@ -607,7 +607,7 @@ fun CyberBottomDock(
                 modifier = Modifier
                     .size(50.dp)
                     .clip(CircleShape)
-                    .background(CyberOrbGradient),
+                    .background(Brush.radialGradient(listOf(Color(0xFF6AF0FF), Color(0xFF087BFF), Color(0xFF082A78)))),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -642,7 +642,7 @@ fun CyberDockItem(
         Icon(
             imageVector = icon,
             contentDescription = label,
-            tint = if (selected) CyberGlowCyan else Color(0xFF64748B),
+            tint = if (selected) CyberGlowCyan else Color(0xFF8298B8),
             modifier = Modifier.size(22.dp)
         )
         Spacer(modifier = Modifier.height(2.dp))
@@ -650,7 +650,7 @@ fun CyberDockItem(
             text = label,
             fontSize = 10.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            color = if (selected) CyberGlowCyan else Color(0xFF64748B)
+            color = if (selected) CyberGlowCyan else Color(0xFF8298B8)
         )
     }
 }
