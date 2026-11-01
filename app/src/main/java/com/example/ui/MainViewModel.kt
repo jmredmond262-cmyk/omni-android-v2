@@ -1225,7 +1225,7 @@ class MainViewModel : ViewModel() {
         listOf(
             OmniAiMessage(
                 sender = AiSender.OMNI_AI,
-                text = "¡Hola! Soy **Omni AI**, tu asistente inteligente local. Conozco los comercios de tu zona, farmacias de turno, remises, horarios y las mejores ofertas en tiempo real.\n\n¿En qué te puedo ayudar hoy?",
+                text = "¡Hola! Soy **Omni AI**. Puedo ayudarte a encontrar comercios, servicios, ofertas y recorridos cercanos. ¿Qué necesitás resolver hoy?",
                 timestamp = "Ahora",
                 actions = emptyList(),
                 tag = "BIENVENIDA"
@@ -1391,7 +1391,7 @@ class MainViewModel : ViewModel() {
         _aiMessages.value = listOf(
             OmniAiMessage(
                 sender = AiSender.OMNI_AI,
-                text = "Conversación reiniciada. ¿En qué te puedo asesorar hoy en tu ciudad?",
+                text = "Conversación reiniciada. ¿Qué necesitás resolver en tu zona?",
                 timestamp = "Ahora",
                 actions = emptyList()
             )
