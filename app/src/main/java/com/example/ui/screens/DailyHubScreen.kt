@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -55,7 +56,8 @@ import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -636,47 +638,57 @@ fun DailyHubScreen(
     }
 
     selectedExperience?.let { experience ->
-        AlertDialog(
-            onDismissRequest = { selectedExperience = null },
-            containerColor = Color(0xFF101B30),
-            title = { Text(experience, color = Color.White, fontWeight = FontWeight.ExtraBold) },
-            text = {
-                if (experience == "OMNI Turista") {
-                    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                        Text("Descubrí lugares para visitar cerca de $displayLocality. Las distancias se calculan desde la ubicación guardada en OMNI.", color = Color(0xFFD2DCEC), fontSize = 12.sp)
+        if (experience == "OMNI Turista") {
+            Dialog(onDismissRequest = { selectedExperience = null }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                Surface(modifier = Modifier.fillMaxWidth(0.94f).heightIn(max = 620.dp), color = Color(0xFF101B30), shape = RoundedCornerShape(22.dp)) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("OMNI TURISTA", color = CyberGlowCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                Text("Lugares para descubrir", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+                            }
+                            IconButton(onClick = { selectedExperience = null }) { Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = Color.White) }
+                        }
+                        Text("Cerca de $displayLocality · ${touristAttractions.size} atractivos disponibles", color = Color(0xFFB8C8D9), fontSize = 11.sp)
                         if (touristAttractions.isEmpty()) {
-                            Text("Todavía no tenemos atractivos cargados dentro del radio cercano. Actualizá tu ubicación desde el perfil para consultar otros destinos.", color = Color(0xFFD2DCEC), fontSize = 11.sp)
+                            Box(modifier = Modifier.fillMaxWidth().height(190.dp), contentAlignment = Alignment.Center) {
+                                Text("Todavía no hay atractivos cargados en esta zona. Actualizá tu ubicación desde el perfil para consultar otros destinos.", color = Color(0xFFD2DCEC), fontSize = 12.sp)
+                            }
                         } else {
-                            touristAttractions.take(5).forEach { attraction ->
-                                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF172943)), shape = RoundedCornerShape(12.dp)) {
-                                    Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Text(attraction.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                        Text("${attraction.category} · ${String.format("%.1f", attraction.distanceKm)} km · ${attraction.estimatedVisitTime}", color = CyberGlowCyan, fontSize = 10.sp)
-                                        Text(attraction.description, color = Color(0xFFB8C8D9), fontSize = 10.sp)
-                                        TextButton(onClick = {
-                                            viewModel.searchTrip(displayLocality, attraction.name)
-                                            viewModel.navigateTo(Screen.TripPlanner)
-                                            selectedExperience = null
-                                        }) { Text("Planificar visita →", color = CyberGlowAmber, fontSize = 11.sp) }
+                            LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 430.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                                items(touristAttractions.take(20)) { attraction ->
+                                    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF172943)), shape = RoundedCornerShape(14.dp)) {
+                                        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                            Text(attraction.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                            Text("${attraction.category} · ${String.format("%.1f", attraction.distanceKm)} km · ${attraction.estimatedVisitTime}", color = CyberGlowCyan, fontSize = 10.sp)
+                                            Text(attraction.description, color = Color(0xFFB8C8D9), fontSize = 11.sp)
+                                            Button(onClick = {
+                                                viewModel.searchTrip(displayLocality, attraction.name)
+                                                viewModel.navigateTo(Screen.TripPlanner)
+                                                selectedExperience = null
+                                            }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF164B63)), contentPadding = PaddingValues(vertical = 8.dp)) {
+                                                Text("Planificar visita", color = CyberGlowCyan, fontSize = 11.sp)
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
+                        TextButton(onClick = { selectedExperience = null }, modifier = Modifier.align(Alignment.End)) { Text("Cerrar", color = CyberGlowCyan) }
                     }
-                } else {
-                    Text(
-                        when (experience) {
-                            "OMNI Joven" -> "Beneficios para estudiantes: descuentos, promociones, cupones y recompensas en comercios adheridos."
-                            "OMNI Flash" -> "Promociones de duración limitada y oportunidades cercanas publicadas por comercios."
-                            else -> "Un espacio para consultar puntos, beneficios acumulados y futuras opciones de canje."
-                        } + "\n\nEste módulo se encuentra en desarrollo.",
-                        color = Color(0xFFD2DCEC)
-                    )
                 }
-            },
-
-            confirmButton = { TextButton(onClick = { selectedExperience = null }) { Text("Entendido", color = CyberGlowCyan) } }
-        )
+            }
+        } else {
+            AlertDialog(onDismissRequest = { selectedExperience = null }, containerColor = Color(0xFF101B30),
+                title = { Text(experience, color = Color.White, fontWeight = FontWeight.ExtraBold) },
+                text = { Text(when (experience) {
+                    "OMNI Joven" -> "Beneficios para estudiantes: descuentos, promociones, cupones y recompensas en comercios adheridos."
+                    "OMNI Flash" -> "Promociones de duración limitada y oportunidades cercanas publicadas por comercios."
+                    else -> "Un espacio para consultar puntos, beneficios acumulados y futuras opciones de canje."
+                } + "\n\nEste módulo se encuentra en desarrollo.", color = Color(0xFFD2DCEC)) },
+                confirmButton = { TextButton(onClick = { selectedExperience = null }) { Text("Entendido", color = CyberGlowCyan) } }
+            )
+        }
     }
 }
 
