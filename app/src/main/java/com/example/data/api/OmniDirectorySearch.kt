@@ -123,7 +123,12 @@ object OmniDirectorySearch {
         // Prioridad semántica: salud y gastronomía antes del genérico shop=commerce.
         val priority = listOf("health", "food", "education", "government", "transport", "finance", "auto", "tourism", "services", "commerce")
         for(group in priority){
-            val filters = groups[group].orEmpty()if(filters.any{f->val v=tags.optString(f.key);v.isNotBlank()&&(f.values==null||f.values.split("|").contains(v))})return group
+            val filters = groups[group].orEmpty()
+            if(filters.any { filter ->
+                val value = tags.optString(filter.key)
+                value.isNotBlank() && (filter.values == null || filter.values.split("|").contains(value))
+            }) return group
+        }
         return "services"
     }
     private fun distanceMeters(a:Double,b:Double,c:Double,d:Double):Double{
