@@ -151,7 +151,10 @@ class MainActivity : ComponentActivity() {
                 delay(2600)
                 showSplash = false
                 val briefingPrefs = getSharedPreferences("omni_session", android.content.Context.MODE_PRIVATE)
-                if (!briefingPrefs.getBoolean("morning_briefing_seen", false)) {
+                if (
+                    !briefingPrefs.getBoolean("morning_briefing_seen", false) &&
+                    viewModel.currentScreen.value !is Screen.StoreDetail
+                ) {
                     viewModel.navigateTo(Screen.MorningBriefing)
                 }
             }
