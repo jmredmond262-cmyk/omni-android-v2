@@ -312,7 +312,7 @@ fun DailyHubScreen(
                     1.dp,
                     if (weatherAlerts.isNotEmpty()) Color(0xFFEF4444).copy(alpha = 0.6f) else Color(0xFF1E2D4A)
                 ),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().clickable { viewModel.navigateTo(Screen.Weather) }
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
                     // Estado del clima local en vivo
@@ -350,6 +350,14 @@ fun DailyHubScreen(
                             )
                         }
                     }
+
+                    Text(
+                        text = "Ver pronóstico por hora y 7 días  ›",
+                        color = CyberGlowCyan,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
 
                     // Si hay alertas climáticas o avisos de catástrofe activa
                     if (weatherAlerts.isNotEmpty()) {
