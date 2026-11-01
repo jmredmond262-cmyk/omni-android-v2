@@ -731,7 +731,7 @@ object SampleData {
     )
 
     val sampleMorningBriefing = com.example.model.MorningBriefing(
-        greeting = "¡Buen día, Santiago! Esperamos que tengas una excelente jornada.",
+        greeting = "¡Buen día! Esperamos que tengas una excelente jornada.",
         dateText = "Jueves, 29 de Octubre • Comienzo de día",
         weatherSummary = "Cielo despejado a algo nublado con brisa agradable",
         temperatureRange = "Min 17°C • Máx 28°C",
