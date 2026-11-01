@@ -13,6 +13,24 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.UUID
 
+data class WeatherHour(
+    val time: String,
+    val temperatureC: Double,
+    val precipitationProbability: Int,
+    val weatherCode: Int,
+    val windSpeedKmh: Double
+)
+
+data class WeatherDay(
+    val date: String,
+    val minC: Double,
+    val maxC: Double,
+    val precipitationProbability: Int,
+    val weatherCode: Int,
+    val sunrise: String,
+    val sunset: String
+)
+
 data class RealWeatherData(
     val temperatureC: Double,
     val apparentTemperatureC: Double,
@@ -22,7 +40,10 @@ data class RealWeatherData(
     val weatherCode: Int,
     val precipitationMm: Double,
     val isDay: Boolean,
-    val locationName: String
+    val locationName: String,
+    val observedAt: String,
+    val hourly: List<WeatherHour>,
+    val daily: List<WeatherDay>
 )
 
 object RealWeatherApi {
@@ -35,8 +56,10 @@ object RealWeatherApi {
     ): Result<RealWeatherData> = withContext(Dispatchers.IO) {
         try {
             val urlString = "https://api.open-meteo.com/v1/forecast?latitude=$latitude&longitude=$longitude" +
-                    "&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m" +
-                    "&timezone=auto"
+                     "&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,showers,weather_code,wind_speed_10m" +
+                    "&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m" +
+                    "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset" +
+                    "&forecast_days=7&timezone=auto"
 
             val url = URL(urlString)
             val connection = (url.openConnection() as HttpURLConnection).apply {
@@ -61,6 +84,44 @@ object RealWeatherApi {
                 val isDay = current.optInt("is_day", 1) == 1
 
                 val desc = getWeatherDescription(code)
+                val hourlyJson = json.optJSONObject("hourly")
+                val dailyJson = json.optJSONObject("daily")
+                val hourlyTimes = hourlyJson?.optJSONArray("time")
+                val hourlyTemps = hourlyJson?.optJSONArray("temperature_2m")
+                val hourlyRain = hourlyJson?.optJSONArray("precipitation_probability")
+                val hourlyCodes = hourlyJson?.optJSONArray("weather_code")
+                val hourlyWind = hourlyJson?.optJSONArray("wind_speed_10m")
+                val hourly = mutableListOf<WeatherHour>()
+                val hourCount = minOf(hourlyTimes?.length() ?: 0, hourlyTemps?.length() ?: 0)
+                for (i in 0 until hourCount) {
+                    hourly.add(WeatherHour(
+                        time = hourlyTimes?.optString(i).orEmpty(),
+                        temperatureC = hourlyTemps?.optDouble(i) ?: temp,
+                        precipitationProbability = hourlyRain?.optInt(i) ?: 0,
+                        weatherCode = hourlyCodes?.optInt(i) ?: code,
+                        windSpeedKmh = hourlyWind?.optDouble(i) ?: wind
+                    ))
+                }
+                val dailyTimes = dailyJson?.optJSONArray("time")
+                val dailyMin = dailyJson?.optJSONArray("temperature_2m_min")
+                val dailyMax = dailyJson?.optJSONArray("temperature_2m_max")
+                val dailyRain = dailyJson?.optJSONArray("precipitation_probability_max")
+                val dailyCodes = dailyJson?.optJSONArray("weather_code")
+                val sunrise = dailyJson?.optJSONArray("sunrise")
+                val sunset = dailyJson?.optJSONArray("sunset")
+                val days = mutableListOf<WeatherDay>()
+                val dayCount = dailyTimes?.length() ?: 0
+                for (i in 0 until dayCount) {
+                    days.add(WeatherDay(
+                        date = dailyTimes?.optString(i).orEmpty(),
+                        minC = dailyMin?.optDouble(i) ?: temp,
+                        maxC = dailyMax?.optDouble(i) ?: temp,
+                        precipitationProbability = dailyRain?.optInt(i) ?: 0,
+                        weatherCode = dailyCodes?.optInt(i) ?: code,
+                        sunrise = sunrise?.optString(i).orEmpty(),
+                        sunset = sunset?.optString(i).orEmpty()
+                    ))
+                }
 
                 Result.success(
                     RealWeatherData(
@@ -72,7 +133,10 @@ object RealWeatherApi {
                         weatherCode = code,
                         precipitationMm = rain,
                         isDay = isDay,
-                        locationName = locationLabel
+                        locationName = locationLabel,
+                        observedAt = current.optString("time", ""),
+                        hourly = hourly,
+                        daily = days
                     )
                 )
             } else {
@@ -151,8 +215,9 @@ object RealWeatherApi {
 
     private fun getWeatherDescription(code: Int): String {
         return when (code) {
-            0 -> "Cielo despejado"
-            1, 2 -> "Parcialmente nublado"
+            0 -> "Despejado"
+            1 -> "Mayormente despejado"
+            2 -> "Parcialmente nublado"
             3 -> "Nublado"
             45, 48 -> "Niebla o neblina"
             51, 53, 55 -> "Llovizna leve"
