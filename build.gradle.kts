@@ -19,6 +19,16 @@ android {
     versionCode = 1
     versionName = "1.0"
 
+    // Inyecta la clave desde GitHub Actions o desde la variable de entorno local.
+    val googleMapsApiKey = System.getenv("GOOGLE_MAPS_API_KEY")
+      ?: rootProject.file(".env").takeIf { it.exists() }
+        ?.readLines()
+        ?.firstOrNull { it.startsWith("GOOGLE_MAPS_API_KEY=") }
+        ?.substringAfter("=")
+        ?.trim()
+      ?: ""
+    buildConfigField("String", "GOOGLE_MAPS_API_KEY", "\"${googleMapsApiKey}\"")
+
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
