@@ -90,9 +90,9 @@ fun OmniAiScreen(
     }
 
     val quickPrompts = listOf(
-        "💊 Farmacias de turno",
-        "🍽️ Comercios y ofertas en $displayLocality",
-        "🚕 Calcular un viaje"
+        "❔ ¿Cómo uso OMNI?",
+        "🏪 ¿Cómo publico mi comercio?",
+        "📍 Comercios y ofertas en $displayLocality"
     )
 
     Column(
@@ -242,7 +242,7 @@ fun OmniAiScreen(
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = "Omni AI está procesando la información local...",
+                            text = "Omni AI está consultando a Gemini...",
                             fontSize = 12.sp,
                             color = Color(0xFF94A3B8)
                         )
