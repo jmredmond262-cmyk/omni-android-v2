@@ -57,7 +57,7 @@ object GooglePlacesApi {
         }
 
         // 3. Clave de demostración activa provista por el usuario
-        return "AIzaSyApzwMwuoqteI9cqJLJFZDJtM7jjgoPORA"
+        return "" // La clave se configura externamente; nunca incluirla en el código fuente.
     }
 
     /**
