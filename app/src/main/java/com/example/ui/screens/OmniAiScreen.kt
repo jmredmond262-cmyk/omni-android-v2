@@ -90,12 +90,9 @@ fun OmniAiScreen(
     }
 
     val quickPrompts = listOf(
-        "💊 ¿Qué farmacias están de turno hoy?",
-        "🍔 Dónde pedir comida rica en $displayLocality",
-        "🚕 Calcular viaje en remis",
-        "🛒 Comparar precios de la canasta",
-        "💳 ¿Cómo pagar con OmniPay?",
-        "🏪 Activar mi comercio en Omni Business"
+        "💊 Farmacias de turno",
+        "🍽️ Comercios y ofertas en $displayLocality",
+        "🚕 Calcular un viaje"
     )
 
     Column(
