@@ -211,7 +211,7 @@ fun DailyHubScreen(
             title = "Más",
             subtitle = "Explorá comercios y mapas",
             icon = Icons.Default.GridView,
-            accentColor = CyberGlowCyan,
+            accentColor = Color(0xFF54E5FF),
             onClick = {
                 viewModel.setScheduleFilter(StoreScheduleFilter.TODOS)
                 viewModel.navigateTo(Screen.StoresList)
