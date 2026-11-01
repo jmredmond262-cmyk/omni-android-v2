@@ -186,9 +186,35 @@ fun StoresListScreen(
         modifier = modifier
             .fillMaxSize()
             .testTag("stores_list_screen"),
-        contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 100.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        contentPadding = PaddingValues(start = 12.dp, top = 10.dp, end = 12.dp, bottom = 100.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        // Buscador principal compacto y visible
+        item {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = { Text("Buscar comercios, farmacias, kioscos...") },
+                leadingIcon = {
+                    Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = EmeraldPrimary)
+                },
+                trailingIcon = {
+                    if (searchQuery.isNotBlank()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(imageVector = Icons.Default.Clear, contentDescription = "Borrar")
+                        }
+                    }
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp)
+                    .testTag("input_search_stores")
+            )
+        }
+
+
         // Banner de Detección GPS en Vivo con Radio Configurable y Botón Buscar Nuevamente
         item {
             Card(
@@ -196,42 +222,21 @@ fun StoresListScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Radar de Comercios en Vivo",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = "📍 Zona: $currentCity • Radio: ${if (searchRadius >= 1000) "${searchRadius / 1000} km" else "$searchRadius m"}",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
+                Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth().clickable { showRadarControls = !showRadarControls }.padding(vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Surface(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), shape = RoundedCornerShape(10.dp)) {
+                            Icon(Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(9.dp).size(18.dp))
                         }
-
-                        Surface(
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(
-                                text = "${filteredAndRankedStores.size} Locales",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = Color.White,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("Radar cercano", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
+                            Text("$currentCity · ${if (searchRadius >= 1000) "${searchRadius / 1000} km" else "$searchRadius m"}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                         }
+                        Surface(color = MaterialTheme.colorScheme.primary, shape = RoundedCornerShape(8.dp)) {
+                            Text("${filteredAndRankedStores.size}", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color.White, modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp))
+                        }
+                        Icon(Icons.Default.Map, contentDescription = "Configurar radar", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(17.dp))
                     }
-
-                    TextButton(onClick = { showRadarControls = !showRadarControls }, modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 5.dp)) {
+                    TextButton(onClick = { showRadarControls = !showRadarControls }, modifier = Modifier.align(Alignment.End), contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)) {
                         Text(if (showRadarControls) "Ocultar controles del radar ▲" else "Configurar radar y búsqueda avanzada ▼", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                     if (showRadarControls) {
@@ -372,29 +377,6 @@ fun StoresListScreen(
                     lonUsuario = userProfile.currentLongitude
                 )
             }
-        }
-
-        // Barra de Búsqueda
-        item {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                label = { Text("Buscar comercios, farmacias, kioscos o súper...") },
-                leadingIcon = {
-                    Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = EmeraldPrimary)
-                },
-                trailingIcon = {
-                    if (searchQuery.isNotBlank()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(imageVector = Icons.Default.Clear, contentDescription = "Borrar")
-                        }
-                    }
-                },
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("input_search_stores")
-            )
         }
 
         // Filtro por Horarios & Guardia (Requerimiento Clave)
