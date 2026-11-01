@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.LunchDining
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Redeem
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
@@ -403,6 +404,20 @@ fun DailyHubScreen(
                                         fontSize = 10.sp,
                                         color = Color(0xFFE2E8F0)
                                     )
+                                }
+                                IconButton(
+                                    onClick = {
+                                        val message = "⚠️ ${alert.title}\n\n${alert.description}\n\nIndicaciones: ${alert.instructions}\nVálido hasta: ${alert.validUntil}\n\nCompartido desde OMNI"
+                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(Intent.EXTRA_SUBJECT, alert.title)
+                                            putExtra(Intent.EXTRA_TEXT, message)
+                                        }
+                                        context.startActivity(Intent.createChooser(shareIntent, "Compartir alerta OMNI"))
+                                    },
+                                    modifier = Modifier.size(30.dp)
+                                ) {
+                                    Icon(Icons.Default.Share, contentDescription = "Compartir alerta", tint = CyberGlowCyan, modifier = Modifier.size(16.dp))
                                 }
                                 IconButton(
                                     onClick = { viewModel.dismissAlert(alert.id) },
