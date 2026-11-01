@@ -26,7 +26,8 @@ data class StoreProduct(
     val inStock: Boolean = true,
     val unitLabel: String = "unid.",
     val photoUri: String? = null,
-    val barcode: String? = null
+    val barcode: String? = null,
+    val description: String = ""
 )
 
 data class Store(
