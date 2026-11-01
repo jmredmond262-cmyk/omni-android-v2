@@ -1110,7 +1110,8 @@ class MainViewModel : ViewModel() {
         price: Double,
         originalPrice: Double?,
         photoUri: String? = null,
-        barcode: String? = null
+        barcode: String? = null,
+        description: String = ""
     ) {
         val current = _managedStore.value
         val newProd = StoreProduct(
@@ -1121,7 +1122,8 @@ class MainViewModel : ViewModel() {
             originalPrice = originalPrice,
             inStock = true,
             photoUri = photoUri,
-            barcode = barcode
+            barcode = barcode,
+            description = description
         )
         val updated = current.copy(inventory = listOf(newProd) + current.inventory)
         _managedStore.value = updated
