@@ -672,30 +672,7 @@ fun CyberBottomDock(
                     testTag = "nav_daily_hub"
                 )
 
-                // 2. Chat (Omni AI)
-                CyberDockItem(
-                    icon = Icons.Default.ChatBubbleOutline,
-                    label = "Chat",
-                    selected = currentScreen is Screen.OmniAi,
-                    onClick = { onNavigate(Screen.OmniAi) },
-                    modifier = Modifier.weight(1f),
-                    testTag = "nav_chat"
-                )
-
-                // Espacio reservado para el Orbe Central 3D "Ai"
-                Spacer(modifier = Modifier.weight(1.3f))
-
-                // 4. Billetera (OmniPay)
-                CyberDockItem(
-                    icon = Icons.Default.AccountBalanceWallet,
-                    label = "Billetera",
-                    selected = currentScreen is Screen.Wallet,
-                    onClick = { onNavigate(Screen.Wallet) },
-                    modifier = Modifier.weight(1f),
-                    testTag = "nav_wallet"
-                )
-
-                // 5. Contactos y servicios del barrio
+                // 2. Contactos: segundo acceso del bloque izquierdo
                 CyberDockItem(
                     icon = Icons.Default.People,
                     label = "Contactos",
@@ -705,7 +682,20 @@ fun CyberBottomDock(
                     testTag = "nav_contacts"
                 )
 
-                // 6. Perfil (Perfil / Omni Business)
+                // Orbe central: acceso único a Omni AI (evita duplicar Chat + Orbe)
+                Spacer(modifier = Modifier.weight(1.3f))
+
+                // 3. Billetera (OmniPay)
+                CyberDockItem(
+                    icon = Icons.Default.AccountBalanceWallet,
+                    label = "Billetera",
+                    selected = currentScreen is Screen.Wallet,
+                    onClick = { onNavigate(Screen.Wallet) },
+                    modifier = Modifier.weight(1f),
+                    testTag = "nav_wallet"
+                )
+
+                // 4. Perfil (Perfil / Omni Business)
                 CyberDockItem(
                     icon = Icons.Default.Person,
                     label = "Perfil",
