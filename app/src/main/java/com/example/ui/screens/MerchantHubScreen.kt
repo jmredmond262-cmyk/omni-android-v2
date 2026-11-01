@@ -628,7 +628,7 @@ fun MerchantHubScreen(
                             Text(text = news.content, fontSize = 11.sp, color = Color.DarkGray)
                             TextButton(
                                 onClick = {
-                                    val message = "${news.badge}\n${news.title}\n${news.content}\n\nCompartido desde OMNI"
+                                    val message = "${news.badge}\n${news.title}\n${news.content}\n\nComercio: ${store.name}\n${store.address}\nAbrí la tienda en OMNI: omni://tienda/${store.id}"
                                     val intent = Intent(Intent.ACTION_SEND).apply {
                                         type = "text/plain"
                                         putExtra(Intent.EXTRA_SUBJECT, news.title)
@@ -890,7 +890,7 @@ fun MerchantHubScreen(
                     }
                     IconButton(
                         onClick = {
-                            val message = "🔥 ${combo.title}\n${combo.description}\nDescuento: ${combo.discountBadge}\n\nCompartido desde OMNI"
+                            val message = "🔥 ${combo.title}\n${combo.description}\nDescuento: ${combo.discountBadge}\n\nComercio: ${store.name}\n${store.description}\n${store.address}\nAbrí la tienda en OMNI: omni://tienda/${store.id}"
                             val send = Intent(Intent.ACTION_SEND).apply {
                                 type = "text/plain"
                                 putExtra(Intent.EXTRA_SUBJECT, combo.title)
