@@ -492,6 +492,7 @@ fun OmniApp(viewModel: MainViewModel) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
                 .padding(innerPadding)
         ) {
             Crossfade(targetState = currentScreen, label = "screen_crossfade") { screen ->
