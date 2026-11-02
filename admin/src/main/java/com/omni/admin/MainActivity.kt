@@ -276,13 +276,21 @@ private fun PasswordLinkScreen(
   var confirmation by remember { mutableStateOf("") }
   var loading by remember { mutableStateOf(false) }
   var message by remember { mutableStateOf("") }
+  var authStep by remember { mutableStateOf("Preparando vinculación") }
   val email = user.email.orEmpty()
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
 
   fun showAuthError(ex: Exception) {
+    val firebaseAuthError = ex as? com.google.firebase.auth.FirebaseAuthException
     val firebaseError = ex as? com.google.firebase.FirebaseException
-    message = (ex.localizedMessage ?: "No se pudo completar la autenticación.") + " (" + (firebaseError?.message ?: ex.javaClass.simpleName) + ")"
+    message = buildString {
+      append("Etapa: ").append(authStep).append("\\n")
+      append("Tipo: ").append(ex.javaClass.simpleName)
+      if (firebaseAuthError != null) append("\\nCódigo Firebase: ").append(firebaseAuthError.errorCode)
+      append("\\nDetalle: ").append(ex.localizedMessage ?: firebaseError?.message ?: "Sin detalle")
+      ex.cause?.let { append("\\nCausa: ").append(it.javaClass.simpleName).append(": ").append(it.localizedMessage ?: "sin detalle") }
+    }
     loading = false
   }
 
@@ -312,6 +320,7 @@ private fun PasswordLinkScreen(
           message = "Volvé a verificar tu cuenta de Google para autorizar el cambio…"
           scope.launch {
             try {
+              authStep = "Obteniendo una nueva credencial de Google"
               val clientIdResource = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
               if (clientIdResource == 0) throw IllegalStateException("No se encontró el cliente OAuth web de Firebase.")
               val serverClientId = context.getString(clientIdResource)
@@ -324,8 +333,10 @@ private fun PasswordLinkScreen(
               val token = GoogleIdTokenCredential.createFrom(credential.data).idToken
               val googleCredential = com.google.firebase.auth.GoogleAuthProvider.getCredential(token, null)
               // Reauthenticate the exact current Firebase user before linking the password.
+              authStep = "Reautenticando la cuenta actual de Firebase con Google"
               user.reauthenticate(googleCredential)
                 .addOnSuccessListener {
+                  authStep = "Vinculando correo y contraseña al mismo UID"
                   val passwordCredential = EmailAuthProvider.getCredential(email, newPassword)
                   user.linkWithCredential(passwordCredential)
                     .addOnSuccessListener { result ->
