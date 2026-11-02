@@ -157,8 +157,8 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
     val total = cartLines.sumOf { it.price * it.quantity }
 
     fun submitOrder() {
-        if (uid.isBlank() || cartLines.isEmpty() || total <= 0.0 || (fulfillmentType == "DELIVERY" && deliveryAddress.isBlank())) {
-            feedback = "Agregá al menos un producto disponible antes de enviar el pedido."
+        if (uid.isBlank() || cartLines.isEmpty() || cartLines.size > 30 || total <= 0.0 || total > 500000.0 || (fulfillmentType == "DELIVERY" && deliveryAddress.isBlank())) {
+            feedback = "Revisá el pedido: máximo 30 productos distintos, total hasta OM$ 500.000 y dirección obligatoria para delivery."
             return
         }
         sending = true
@@ -256,7 +256,13 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
             else LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(vertical = 10.dp, bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(store.inventory.filter { it.inStock }, key = { it.id }) { product ->
                     OrderProductRow(product, cart[product.id] ?: 0,
-                        onAdd = { cart = cart + (product.id to ((cart[product.id] ?: 0) + 1)) },
+                        onAdd = {
+                            if (!cart.containsKey(product.id) && cart.size >= 30) {
+                                feedback = "El pedido admite hasta 30 productos distintos."
+                            } else {
+                                cart = cart + (product.id to ((cart[product.id] ?: 0) + 1))
+                            }
+                        },
                         onRemove = {
                             val next = (cart[product.id] ?: 0) - 1
                             cart = if (next <= 0) cart - product.id else cart + (product.id to next)
