@@ -1,16 +1,18 @@
 package com.example.data.analytics
 
+import android.util.Log
 import com.example.BuildConfig
-import com.google.firebase.firestore.FieldValue
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Timestamp
 import java.util.UUID
 
 /**
- * First-party product analytics compatible with the existing Firestore rules.
- * Records only module/event/version/session metadata; never message contents,
- * passwords, precise location, health data, or payment credentials.
+ * First-party product analytics. Stores only module/event/version/session metadata.
+ * No message contents, passwords, precise location, health data, or payment credentials.
  */
 object UsageAnalyticsRepository {
+    private const val TAG = "OmniUsageAnalytics"
     private val firestore by lazy { FirebaseFirestore.getInstance() }
     private val sessionId: String = UUID.randomUUID().toString()
 
@@ -26,16 +28,32 @@ object UsageAnalyticsRepository {
         record(uid, module, action)
     }
 
-    private fun record(uid: String, module: String, eventName: String) {
-        if (uid.isBlank()) return
+    private fun record(requestedUid: String, module: String, eventName: String) {
+        // Resolve identity from Firebase Auth as the source of truth; the UI profile
+        // can still be initializing when the first screen is composed.
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+            ?.takeIf { it.isNotBlank() }
+            ?: requestedUid.takeIf { it.isNotBlank() }
+            ?: return
+
         val event = hashMapOf<String, Any>(
             "uid" to uid,
-            "module" to module,
-            "event" to eventName,
+            "module" to module.take(80),
+            "event" to eventName.take(80),
             "sessionId" to sessionId,
             "appVersion" to BuildConfig.VERSION_NAME,
-            "createdAt" to FieldValue.serverTimestamp()
+            // Send an explicit Firestore timestamp instead of a server transform,
+            // so the security rule can validate the field as a timestamp at create time.
+            "createdAt" to Timestamp.now()
         )
-        firestore.collection("usageEvents").add(event)
+
+        firestore.collection("usageEvents")
+            .add(event)
+            .addOnSuccessListener { document ->
+                Log.d(TAG, "Evento registrado: $eventName / $module / ${document.id}")
+            }
+            .addOnFailureListener { error ->
+                Log.e(TAG, "No se pudo registrar $eventName / $module: ${error.message}", error)
+            }
     }
 }
