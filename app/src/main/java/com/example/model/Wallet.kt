@@ -5,7 +5,9 @@ enum class TransactionType {
     REINTEGRO_CASHBACK,
     CARGA_SALDO,
     TRANSFERENCIA_ENVIADA,
-    TRANSFERENCIA_RECIBIDA
+    TRANSFERENCIA_RECIBIDA,
+    QR_PAGO,
+    QR_COBRO
 }
 
 data class WalletTransaction(
