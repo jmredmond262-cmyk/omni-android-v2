@@ -117,6 +117,22 @@ service cloud.firestore {
 
     // OMNI Oportunidades: job and local-service listings.
     // Listings are visible to signed-in users; only the publisher can edit or remove them.
+    // OMNI Events: authenticated community calendar.
+    match /omniEvents/{eventId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 3000
+        && request.resource.data.location is string
+        && request.resource.data.dateTime is string
+        && request.resource.data.status == "PUBLISHED";
+      allow update, delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+    }
+
     match /jobPosts/{postId} {
       allow read: if signedIn();
       allow create: if signedIn()
