@@ -330,6 +330,29 @@ fun DailyHubScreen(
             }
         }
 
+        item {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF101B30)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, CyberGlowAmber.copy(alpha = 0.35f)),
+                modifier = Modifier.fillMaxWidth().clickable { viewModel.navigateTo(Screen.Events) }
+                    .testTag("home_events_entry")
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 13.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(11.dp)
+                ) {
+                    Text("📅", fontSize = 25.sp)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("Eventos y Agenda OMNI", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("Actividades, encuentros y propuestas de tu región", color = Color(0xFF9AAAC2), fontSize = 10.sp)
+                    }
+                    Text("ABRIR ›", color = CyberGlowAmber, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                }
+            }
+        }
+
         // ==========================================
         // 3. OMNI EXPERIENCE
         // ==========================================
