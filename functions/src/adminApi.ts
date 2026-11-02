@@ -147,11 +147,12 @@ export const omniAdminApi = onRequest({ region: REGION, timeoutSeconds: 60, memo
     const result = await handleAction(actor, action, data);
     response.status(200).json({ ok: true, result });
   } catch (error) {
-    const code = error instanceof HttpsError ? error.code : "internal";
+    const authCode = (error as { code?: string })?.code ?? "";
+    const code = error instanceof HttpsError ? error.code : authCode.startsWith("auth/") ? "unauthenticated" : "internal";
     const message = error instanceof Error ? error.message : "Error interno.";
     const status = code === "unauthenticated" ? 401 : code === "permission-denied" ? 403
       : code === "invalid-argument" ? 400 : 500;
     if (status === 500) console.error("omniAdminApi failed", error);
-    response.status(status).json({ ok: false, error: code, message: status === 500 ? "No se pudo completar la operación." : message });
+    response.status(status).json({ ok: false, error: code, message: status === 500 ? "No se pudo completar la operación." : code === "unauthenticated" ? "La sesión administrativa no es válida o venció. Ingresá nuevamente." : message });
   }
 });
