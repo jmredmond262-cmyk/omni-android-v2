@@ -226,6 +226,12 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    /** Reinicia el entorno de prueba sin tocar puntos ni datos bancarios. */
+    fun resetDemoWallet(context: Context) {
+        _wallet.value = UserWallet()
+        persistDemoWallet(context)
+    }
+
     /** Guarda saldo y movimientos localmente en el dispositivo. */
     fun persistDemoWallet(context: Context) {
         val current = _wallet.value
