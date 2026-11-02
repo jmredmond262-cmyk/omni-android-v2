@@ -156,3 +156,5 @@ export const topUpDemoWallet = onCall({ region: REGION }, async (request) => {
     return { operationId, status: "APROBADA · DEMO", duplicate: false };
   });
 });
+
+export { omniAdminApi } from "./adminApi.js";
