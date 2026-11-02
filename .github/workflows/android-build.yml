@@ -36,15 +36,16 @@ jobs:
       - name: Install Android SDK packages
         run: |
           "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36.1" "build-tools;36.0.0"
-      - name: Configure Firebase Android app
+      - name: Configure Firebase Android apps
         env:
           FIREBASE_GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON_BASE64 }}
         run: |
           if [ -n "$FIREBASE_GOOGLE_SERVICES_JSON_BASE64" ]; then
             printf '%s' "$FIREBASE_GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > app/google-services.json
-            echo "Firebase Android configuration installed for this build."
+            cp app/google-services.json admin/google-services.json
+            echo "Firebase configuration installed for OMNI and OMNI Admin."
           else
-            echo "Firebase secret not configured; continuing without google-services.json."
+            echo "Firebase secret not configured; both apps will compile without live Firebase configuration."
           fi
       - name: Configure optional API keys
         env:
@@ -69,7 +70,7 @@ jobs:
           fi
           keytool -list -v -keystore debug.keystore -storepass android -alias androiddebugkey | grep -E 'SHA1:|SHA256:'
       - name: Build debug APK
-        run: gradle :app:assembleDebug
+        run: gradle :app:assembleDebug :admin:assembleDebug
       - name: Upload one-time signing keystore
         if: ${{ steps.signing.outputs.generated == 'true' }}
         uses: actions/upload-artifact@v4
@@ -78,10 +79,17 @@ jobs:
           path: debug.keystore
           if-no-files-found: error
           retention-days: 1
-      - name: Upload APK
+      - name: Upload OMNI APK
         uses: actions/upload-artifact@v4
         with:
           name: omni-v2-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload OMNI Admin APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: omni-admin-debug-apk
+          path: admin/build/outputs/apk/debug/admin-debug.apk
           if-no-files-found: error
           retention-days: 14
