@@ -113,7 +113,10 @@ fun WalletScreen(
             walletRepository.ensureWallet { accountResult ->
                 if (!disposed) {
                     accountResult.fold(
-                        onSuccess = {
+                        onSuccess = { account ->
+                            viewModel.applyRemoteDemoWallet(
+                                account.balance, 0.0, emptyList(), account.alias, account.cvu
+                            )
                             registrations = walletRepository.observeWallet(currentUid) { remoteResult ->
                                 if (!disposed) remoteResult.fold(
                                     onSuccess = { snapshot ->
@@ -612,7 +615,7 @@ fun WalletScreen(
             title = { Text("Agregar saldo virtual de prueba") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Ingresa el monto a transferir desde tu cuenta bancaria o tarjeta:", fontSize = 13.sp)
+                    Text("Agregá saldo ficticio al entorno de pruebas. Límite: OM$ 50.000 por carga y OM$ 150.000 acumulados por cuenta.", fontSize = 13.sp)
                     OutlinedTextField(
                         value = addAmount,
                         onValueChange = { addAmount = it },
