@@ -63,14 +63,15 @@ values = {
 }
 os.makedirs("admin/src/main/res/values", exist_ok=True)
 with open("admin/src/main/res/values/firebase_config.xml", "w", encoding="utf-8") as f:
-    f.write("<resources>\\n")
+    f.write("<resources>\n")
     for key, value in values.items():
-        f.write(f'  <string name="{key}" translatable="false">{xml.escape(value)}</string>\\n')
-    f.write("</resources>\\n")
+        f.write(f'  <string name="{key}" translatable="false">{xml.escape(value)}</string>\n')
+    f.write("</resources>\n")
 PY
             echo "Firebase project resources configured for OMNI Admin."
           else
-            echo "Firebase secret not configured; OMNI Admin will compile but cannot connect until project resources are provided."
+            echo "::error::Falta FIREBASE_GOOGLE_SERVICES_JSON_BASE64. Se cancela la compilación para no publicar un APK de OMNI Admin sin conexión funcional a Firebase."
+            exit 1
           fi
       - name: Configure optional API keys
         env:
@@ -94,8 +95,8 @@ PY
             echo "A one-time debug key was generated. Save the keystore artifact and configure OMNI_DEBUG_KEYSTORE_BASE64 to keep this signing identity."
           fi
           keytool -list -v -keystore debug.keystore -storepass android -alias androiddebugkey | grep -E 'SHA1:|SHA256:'
-      - name: Build debug APK
-        run: gradle :app:assembleDebug :admin:assembleDebug
+      - name: Build OMNI APK
+        run: gradle :app:assembleDebug
       - name: Upload one-time signing keystore
         if: ${{ steps.signing.outputs.generated == 'true' }}
         uses: actions/upload-artifact@v4
@@ -111,6 +112,8 @@ PY
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
+      - name: Build OMNI Admin APK
+        run: gradle :admin:assembleDebug
       - name: Upload OMNI Admin APK
         uses: actions/upload-artifact@v4
         with:
