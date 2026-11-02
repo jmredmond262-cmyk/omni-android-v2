@@ -838,14 +838,14 @@ fun WalletTransactionCard(transaction: WalletTransaction, modifier: Modifier = M
 
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = "${if (transaction.amount > 0) "+" else ""}$${String.format("%,.2f", transaction.amount)}",
+                    text = "${if (transaction.amount > 0) "+" else ""}OM$ ${String.format("%,.2f", transaction.amount)}",
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
                     color = if (isIncome) EmeraldDark else SlateNavy
                 )
                 if (transaction.cashbackEarned > 0) {
                     Text(
-                        text = "+$${String.format("%,.2f", transaction.cashbackEarned)} cash",
+                        text = "+OM$ ${String.format("%,.2f", transaction.cashbackEarned)} virtuales",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = AmberDeal
