@@ -26,7 +26,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.NoCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.PhoneAuthOptions
@@ -233,11 +235,20 @@ private fun LoginScreen(
             .setServerClientId(serverClientId)
             .setAutoSelectEnabled(false)
             .build()
-          val request = GetCredentialRequest.Builder()
-            .addCredentialOption(googleOption)
-            .build()
-          val credential = CredentialManager.create(context)
-            .getCredential(context, request).credential
+          val credentialManager = CredentialManager.create(context)
+          val credential = try {
+            val request = GetCredentialRequest.Builder()
+              .addCredentialOption(googleOption)
+              .build()
+            credentialManager.getCredential(context, request).credential
+          } catch (noCredential: NoCredentialException) {
+            // No saved/eligible Google credential: launch the explicit Google sign-in flow.
+            val signInOption = GetSignInWithGoogleOption.Builder(serverClientId).build()
+            val signInRequest = GetCredentialRequest.Builder()
+              .addCredentialOption(signInOption)
+              .build()
+            credentialManager.getCredential(context, signInRequest).credential
+          }
           if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
             val token = GoogleIdTokenCredential.createFrom(credential.data).idToken
             complete(auth.signInWithCredential(com.google.firebase.auth.GoogleAuthProvider.getCredential(token, null)))
