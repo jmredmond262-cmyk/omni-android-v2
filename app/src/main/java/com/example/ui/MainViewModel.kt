@@ -71,6 +71,7 @@ sealed class Screen(val title: String) {
     object OmniAi : Screen("Omni AI Assistant")
     object MorningBriefing : Screen("OMNI Buenos Días")
     object Routine : Screen("Modo Rutina")
+    object JobBoard : Screen("Bolsa de Trabajo y Servicios")
 }
 
 data class CommunityAlert(
