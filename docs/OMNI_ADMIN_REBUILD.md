@@ -23,7 +23,7 @@ La configuración externa no puede generarse desde el repositorio: requiere acce
    - `OMNI_ADMIN_GOOGLE_SERVICES_JSON_BASE64`: contenido del archivo codificado en Base64.
    - `OMNI_ADMIN_AUTH_PROJECT_ID`: ID del proyecto Firebase de autenticación.
 6. Crear en ese proyecto de autenticación la cuenta administrativa con correo y contraseña. Confirmar el correo si la configuración lo exige.
-7. Copiar el UID de esa cuenta y, en Firestore del proyecto original `omni-57f69`, crear `systemAdmins/{UID}`:
+La cuenta nueva puede usar el mismo correo y la misma contraseña que tu cuenta OMNI actual: al estar en otro proyecto Firebase, será una identidad separada y tendrá su propio UID. No se vincula ni modifica la cuenta de la app OMNI.\n7. Copiar el UID de esa cuenta y, en Firestore del proyecto original `omni-57f69`, crear `systemAdmins/{UID}`:
    ```json
    { "role": "owner", "enabled": true }
    ```
