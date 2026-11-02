@@ -238,6 +238,11 @@ private fun LoginScreen(
           if (clientIdResource == 0) throw IllegalStateException("Falta configurar el cliente OAuth web de Google en Firebase.")
           val serverClientId = context.getString(clientIdResource)
           val credentialManager = CredentialManager.create(context)
+          // Remove any stale provider-side session left by an earlier app version
+          // before opening Google's account picker.
+          runCatching {
+            credentialManager.clearCredentialState(ClearCredentialStateRequest())
+          }
           val option = GetGoogleIdOption.Builder().setFilterByAuthorizedAccounts(false)
             .setServerClientId(serverClientId).setAutoSelectEnabled(false).build()
           val credential = try {
