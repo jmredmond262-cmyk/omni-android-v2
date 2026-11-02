@@ -146,12 +146,12 @@ async function countDocuments(env, collection) {
   const result = await firestore(env, ":runAggregationQuery", { method: "POST", body: JSON.stringify(query) });
   return Number(result[0]?.result?.aggregateFields?.total?.integerValue || 0);
 }
-async function recentDocuments(env, collection) {
+async function recentDocuments(env, collection, limit = 8) {
   const query = {
     structuredQuery: {
       from: [{ collectionId: collection }],
       orderBy: [{ field: { fieldPath: "createdAt" }, direction: "DESCENDING" }],
-      limit: 8
+      limit: Math.min(Math.max(Number(limit) || 8, 1), 500)
     }
   };
   const rows = await firestore(env, ":runQuery", { method: "POST", body: JSON.stringify({ structuredQuery: query.structuredQuery }) });
@@ -179,22 +179,45 @@ async function audit(env, actor, action, target, details = {}) {
 async function dashboard(env) {
   const collections = ["users", "walletAccounts", "walletOperations", "merchantProfiles", "storeOrders", "omniEvents", "appFeedback", "usageEvents", "moduleRegistry", "adminAuditLogs"];
   const counts = await Promise.all(collections.map(name => countDocuments(env, name)));
-  const [wallets, operations, userProfiles] = await Promise.all([
+  const [wallets, operations, userProfiles, usageEvents] = await Promise.all([
     listDocuments(env, "walletAccounts", 1000),
     recentDocuments(env, "walletOperations"),
-    listDocuments(env, "users", 200)
+    listDocuments(env, "users", 200),
+    recentDocuments(env, "usageEvents", 300)
   ]);
   const resolvedCounts = Object.fromEntries(collections.map((name, index) => [
     name, name === "users" ? Math.max(counts[index], userProfiles.length) : counts[index]
   ]));
   const recentUsers = [...userProfiles]
-    .sort((a, b) => String(b.createdAt || b.updatedAt || "").localeCompare(String(a.createdAt || a.updatedAt || "")))
+    .sort((a, b) => String(b.createdAt || b.lastSeenAt || b.updatedAt || "").localeCompare(String(a.createdAt || a.lastSeenAt || a.updatedAt || "")))
     .slice(0, 8);
+  const now = new Date();
+  const dayKeys = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(now);
+    date.setUTCDate(date.getUTCDate() - (6 - index));
+    return date.toISOString().slice(0, 10);
+  });
+  const usageByDay = Object.fromEntries(dayKeys.map(day => [day, 0]));
+  const activeUids = new Set();
+  for (const event of usageEvents) {
+    const day = String(event.createdAt || "").slice(0, 10);
+    if (Object.prototype.hasOwnProperty.call(usageByDay, day)) {
+      usageByDay[day] += 1;
+      if (event.uid) activeUids.add(String(event.uid));
+    }
+  }
+  const usageTrend = dayKeys.map(day => ({
+    date: day.slice(8, 10) + "/" + day.slice(5, 7),
+    count: usageByDay[day]
+  }));
   return {
     counts: resolvedCounts,
+    activeUsers7d: activeUids.size,
+    usageTrend,
     walletBalanceSample: wallets.reduce((sum, item) => sum + (Number(item.balance) || 0), 0),
     walletSampleSize: wallets.length,
-    recentUsers, recentOperations: operations
+    recentUsers, recentOperations: operations,
+    recentUsageEvents: usageEvents.slice(0, 8)
   };
 }
 async function handleAction(env, actor, action, data) {
