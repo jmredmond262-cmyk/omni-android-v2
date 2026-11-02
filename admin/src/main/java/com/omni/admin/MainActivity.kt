@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import com.google.firebase.FirebaseApp
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import java.text.NumberFormat
@@ -119,6 +120,8 @@ private fun OmniAdminApp(firebaseConfigured: Boolean, activity: Activity) {
       !firebaseConfigured -> SetupNotice()
       user == null -> LoginScreen(activity, email, { email = it }, password, { password = it }, error,
         { authenticated -> user = authenticated }, { error = it })
+      user!!.providerData.none { it.providerId == "password" } ->
+        PasswordLinkScreen(user!!, { linkedUser -> user = linkedUser }, { error = it })
       checking -> LoadingScreen("Verificando permisos administrativos…")
       !authorized -> AccessDenied(error, ::signOut)
       else -> AdminHome(user!!.email ?: "Administrador", { refresh++ }, ::signOut)
@@ -260,6 +263,72 @@ private fun LoginScreen(
     if (error.isNotBlank()) { Spacer(Modifier.height(10.dp)); Text(error, color = Color(0xFFFF8B8B), fontSize = 13.sp) }
     Spacer(Modifier.height(16.dp))
     Text("El acceso administrativo se valida por UID. Tener una cuenta OMNI no concede permisos de administrador automáticamente.", color = Muted, fontSize = 12.sp)
+  }
+}
+
+@Composable
+private fun PasswordLinkScreen(
+  user: com.google.firebase.auth.FirebaseUser,
+  onLinked: (com.google.firebase.auth.FirebaseUser) -> Unit,
+  onError: (String) -> Unit
+) {
+  var newPassword by remember { mutableStateOf("") }
+  var confirmation by remember { mutableStateOf("") }
+  var loading by remember { mutableStateOf(false) }
+  var message by remember { mutableStateOf("") }
+  val email = user.email.orEmpty()
+
+  Column(Modifier.fillMaxSize().padding(26.dp), verticalArrangement = Arrangement.Center) {
+    Text("OMNI", color = White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+    Text("VINCULAR CONTRASEÑA", color = Mint, fontSize = 25.sp, fontWeight = FontWeight.Black)
+    Spacer(Modifier.height(12.dp))
+    Text("Google ya verificó tu identidad. Para habilitar el acceso por correo y contraseña en OMNI Admin, creá una contraseña para esta misma cuenta.", color = Muted)
+    Spacer(Modifier.height(8.dp))
+    Text(email, color = White, fontWeight = FontWeight.SemiBold)
+    Spacer(Modifier.height(18.dp))
+    OutlinedTextField(newPassword, { newPassword = it }, Modifier.fillMaxWidth(),
+      label = { Text("Nueva contraseña de OMNI Admin") }, singleLine = true,
+      visualTransformation = PasswordVisualTransformation())
+    Spacer(Modifier.height(10.dp))
+    OutlinedTextField(confirmation, { confirmation = it }, Modifier.fillMaxWidth(),
+      label = { Text("Repetir contraseña") }, singleLine = true,
+      visualTransformation = PasswordVisualTransformation())
+    Spacer(Modifier.height(14.dp))
+    Button(onClick = {
+      when {
+        newPassword.length < 6 -> message = "La contraseña debe tener al menos 6 caracteres."
+        newPassword != confirmation -> message = "Las contraseñas no coinciden."
+        email.isBlank() -> message = "La cuenta de Google no tiene un correo disponible."
+        else -> {
+          loading = true
+          message = ""
+          val credential = EmailAuthProvider.getCredential(email, newPassword)
+          user.linkWithCredential(credential)
+            .addOnSuccessListener { result ->
+              loading = false
+              val linked = result.user ?: FirebaseAuth.getInstance().currentUser
+              if (linked != null) onLinked(linked)
+              else message = "La vinculación se completó, pero no se pudo recuperar la sesión. Volvé a ingresar."
+            }
+            .addOnFailureListener { ex ->
+              loading = false
+              message = ex.localizedMessage ?: "No se pudo vincular la contraseña."
+            }
+        }
+      }
+    }, Modifier.fillMaxWidth().height(50.dp), enabled = !loading) {
+      Text(if (loading) "Vinculando…" else "Vincular a mi cuenta OMNI", fontWeight = FontWeight.Bold)
+    }
+    if (loading) {
+      Spacer(Modifier.height(10.dp))
+      CircularProgressIndicator(color = Mint, modifier = Modifier.align(Alignment.CenterHorizontally))
+    }
+    if (message.isNotBlank()) {
+      Spacer(Modifier.height(10.dp))
+      Text(message, color = Color(0xFFFF8B8B), fontSize = 13.sp)
+    }
+    Spacer(Modifier.height(14.dp))
+    Text("Esto agrega el proveedor correo/contraseña al mismo usuario de Firebase; no crea otra cuenta ni cambia su UID. No uses la contraseña de Google: Google no la comparte con OMNI.", color = Muted, fontSize = 12.sp)
   }
 }
 
