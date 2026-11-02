@@ -29,6 +29,7 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
+import com.example.data.analytics.UsageAnalyticsRepository
 
 private data class OmniJobPost(
     val id: String,
@@ -137,6 +138,7 @@ fun JobBoardScreen(onBack: () -> Unit) {
             "status" to "ACTIVE",
             "createdAt" to FieldValue.serverTimestamp()
         )).addOnSuccessListener {
+            UsageAnalyticsRepository.trackAction(uid, "JOB_POST_PUBLISHED", "jobs")
             busy = false
             showPublish = false
             selectedTab = 0
@@ -170,6 +172,7 @@ fun JobBoardScreen(onBack: () -> Unit) {
                         "status" to "RECIBIDA",
                         "createdAt" to FieldValue.serverTimestamp()
                     )).addOnSuccessListener {
+                        UsageAnalyticsRepository.trackAction(uid, "JOB_APPLICATION_SENT", "jobs")
                         busy = false
                         feedback = "Postulación enviada correctamente."
                     }.addOnFailureListener { e ->
