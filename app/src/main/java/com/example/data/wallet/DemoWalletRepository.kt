@@ -219,12 +219,10 @@ class DemoWalletRepository(
         val operationRef = firestore.collection("walletOperations").document(operationId)
         firestore.runTransaction { tx ->
             val sender = tx.get(senderRef)
-            val recipient = tx.get(recipientRef)
-            check(sender.exists() && recipient.exists()) { "Una de las cuentas no está disponible." }
+            check(sender.exists()) { "Tu billetera DEMO no está disponible." }
             val senderBalance = (sender.get("balance") as? Number)?.toDouble() ?: 0.0
-            val recipientBalance = (recipient.get("balance") as? Number)?.toDouble() ?: 0.0
             check(senderBalance >= amount) { "Saldo insuficiente para completar la operación." }
-            val recipientAlias = recipient.getString("alias").orEmpty()
+            val recipientAlias = "Cuenta OMNI Pay"
             val senderAlias = sender.getString("alias").orEmpty()
             val senderType = if (isQr) TransactionType.QR_PAGO else TransactionType.TRANSFERENCIA_ENVIADA
             val recipientType = if (isQr) TransactionType.QR_COBRO else TransactionType.TRANSFERENCIA_RECIBIDA
@@ -233,7 +231,7 @@ class DemoWalletRepository(
                 "updatedAt" to FieldValue.serverTimestamp()
             ))
             tx.update(recipientRef, mapOf(
-                "balance" to recipientBalance + amount, "lastOperationId" to operationId,
+                "balance" to FieldValue.increment(amount), "lastOperationId" to operationId,
                 "updatedAt" to FieldValue.serverTimestamp()
             ))
             tx.set(operationRef, mapOf(
