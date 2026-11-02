@@ -2,6 +2,10 @@ package com.example.ui.screens
 
 import android.content.Intent
 import android.graphics.Bitmap
+import android.content.ClipData
+import androidx.core.content.FileProvider
+import java.io.File
+import java.io.FileOutputStream
 import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -353,7 +357,25 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
             text = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Mostrá este QR en el comercio para identificar tu pedido.", color = Color(0xFFB8C8D9), fontSize = 11.sp)
-                    bitmap?.let { Image(it.asImageBitmap(), "QR del pedido", modifier = Modifier.size(190.dp)) }
+                    bitmap?.let { qrBitmap ->
+                        Image(qrBitmap.asImageBitmap(), "QR del pedido", modifier = Modifier.size(190.dp))
+                        OutlinedButton(onClick = {
+                            runCatching {
+                                val folder = File(context.cacheDir, "shared_qr").apply { mkdirs() }
+                                val qrFile = File(folder, "omni-pedido-${order.id.take(10)}.png")
+                                FileOutputStream(qrFile).use { output -> check(qrBitmap.compress(Bitmap.CompressFormat.PNG, 100, output)) }
+                                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", qrFile)
+                                val share = Intent(Intent.ACTION_SEND).apply {
+                                    type = "image/png"
+                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                    putExtra(Intent.EXTRA_TEXT, "Pedido OMNI ${order.id}\nComercio: ${order.storeName}\nTotal: OM$ ${String.format("%,.2f", order.total)}\nPago pendiente al retirar o recibir.")
+                                    clipData = ClipData.newUri(context.contentResolver, "QR Pedido OMNI", uri)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(Intent.createChooser(share, "Compartir QR del pedido"))
+                            }.onFailure { feedback = it.localizedMessage ?: "No se pudo compartir el QR." }
+                        }) { Text("Compartir QR") }
+                    } ?: Text("No se pudo generar la imagen QR.", color = Color(0xFFFF9B8F), fontSize = 10.sp)
                     Text("Pedido ${order.id.take(10)} · ${order.status}", color = Color(0xFF57DDF5), fontWeight = FontWeight.Bold, fontSize = 11.sp)
                     Text("Pago pendiente · se abona al retirar o recibir. Este QR no es un comprobante de pago.", color = Color(0xFFFFC978), fontSize = 10.sp)
                 }
