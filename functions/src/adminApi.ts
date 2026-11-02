@@ -22,7 +22,7 @@ function bearerToken(header: string | undefined): string {
 }
 
 async function authenticate(header: string | undefined): Promise<AdminContext> {
-  const decoded = await getAuthVerifier().verifyIdToken(bearerToken(header), true);
+  const decoded = await getAuthVerifier().verifyIdToken(bearerToken(header));
   const adminSnap = await db.collection("systemAdmins").doc(decoded.uid).get();
   const role = adminSnap.get("role");
   if (!adminSnap.exists || adminSnap.get("enabled") !== true || (role !== "owner" && role !== "admin")) {
