@@ -111,7 +111,8 @@ class AuthRepository(
             "phoneNumber" to (user.phoneNumber ?: ""),
             "photoUrl" to user.photoUrl?.toString(),
             "providerIds" to user.providerData.map { it.providerId }.filter { it != "firebase" },
-            "updatedAt" to FieldValue.serverTimestamp()
+            "updatedAt" to FieldValue.serverTimestamp(),
+            "lastSeenAt" to FieldValue.serverTimestamp()
         )
         firestore.collection("users").document(user.uid).get()
             .addOnSuccessListener { snapshot ->
