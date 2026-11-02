@@ -193,6 +193,16 @@ fun DailyHubScreen(
                 viewModel.setScheduleFilter(StoreScheduleFilter.TODOS)
                 viewModel.navigateTo(Screen.StoresList)
             }
+        ),
+        HomeCategoryItem(
+            id = "merchant_portal",
+            title = "Mi comercio",
+            subtitle = "Administrá tu negocio",
+            icon = Icons.Default.Build,
+            accentColor = Color(0xFF38D6A6),
+            onClick = {
+                viewModel.navigateTo(Screen.MerchantHub)
+            }
         )
     )
 
