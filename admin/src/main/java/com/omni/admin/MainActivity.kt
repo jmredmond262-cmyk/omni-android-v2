@@ -24,12 +24,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.platform.LocalContext
 import androidx.credentials.CredentialManager
-import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
-import androidx.credentials.exceptions.NoCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
-import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.PhoneAuthOptions
@@ -85,7 +82,6 @@ private fun OmniAdminApp(firebaseConfigured: Boolean, activity: Activity) {
   var email by remember { mutableStateOf("") }
   var password by remember { mutableStateOf("") }
   var refresh by remember { mutableIntStateOf(0) }
-  val credentialManager = remember { CredentialManager.create(activity) }
   val scope = rememberCoroutineScope()
 
   fun signOut() {
@@ -93,13 +89,6 @@ private fun OmniAdminApp(firebaseConfigured: Boolean, activity: Activity) {
     user = null
     password = ""
     error = ""
-    // Clear Google's Credential Manager session as well as the Firebase session.
-    // Otherwise a later account selection can enter a stale re-authentication flow.
-    scope.launch {
-      runCatching {
-        credentialManager.clearCredentialState(ClearCredentialStateRequest())
-      }
-    }
   }
 
   fun verifyAdmin(uid: String) {
@@ -237,23 +226,18 @@ private fun LoginScreen(
           val clientIdResource = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
           if (clientIdResource == 0) throw IllegalStateException("Falta configurar el cliente OAuth web de Google en Firebase.")
           val serverClientId = context.getString(clientIdResource)
-          val credentialManager = CredentialManager.create(context)
-          // Remove any stale provider-side session left by an earlier app version
-          // before opening Google's account picker.
-          runCatching {
-            credentialManager.clearCredentialState(ClearCredentialStateRequest())
-          }
-          val option = GetGoogleIdOption.Builder().setFilterByAuthorizedAccounts(false)
-            .setServerClientId(serverClientId).setAutoSelectEnabled(false).build()
-          val credential = try {
-            val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
-            credentialManager.getCredential(context, request).credential
-          } catch (noCredential: NoCredentialException) {
-            // If no saved/eligible credential is available, explicitly launch Google's account picker.
-            val signInOption = GetSignInWithGoogleOption.Builder(serverClientId).build()
-            val signInRequest = GetCredentialRequest.Builder().addCredentialOption(signInOption).build()
-            credentialManager.getCredential(context, signInRequest).credential
-          }
+          // Keep the same Credential Manager flow used by the working OMNI app.
+          // Do not clear provider state or switch to a second Google sign-in option here.
+          val googleOption = GetGoogleIdOption.Builder()
+            .setFilterByAuthorizedAccounts(false)
+            .setServerClientId(serverClientId)
+            .setAutoSelectEnabled(false)
+            .build()
+          val request = GetCredentialRequest.Builder()
+            .addCredentialOption(googleOption)
+            .build()
+          val credential = CredentialManager.create(context)
+            .getCredential(context, request).credential
           if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
             val token = GoogleIdTokenCredential.createFrom(credential.data).idToken
             complete(auth.signInWithCredential(com.google.firebase.auth.GoogleAuthProvider.getCredential(token, null)))
