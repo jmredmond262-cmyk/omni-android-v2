@@ -397,7 +397,7 @@ private val fieldLabels = mapOf(
   "paymentStatus" to "Estado del pago", "paymentMethod" to "Medio de pago",
   "fulfillmentType" to "Entrega", "action" to "Acción", "target" to "Destino",
   "message" to "Mensaje", "description" to "Descripción", "enabled" to "Habilitado",
-  "eventName" to "Evento", "screen" to "Pantalla", "platform" to "Plataforma", "appVersion" to "Versión",
+  "event" to "Evento", "module" to "Módulo", "eventName" to "Evento", "screen" to "Pantalla", "appVersion" to "Versión",
   "createdAt" to "Fecha de registro", "updatedAt" to "Última actualización", "lastSeenAt" to "Última actividad",
   "cvu" to "CVU"
 )
@@ -437,7 +437,7 @@ private fun RecordCard(item: Map<String, Any?>, type: String) {
     "merchantProfiles" -> firstPresentValue(item, "storeName", "name").ifBlank { "Comercio OMNI" }
     "storeOrders" -> "Pedido " + firstPresentValue(item, "orderNumber", "status").ifBlank { "OMNI" }
     "appFeedback" -> "Comentario de usuario"
-    "usageEvents" -> friendlyEnum(firstPresentValue(item, "eventName").ifBlank { "Actividad OMNI" })
+    "usageEvents" -> friendlyEnum(firstPresentValue(item, "event", "eventName").ifBlank { "Actividad OMNI" })
     "adminAuditLogs" -> friendlyEnum(firstPresentValue(item, "action").ifBlank { "Actividad administrativa" })
     else -> firstPresentValue(item, "title", "name", "action").ifBlank { "Registro OMNI" }
   }
@@ -448,7 +448,7 @@ private fun RecordCard(item: Map<String, Any?>, type: String) {
     "merchantProfiles" -> listOf("description", "category", "address", "status", "createdAt")
     "storeOrders" -> listOf("total", "paymentStatus", "fulfillmentType", "createdAt")
     "appFeedback" -> listOf("message", "createdAt")
-    "usageEvents" -> listOf("screen", "platform", "appVersion", "createdAt")
+    "usageEvents" -> listOf("module", "appVersion", "createdAt")
     else -> listOf("status", "createdAt", "updatedAt")
   }
   val visible = preferred.mapNotNull { key ->
