@@ -1,6 +1,7 @@
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
+  alias(libs.plugins.google.services)
 }
 
 android {
@@ -8,11 +9,11 @@ android {
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
-    applicationId = "com.omni.admin"
+    applicationId = "com.omni.adminpanel"
     minSdk = 24
     targetSdk = 36
-    versionCode = 6
-    versionName = "1.0.5"
+    versionCode = 1
+    versionName = "1.0.0"
   }
 
   compileOptions {
@@ -35,8 +36,5 @@ dependencies {
   implementation(libs.androidx.compose.ui.graphics)
   implementation(libs.androidx.compose.ui.tooling.preview)
   implementation(libs.firebase.auth)
-  implementation(libs.firebase.firestore)
-  implementation(libs.androidx.credentials)
-  implementation(libs.androidx.credentials.play.services)
-  implementation(libs.googleid)
+  implementation(libs.kotlinx.coroutines.play.services)
 }
