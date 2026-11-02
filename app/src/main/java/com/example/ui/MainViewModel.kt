@@ -70,6 +70,7 @@ sealed class Screen(val title: String) {
     object TripPlanner : Screen("Buscador de Viaje")
     object OmniAi : Screen("Omni AI Assistant")
     object MorningBriefing : Screen("OMNI Buenos Días")
+    object Routine : Screen("Modo Rutina")
 }
 
 data class CommunityAlert(
