@@ -567,12 +567,10 @@ fun StoreDetailScreen(
                                         append("Compartido desde OMNI")
                                     }
                                     val imageUri = product.photoUri?.let { Uri.parse(it) }
-                                    val canAttachImage = imageUri != null &&
-                                        imageUri.scheme in listOf("content", "file", "android.resource")
                                     val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                         putExtra(Intent.EXTRA_SUBJECT, product.name)
                                         putExtra(Intent.EXTRA_TEXT, message)
-                                        if (canAttachImage) {
+                                        if (imageUri != null && imageUri.scheme in listOf("content", "file", "android.resource")) {
                                             type = "image/*"
                                             putExtra(Intent.EXTRA_STREAM, imageUri)
                                             clipData = ClipData.newUri(context.contentResolver, product.name, imageUri)
