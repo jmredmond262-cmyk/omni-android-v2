@@ -366,7 +366,7 @@ private val fieldLabels = mapOf(
   "paymentStatus" to "Estado del pago", "paymentMethod" to "Medio de pago",
   "fulfillmentType" to "Entrega", "action" to "Acción", "target" to "Destino",
   "message" to "Mensaje", "description" to "Descripción", "enabled" to "Habilitado",
-  "createdAt" to "Fecha de creación", "updatedAt" to "Última actualización",
+  "createdAt" to "Fecha de registro", "updatedAt" to "Última actualización", "lastSeenAt" to "Última actividad",
   "cvu" to "CVU"
 )
 private fun friendlyEnum(value: String): String = when (value.uppercase()) {
@@ -407,7 +407,7 @@ private fun RecordCard(item: Map<String, Any?>, type: String) {
     else -> firstPresentValue(item, "title", "name", "action").ifBlank { "Registro OMNI" }
   }
   val preferred = when (type) {
-    "users" -> listOf("email", "phoneNumber", "phone", "createdAt")
+    "users" -> listOf("email", "phoneNumber", "phone", "createdAt", "lastSeenAt")
     "walletAccounts" -> listOf("balance", "cashbackTotal", "createdAt")
     "walletOperations" -> listOf("amount", "status", "createdAt")
     "merchantProfiles" -> listOf("description", "category", "address", "status", "createdAt")
