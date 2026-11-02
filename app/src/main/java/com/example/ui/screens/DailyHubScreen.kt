@@ -31,6 +31,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -644,7 +646,11 @@ fun DailyHubScreen(
         if (experience == "OMNI Turista") {
             Dialog(onDismissRequest = { selectedExperience = null }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Surface(modifier = Modifier.fillMaxWidth(0.94f).heightIn(max = 620.dp), color = Color(0xFF101B30), shape = RoundedCornerShape(22.dp)) {
-                    Column(modifier = Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 620.dp)
+                            .verticalScroll(rememberScrollState()).padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text("OMNI TURISTA", color = CyberGlowCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -658,8 +664,8 @@ fun DailyHubScreen(
                                 Text("Todavía no hay atractivos cargados en esta zona. Actualizá tu ubicación desde el perfil para consultar otros destinos.", color = Color(0xFFD2DCEC), fontSize = 12.sp)
                             }
                         } else {
-                            LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 430.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                                items(touristAttractions.take(20)) { attraction ->
+                            Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                                touristAttractions.take(20).forEach { attraction ->
                                     Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF172943)), shape = RoundedCornerShape(14.dp)) {
                                         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                                             Text(attraction.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
