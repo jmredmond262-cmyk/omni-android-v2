@@ -2,25 +2,153 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{userId} {
-      allow read, create, update, delete: if request.auth != null
-        && request.auth.uid == userId;
+    function signedIn() { return request.auth != null; }
+    function walletPath(uid) {
+      return /databases/$(database)/documents/walletAccounts/$(uid);
+    }
+    function operationPath(operationId) {
+      return /databases/$(database)/documents/walletOperations/$(operationId);
+    }
+    function validAmount(amount) {
+      return amount is number && amount > 0 && amount <= 50000;
+    }
+    function changedOnly(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
     }
 
-    // Los saldos y movimientos solo se modifican desde Cloud Functions (Admin SDK).
+    match /users/{userId} {
+      allow read, create, update, delete: if signedIn() && request.auth.uid == userId;
+    }
+
+    // Wallet accounts are private. A new account receives one fixed fictitious
+    // welcome credit; clients cannot choose a larger starting balance.
     match /walletAccounts/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow create, update, delete: if false;
+      allow read: if signedIn() && request.auth.uid == userId;
+
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.uid == userId
+        && request.resource.data.balance == 50000
+        && request.resource.data.cashbackTotal == 0
+        && request.resource.data.depositedTotal == 0
+        && request.resource.data.alias is string
+        && request.resource.data.cvu is string
+        && request.resource.data.lastOperationId == "welcome";
+
+      allow update: if signedIn()
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.alias == resource.data.alias
+        && request.resource.data.cvu == resource.data.cvu
+        && changedOnly(["balance", "depositedTotal", "lastOperationId", "updatedAt"])
+        && request.resource.data.lastOperationId is string
+        && existsAfter(operationPath(request.resource.data.lastOperationId))
+        && (
+          (
+            getAfter(operationPath(request.resource.data.lastOperationId)).data.kind == "DEPOSIT"
+            && request.auth.uid == userId
+            && getAfter(operationPath(request.resource.data.lastOperationId)).data.senderUid == userId
+            && request.resource.data.balance == resource.data.balance
+              + getAfter(operationPath(request.resource.data.lastOperationId)).data.amount
+            && request.resource.data.depositedTotal == resource.data.depositedTotal
+              + getAfter(operationPath(request.resource.data.lastOperationId)).data.amount
+          )
+          ||
+          (
+            getAfter(operationPath(request.resource.data.lastOperationId)).data.kind in ["TRANSFER", "QR_PAYMENT"]
+            && request.auth.uid == getAfter(operationPath(request.resource.data.lastOperationId)).data.senderUid
+            && (
+              (
+                userId == getAfter(operationPath(request.resource.data.lastOperationId)).data.senderUid
+                && request.resource.data.balance == resource.data.balance
+                  - getAfter(operationPath(request.resource.data.lastOperationId)).data.amount
+                && request.resource.data.depositedTotal == resource.data.depositedTotal
+              )
+              ||
+              (
+                userId == getAfter(operationPath(request.resource.data.lastOperationId)).data.recipientUid
+                && request.resource.data.balance == resource.data.balance
+                  + getAfter(operationPath(request.resource.data.lastOperationId)).data.amount
+                && request.resource.data.depositedTotal == resource.data.depositedTotal
+              )
+            )
+          )
+        );
+
+      allow delete: if false;
 
       match /transactions/{transactionId} {
-        allow read: if request.auth != null && request.auth.uid == userId;
-        allow create, update, delete: if false;
+        allow read: if signedIn() && request.auth.uid == userId;
+        allow create: if signedIn()
+          && request.resource.data.operationId == transactionId
+          && request.resource.data.amount is number
+          && request.resource.data.amount > 0
+          && request.resource.data.status == "APROBADA · DEMO"
+          && (
+            (
+              transactionId == "welcome"
+              && request.auth.uid == userId
+              && request.resource.data.amount == 50000
+              && getAfter(walletPath(userId)).data.balance == 50000
+            )
+            ||
+            (
+              existsAfter(operationPath(transactionId))
+              && request.auth.uid == getAfter(operationPath(transactionId)).data.senderUid
+              && (
+                userId == getAfter(operationPath(transactionId)).data.senderUid
+                || userId == getAfter(operationPath(transactionId)).data.recipientUid
+              )
+              && request.resource.data.amount == getAfter(operationPath(transactionId)).data.amount
+            )
+          );
+        allow update, delete: if false;
       }
     }
 
-    // El índice de alias no se expone directamente al cliente.
-    match /walletAliases/{alias} {
-      allow read, write: if false;
+    // Public lookup data contains only fictitious account identifiers.
+    match /walletDirectory/{alias} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.alias == alias
+        && request.resource.data.cvu is string;
+      allow update, delete: if false;
+    }
+
+    // The operation record ties both balance changes together atomically.
+    match /walletOperations/{operationId} {
+      allow read: if signedIn()
+        && (resource.data.senderUid == request.auth.uid
+          || resource.data.recipientUid == request.auth.uid);
+
+      allow create: if signedIn()
+        && request.resource.data.operationId == operationId
+        && request.resource.data.senderUid == request.auth.uid
+        && validAmount(request.resource.data.amount)
+        && (
+          (
+            request.resource.data.kind == "DEPOSIT"
+            && request.resource.data.recipientUid == request.auth.uid
+            && get(walletPath(request.auth.uid)).data.depositedTotal
+              + request.resource.data.amount <= 150000
+            && getAfter(walletPath(request.auth.uid)).data.balance
+              == get(walletPath(request.auth.uid)).data.balance + request.resource.data.amount
+            && getAfter(walletPath(request.auth.uid)).data.depositedTotal
+              == get(walletPath(request.auth.uid)).data.depositedTotal + request.resource.data.amount
+          )
+          ||
+          (
+            request.resource.data.kind in ["TRANSFER", "QR_PAYMENT"]
+            && request.resource.data.recipientUid is string
+            && request.resource.data.recipientUid != request.auth.uid
+            && get(walletPath(request.auth.uid)).data.balance >= request.resource.data.amount
+            && getAfter(walletPath(request.auth.uid)).data.balance
+              == get(walletPath(request.auth.uid)).data.balance - request.resource.data.amount
+            && getAfter(walletPath(request.resource.data.recipientUid)).data.balance
+              == get(walletPath(request.resource.data.recipientUid)).data.balance + request.resource.data.amount
+          )
+        );
+      allow update, delete: if false;
     }
   }
 }
