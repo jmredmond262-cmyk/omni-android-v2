@@ -731,9 +731,8 @@ class MainViewModel : ViewModel() {
 
             // Cargar comercios reales con Google Places API (New) y base local verificada
             val localStores = RealPlacesApi.fetchNearbyRealStores(lat, lon, _searchRadiusMeters.value, city, context)
-            if (localStores.isNotEmpty()) {
-                _stores.value = localStores
-            }
+            // Nunca conservar resultados de otra localidad ni dejar visibles comercios fuera de la zona elegida.
+            _stores.value = onlySelectedLocality(localStores)
 
             // Actualizar viaje con origen real
             searchTrip(address, _tripDestination.value)
