@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -208,6 +209,20 @@ fun EventsScreen(onBack: () -> Unit) {
                                     else Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/${value.filter { it.isDigit() }}"))
                                 runCatching { context.startActivity(intent) }.onFailure { feedback = "No se pudo abrir el medio de contacto." }
                             }) { Text("Consultar / reservar", color = Color(0xFF57DDF5), fontSize = 10.sp) }
+                            TextButton(onClick = {
+                                val share = "📅 ${event.title}\n${event.dateTime}\n📍 ${event.location}\n\n${event.description}\n\nCompartido desde OMNI."
+                                val send = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_SUBJECT, event.title)
+                                    putExtra(Intent.EXTRA_TEXT, share)
+                                }
+                                runCatching { context.startActivity(Intent.createChooser(send, "Compartir evento OMNI")) }
+                                    .onFailure { feedback = "No se pudo abrir el menú para compartir." }
+                            }) {
+                                Icon(Icons.Default.Share, null, modifier = Modifier.size(14.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Compartir", color = Color(0xFF57DDF5), fontSize = 10.sp)
+                            }
                         }
                     }
                 }
