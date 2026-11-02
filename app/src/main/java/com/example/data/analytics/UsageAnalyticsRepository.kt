@@ -18,6 +18,8 @@ object UsageAnalyticsRepository {
 
     fun startSession(uid: String) {
         record(uid, "app", "SESSION_START")
+        // Evento centinela para verificar la escritura de analíticas de extremo a extremo.
+        record(uid, "diagnostics", "DIAGNOSTIC_TEST")
     }
 
     fun trackScreen(uid: String, screen: String) {
