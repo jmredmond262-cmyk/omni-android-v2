@@ -2,9 +2,9 @@ name: OMNI Android Build
 
 on:
   push:
-    branches: [ "main", "omni-resto-mejoras" ]
+    branches: [ "main", "omni-resto-mejoras", "omni-admin-app" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "omni-resto-mejoras" ]
   workflow_dispatch:
 
 permissions:
@@ -36,15 +36,50 @@ jobs:
       - name: Install Android SDK packages
         run: |
           "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36.1" "build-tools;36.0.0"
-      - name: Configure Firebase Android app
+      - name: Configure Firebase Android apps
         env:
           FIREBASE_GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON_BASE64 }}
         run: |
           if [ -n "$FIREBASE_GOOGLE_SERVICES_JSON_BASE64" ]; then
             printf '%s' "$FIREBASE_GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > app/google-services.json
-            echo "Firebase Android configuration installed for this build."
+            python3 - <<'PY'
+          import json
+          import os
+          import xml.sax.saxutils as xml
+          
+          with open("admin/google-services.json", encoding="utf-8") as f:
+              data = json.load(f)
+          client = next(
+              item for item in data["client"]
+              if item["client_info"]["android_client_info"]["package_name"] == "com.omni.admin"
+          )
+          project = data["project_info"]
+          values = {
+              "google_app_id": client["client_info"]["mobilesdk_app_id"],
+              "google_api_key": client["api_key"][0]["current_key"],
+              "project_id": project["project_id"],
+              "gcm_defaultSenderId": project["project_number"],
+              "google_storage_bucket": project.get("storage_bucket", ""),
+          }
+          web_client = next(
+              (oauth["client_id"] for item in data["client"]
+               for oauth in item.get("oauth_client", [])
+               if oauth.get("client_type") == 3),
+              None
+          )
+          if web_client:
+              values["default_web_client_id"] = web_client
+          os.makedirs("admin/src/main/res/values", exist_ok=True)
+          with open("admin/src/main/res/values/firebase_config.xml", "w", encoding="utf-8") as f:
+              f.write("<resources>\n")
+              for key, value in values.items():
+                  f.write(f'  <string name="{key}" translatable="false">{xml.escape(value)}</string>\n')
+              f.write("</resources>\n")
+          PY
+            echo "Firebase project resources configured for OMNI Admin."
           else
-            echo "Firebase secret not configured; continuing without google-services.json."
+            echo "::error::Falta FIREBASE_GOOGLE_SERVICES_JSON_BASE64. Se cancela la compilación para no publicar un APK de OMNI Admin sin conexión funcional a Firebase."
+            exit 1
           fi
       - name: Configure optional API keys
         env:
@@ -68,7 +103,7 @@ jobs:
             echo "A one-time debug key was generated. Save the keystore artifact and configure OMNI_DEBUG_KEYSTORE_BASE64 to keep this signing identity."
           fi
           keytool -list -v -keystore debug.keystore -storepass android -alias androiddebugkey | grep -E 'SHA1:|SHA256:'
-      - name: Build debug APK
+      - name: Build OMNI APK
         run: gradle :app:assembleDebug
       - name: Upload one-time signing keystore
         if: ${{ steps.signing.outputs.generated == 'true' }}
@@ -78,10 +113,19 @@ jobs:
           path: debug.keystore
           if-no-files-found: error
           retention-days: 1
-      - name: Upload APK
+      - name: Upload OMNI APK
         uses: actions/upload-artifact@v4
         with:
           name: omni-v2-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+      - name: Build OMNI Admin APK
+        run: gradle :admin:assembleDebug
+      - name: Upload OMNI Admin APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: omni-admin-debug-apk
+          path: admin/build/outputs/apk/debug/admin-debug.apk
           if-no-files-found: error
           retention-days: 14

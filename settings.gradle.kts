@@ -24,4 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Omni"
 
-include(":app")
+include(":app", ":admin")

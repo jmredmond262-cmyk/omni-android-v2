@@ -3,6 +3,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
+    function isSystemAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/systemAdmins/$(request.auth.uid))
+        && get(/databases/$(database)/documents/systemAdmins/$(request.auth.uid)).data.enabled == true
+        && get(/databases/$(database)/documents/systemAdmins/$(request.auth.uid)).data.role in ["owner", "admin"];
+    }
     function walletPath(uid) {
       return /databases/$(database)/documents/walletAccounts/$(uid);
     }
@@ -17,13 +23,14 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read, create, update, delete: if signedIn() && request.auth.uid == userId;
+      allow read: if (signedIn() && request.auth.uid == userId) || isSystemAdmin();
+      allow create, update, delete: if signedIn() && request.auth.uid == userId;
     }
 
     // Wallet accounts are private. A new account receives one fixed fictitious
     // welcome credit; clients cannot choose a larger starting balance.
     match /walletAccounts/{userId} {
-      allow read: if signedIn() && request.auth.uid == userId;
+      allow read: if (signedIn() && request.auth.uid == userId) || isSystemAdmin();
 
       allow create: if signedIn()
         && request.auth.uid == userId
@@ -168,9 +175,9 @@ service cloud.firestore {
           == request.resource.data.merchantUid;
       // Queries must constrain customerUid or merchantUid to the signed-in user.
       // merchantUid is copied from the claimed merchant profile at order creation.
-      allow read: if signedIn()
+      allow read: if isSystemAdmin() || (signedIn()
         && (resource.data.customerUid == request.auth.uid
-          || resource.data.merchantUid == request.auth.uid);
+          || resource.data.merchantUid == request.auth.uid));
       allow update: if signedIn()
         && get(merchantProfilePath()).data.ownerUid == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "updatedAt"])
@@ -221,10 +228,10 @@ service cloud.firestore {
         && request.resource.data.postOwnerUid != request.auth.uid
         && get(/databases/$(database)/documents/jobPosts/$(request.resource.data.postId)).data.ownerUid
           == request.resource.data.postOwnerUid;
-      allow read: if signedIn()
+      allow read: if isSystemAdmin() || (signedIn()
         && (applicationId.matches("^" + request.auth.uid + "_.*")
           || resource.data.applicantUid == request.auth.uid
-          || resource.data.postOwnerUid == request.auth.uid);
+          || resource.data.postOwnerUid == request.auth.uid));
       allow update: if signedIn()
         && resource.data.postOwnerUid == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status"])
@@ -234,9 +241,9 @@ service cloud.firestore {
 
     // The operation record ties both balance changes together atomically.
     match /walletOperations/{operationId} {
-      allow read: if signedIn()
+      allow read: if isSystemAdmin() || (signedIn()
         && (resource.data.senderUid == request.auth.uid
-          || resource.data.recipientUid == request.auth.uid);
+          || resource.data.recipientUid == request.auth.uid));
 
       allow create: if signedIn()
         && request.resource.data.operationId == operationId
@@ -265,6 +272,55 @@ service cloud.firestore {
               == get(walletPath(request.resource.data.recipientUid)).data.balance + request.resource.data.amount
           )
         );
+      allow update, delete: if false;
+    }
+
+    // OMNI Admin: authorization documents are provisioned manually by the project owner.
+    match /systemAdmins/{adminUid} {
+      allow read: if signedIn() && request.auth.uid == adminUid;
+      allow create, update, delete: if false;
+    }
+
+    match /adminConfig/{configId} {
+      allow read, write: if isSystemAdmin();
+    }
+
+    match /adminAuditLogs/{logId} {
+      allow read: if isSystemAdmin();
+      allow create: if isSystemAdmin()
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.action is string
+        && request.resource.data.createdAt is timestamp;
+      allow update, delete: if false;
+    }
+
+    match /moduleRegistry/{moduleId} {
+      allow read, write: if isSystemAdmin();
+    }
+
+    match /betaInvitations/{invitationId} {
+      allow read, write: if isSystemAdmin();
+    }
+
+    match /usageEvents/{eventId} {
+      allow read: if isSystemAdmin();
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.module is string
+        && request.resource.data.event is string
+        && request.resource.data.appVersion is string
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.keys().hasOnly(["uid", "module", "event", "appVersion", "createdAt", "campaignId", "sessionId"]);
+      allow update, delete: if false;
+    }
+
+    match /appFeedback/{feedbackId} {
+      allow read: if isSystemAdmin();
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.message is string
+        && request.resource.data.message.size() <= 2000
+        && request.resource.data.createdAt is timestamp;
       allow update, delete: if false;
     }
   }
