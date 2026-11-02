@@ -2,7 +2,7 @@ name: OMNI Android Build
 
 on:
   push:
-    branches: [ "main", "omni-resto-mejoras", "omni-admin-app" ]
+    branches: [ "main", "omni-resto-mejoras", "omni-admin-app", "omni-admin-verified" ]
   pull_request:
     branches: [ "main", "omni-resto-mejoras" ]
   workflow_dispatch:
