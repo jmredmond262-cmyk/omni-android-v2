@@ -6,6 +6,7 @@ import android.provider.CalendarContract
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -139,8 +140,8 @@ fun EventsScreen(onBack: () -> Unit) {
         Spacer(Modifier.height(10.dp))
         OutlinedTextField(search, { search = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Buscar eventos o lugares") })
         Spacer(Modifier.height(7.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-            listOf("Todos", "Favoritos", "Comunidad", "Cultura", "Deportes", "Comercial").forEach { value ->
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            items(listOf("Todos", "Favoritos", "Comunidad", "Cultura", "Deportes", "Comercial")) { value ->
                 FilterChip(selected = category == value, onClick = { category = value }, label = { Text(value, fontSize = 9.sp) })
             }
         }
