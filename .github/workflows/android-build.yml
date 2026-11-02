@@ -43,30 +43,30 @@ jobs:
           if [ -n "$FIREBASE_GOOGLE_SERVICES_JSON_BASE64" ]; then
             printf '%s' "$FIREBASE_GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > app/google-services.json
             python3 - <<'PY'
-import json
-import os
-import xml.sax.saxutils as xml
-
-with open("app/google-services.json", encoding="utf-8") as f:
-    data = json.load(f)
-client = next(
-    item for item in data["client"]
-    if item["client_info"]["android_client_info"]["package_name"] == "com.aistudio.omnihub.qtzmvd"
-)
-project = data["project_info"]
-values = {
-    "google_app_id": client["client_info"]["mobilesdk_app_id"],
-    "google_api_key": client["api_key"][0]["current_key"],
-    "project_id": project["project_id"],
-    "gcm_defaultSenderId": project["project_number"],
-    "google_storage_bucket": project.get("storage_bucket", ""),
-}
-os.makedirs("admin/src/main/res/values", exist_ok=True)
-with open("admin/src/main/res/values/firebase_config.xml", "w", encoding="utf-8") as f:
-    f.write("<resources>\n")
-    for key, value in values.items():
-        f.write(f'  <string name="{key}" translatable="false">{xml.escape(value)}</string>\n')
-    f.write("</resources>\n")
+          import json
+          import os
+          import xml.sax.saxutils as xml
+          
+          with open("app/google-services.json", encoding="utf-8") as f:
+              data = json.load(f)
+          client = next(
+              item for item in data["client"]
+              if item["client_info"]["android_client_info"]["package_name"] == "com.aistudio.omnihub.qtzmvd"
+          )
+          project = data["project_info"]
+          values = {
+              "google_app_id": client["client_info"]["mobilesdk_app_id"],
+              "google_api_key": client["api_key"][0]["current_key"],
+              "project_id": project["project_id"],
+              "gcm_defaultSenderId": project["project_number"],
+              "google_storage_bucket": project.get("storage_bucket", ""),
+          }
+          os.makedirs("admin/src/main/res/values", exist_ok=True)
+          with open("admin/src/main/res/values/firebase_config.xml", "w", encoding="utf-8") as f:
+              f.write("<resources>\n")
+              for key, value in values.items():
+                  f.write(f'  <string name="{key}" translatable="false">{xml.escape(value)}</string>\n')
+              f.write("</resources>\n")
 PY
             echo "Firebase project resources configured for OMNI Admin."
           else
