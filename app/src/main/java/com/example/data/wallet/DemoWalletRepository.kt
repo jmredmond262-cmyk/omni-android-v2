@@ -6,9 +6,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.google.firebase.functions.FirebaseFunctions
-import com.google.firebase.Timestamp
 import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 import java.util.UUID
 
@@ -51,7 +49,7 @@ class DemoWalletRepository(
 
     fun observeWallet(uid: String, onUpdate: (Result<DemoWalletSnapshot>) -> Unit): List<ListenerRegistration> {
         val accountRef = firestore.collection("walletAccounts").document(uid)
-        var balance = 50000.0
+        var balance = 0.0
         var cashback = 0.0
         var alias = ""
         var cvu = ""
