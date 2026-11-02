@@ -6,7 +6,9 @@ OMNI Admin es una aplicación Android independiente del cliente OMNI.
 - Módulo: `:admin`
 - Application ID: `com.omni.admin`
 - APK debug: `admin/build/outputs/apk/debug/admin-debug.apk`
-- Firebase: reutiliza las credenciales de proyecto de la app OMNI registradas en `app/google-services.json`; CI genera los recursos Firebase de Admin. No requiere registrar un segundo paquete Android para la autenticación por correo/contraseña.
+- CI compila y publica primero OMNI y luego OMNI Admin en pasos separados para aislar fallas y conservar el artefacto de OMNI si Admin falla.
+- Firebase: reutiliza las credenciales del proyecto OMNI mediante el secreto `FIREBASE_GOOGLE_SERVICES_JSON_BASE64` de GitHub Actions. CI genera `firebase_config.xml` con XML válido antes de compilar Admin. Si falta el secreto, el flujo se detiene para evitar entregar una APK que no pueda conectarse.
+- La inicialización de Firebase se comprueba en `MainActivity` antes de entrar en Compose; la autorización exige `enabled: true` explícito y rol `owner` o `admin`.
 
 ## Acceso administrativo
 1. Crear o habilitar el usuario desde Firebase Authentication (correo/contraseña).
