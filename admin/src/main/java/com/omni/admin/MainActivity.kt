@@ -59,7 +59,8 @@ private data class DashboardData(
 
 @Composable
 private fun OmniAdminApp() {
-  val contextReady = remember { FirebaseApp.getApps(androidx.compose.ui.platform.LocalContext.current).isNotEmpty() }
+  val context = androidx.compose.ui.platform.LocalContext.current
+  val contextReady = remember(context) { FirebaseApp.getApps(context).isNotEmpty() }
   var user by remember { mutableStateOf(if (contextReady) FirebaseAuth.getInstance().currentUser else null) }
   var authorized by remember { mutableStateOf(false) }
   var checking by remember { mutableStateOf(false) }
