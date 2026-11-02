@@ -220,7 +220,8 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/jobPosts/$(request.resource.data.postId)).data.ownerUid
           == request.resource.data.postOwnerUid;
       allow read: if signedIn()
-        && (resource.data.applicantUid == request.auth.uid
+        && (applicationId.matches("^" + request.auth.uid + "_.*")
+          || resource.data.applicantUid == request.auth.uid
           || resource.data.postOwnerUid == request.auth.uid);
       allow update: if signedIn()
         && resource.data.postOwnerUid == request.auth.uid
