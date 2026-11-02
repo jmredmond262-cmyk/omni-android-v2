@@ -300,6 +300,29 @@ fun MerchantHubScreen(
             }
         }
 
+        item {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F2337)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF57DDF5).copy(alpha = 0.5f)),
+                modifier = Modifier.fillMaxWidth().clickable { viewModel.navigateTo(Screen.MerchantOrders) }
+                    .testTag("merchant_orders_entry")
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(Icons.Default.Inventory, contentDescription = null, tint = Color(0xFF57DDF5), modifier = Modifier.size(25.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Pedidos QR y Delivery", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("Recibir pedidos, verificar QR y actualizar preparación / entrega", color = Color(0xFFB8C8D9), fontSize = 10.sp)
+                    }
+                    Text("ABRIR ›", color = Color(0xFF57DDF5), fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                }
+            }
+        }
+
         // Beneficios Comerciales, Puntos & Rendimiento por Ventas
         item {
             Card(
@@ -636,11 +659,12 @@ fun MerchantHubScreen(
                                     }
                                     context.startActivity(Intent.createChooser(intent, "Compartir desde OMNI"))
                                 },
-                                modifier = Modifier.align(Alignment.End)
+                                modifier = Modifier.align(Alignment.End).testTag("share_manual_news_${news.id}"),
+                                colors = ButtonDefaults.textButtonColors(contentColor = RosePromo)
                             ) {
-                                Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Icon(imageVector = Icons.Default.Share, contentDescription = "Compartir novedad", modifier = Modifier.size(14.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Compartir", fontSize = 11.sp)
+                                Text("Compartir", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                         Spacer(modifier = Modifier.height(6.dp))

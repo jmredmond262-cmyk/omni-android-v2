@@ -31,6 +31,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -193,6 +195,16 @@ fun DailyHubScreen(
                 viewModel.setScheduleFilter(StoreScheduleFilter.TODOS)
                 viewModel.navigateTo(Screen.StoresList)
             }
+        ),
+        HomeCategoryItem(
+            id = "merchant_portal",
+            title = "Mi comercio",
+            subtitle = "Administrá tu negocio",
+            icon = Icons.Default.Build,
+            accentColor = Color(0xFF38D6A6),
+            onClick = {
+                viewModel.navigateTo(Screen.MerchantHub)
+            }
         )
     )
 
@@ -265,6 +277,78 @@ fun DailyHubScreen(
                             modifier = Modifier.weight(1f)
                         )
                     }
+                }
+            }
+        }
+
+        // ==========================================
+        // ACCESO A MODO RUTINA
+        // ==========================================
+        item {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF101B30)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, CyberGlowCyan.copy(alpha = 0.35f)),
+                modifier = Modifier.fillMaxWidth().clickable { viewModel.navigateTo(Screen.Routine) }
+                    .testTag("home_routine_mode_entry")
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 13.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(11.dp)
+                ) {
+                    Text("⏰", fontSize = 25.sp)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("Modo Rutina", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("Organizá tus actividades y recordatorios recurrentes", color = Color(0xFF9AAAC2), fontSize = 10.sp)
+                    }
+                    Text("ABRIR ›", color = CyberGlowCyan, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                }
+            }
+        }
+
+        item {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF101B30)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, CyberGlowPurple.copy(alpha = 0.38f)),
+                modifier = Modifier.fillMaxWidth().clickable { viewModel.navigateTo(Screen.JobBoard) }
+                    .testTag("home_job_board_entry")
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 13.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(11.dp)
+                ) {
+                    Text("🧰", fontSize = 25.sp)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("Bolsa de Trabajo y Servicios", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("Encontrá oportunidades o publicá tus servicios", color = Color(0xFF9AAAC2), fontSize = 10.sp)
+                    }
+                    Text("ABRIR ›", color = CyberGlowPurple, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                }
+            }
+        }
+
+        item {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF101B30)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, CyberGlowAmber.copy(alpha = 0.35f)),
+                modifier = Modifier.fillMaxWidth().clickable { viewModel.navigateTo(Screen.Events) }
+                    .testTag("home_events_entry")
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 13.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(11.dp)
+                ) {
+                    Text("📅", fontSize = 25.sp)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("Eventos y Agenda OMNI", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("Actividades, encuentros y propuestas de tu región", color = Color(0xFF9AAAC2), fontSize = 10.sp)
+                    }
+                    Text("ABRIR ›", color = CyberGlowAmber, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
                 }
             }
         }
@@ -634,7 +718,11 @@ fun DailyHubScreen(
         if (experience == "OMNI Turista") {
             Dialog(onDismissRequest = { selectedExperience = null }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
                 Surface(modifier = Modifier.fillMaxWidth(0.94f).heightIn(max = 620.dp), color = Color(0xFF101B30), shape = RoundedCornerShape(22.dp)) {
-                    Column(modifier = Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 620.dp)
+                            .verticalScroll(rememberScrollState()).padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text("OMNI TURISTA", color = CyberGlowCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -648,8 +736,8 @@ fun DailyHubScreen(
                                 Text("Todavía no hay atractivos cargados en esta zona. Actualizá tu ubicación desde el perfil para consultar otros destinos.", color = Color(0xFFD2DCEC), fontSize = 12.sp)
                             }
                         } else {
-                            LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 430.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                                items(touristAttractions.take(20)) { attraction ->
+                            Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                                touristAttractions.take(20).forEach { attraction ->
                                     Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF172943)), shape = RoundedCornerShape(14.dp)) {
                                         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                                             Text(attraction.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)

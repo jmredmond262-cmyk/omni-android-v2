@@ -95,6 +95,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.MainViewModel
 import com.example.data.auth.AuthRepository
+import com.example.data.wallet.DemoWalletRepository
 import com.example.ui.screens.AuthScreen
 import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.runtime.DisposableEffect
@@ -111,6 +112,10 @@ import com.example.ui.screens.TripPlannerScreen
 import com.example.ui.screens.UserProfileScreen
 import com.example.ui.screens.WeatherForecastScreen
 import com.example.ui.screens.WalletScreen
+import com.example.ui.screens.RoutineModeScreen
+import com.example.ui.screens.JobBoardScreen
+import com.example.ui.screens.EventsScreen
+import com.example.ui.screens.OrderCenterScreen
 import com.example.ui.theme.AppThemeMode
 import com.example.ui.theme.MyApplicationTheme
 
@@ -173,6 +178,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun AuthGate(activity: ComponentActivity, viewModel: MainViewModel) {
     val auth = remember { FirebaseAuth.getInstance() }
+    val demoWalletRepository = remember { DemoWalletRepository() }
     var currentUser by remember { mutableStateOf(auth.currentUser) }
     var authReady by remember { mutableStateOf(false) }
 
@@ -194,6 +200,14 @@ private fun AuthGate(activity: ComponentActivity, viewModel: MainViewModel) {
                 phone = user.phoneNumber.orEmpty(),
                 photoUrl = user.photoUrl?.toString().orEmpty()
             )
+            // La cuenta DEMO se provisiona al iniciar sesión, no al abrir la billetera.
+            demoWalletRepository.ensureWallet { result ->
+                result.onSuccess { account ->
+                    viewModel.applyRemoteDemoWallet(
+                        account.balance, 0.0, emptyList(), account.alias, account.cvu
+                    )
+                }
+            }
         }
     }
 
@@ -277,7 +291,12 @@ fun OmniApp(viewModel: MainViewModel) {
                 currentScreen is Screen.OmniAi ||
                 currentScreen is Screen.UserProfile ||
                 currentScreen is Screen.Weather ||
-                currentScreen is Screen.MorningBriefing
+                currentScreen is Screen.MorningBriefing ||
+                currentScreen is Screen.Routine ||
+                currentScreen is Screen.JobBoard ||
+                currentScreen is Screen.Events ||
+                currentScreen is Screen.OrderCenter ||
+                currentScreen is Screen.MerchantOrders
     ) {
         when (currentScreen) {
             is Screen.InteractiveRoute -> viewModel.navigateTo(Screen.StoreDetail)
@@ -289,6 +308,11 @@ fun OmniApp(viewModel: MainViewModel) {
             is Screen.OmniAi -> viewModel.navigateTo(Screen.DailyHub)
             is Screen.Weather -> viewModel.navigateTo(Screen.DailyHub)
             is Screen.MorningBriefing -> viewModel.navigateTo(Screen.DailyHub)
+            is Screen.Routine -> viewModel.navigateTo(Screen.DailyHub)
+            is Screen.JobBoard -> viewModel.navigateTo(Screen.DailyHub)
+            is Screen.Events -> viewModel.navigateTo(Screen.DailyHub)
+            is Screen.OrderCenter -> viewModel.navigateTo(Screen.StoreDetail)
+            is Screen.MerchantOrders -> viewModel.navigateTo(Screen.MerchantHub)
             else -> viewModel.navigateTo(Screen.DailyHub)
         }
     }
@@ -562,11 +586,9 @@ fun OmniApp(viewModel: MainViewModel) {
                                     }
                                 )
                                 DropdownMenuItem(
-                                    text = {
-                                        Text("👥 Contactos y servicios del barrio")
-                                    },
+                                    text = { Text("🏪 Portal de Comerciante") },
                                     onClick = {
-                                        viewModel.navigateTo(Screen.Contacts)
+                                        viewModel.navigateTo(Screen.MerchantHub)
                                         overflowMenuExpanded = false
                                     }
                                 )
@@ -626,6 +648,11 @@ fun OmniApp(viewModel: MainViewModel) {
                     Screen.UserProfile -> UserProfileScreen(viewModel = viewModel)
                     Screen.MerchantHub -> MerchantHubScreen(viewModel = viewModel)
                     Screen.TripPlanner -> TripPlannerScreen(viewModel = viewModel)
+                    Screen.Routine -> RoutineModeScreen(onBack = { viewModel.navigateTo(Screen.DailyHub) })
+                    Screen.JobBoard -> JobBoardScreen(onBack = { viewModel.navigateTo(Screen.DailyHub) })
+                    Screen.Events -> EventsScreen(onBack = { viewModel.navigateTo(Screen.DailyHub) })
+                    Screen.OrderCenter -> OrderCenterScreen(viewModel = viewModel, merchantMode = false, onBack = { viewModel.navigateTo(Screen.StoreDetail) })
+                    Screen.MerchantOrders -> OrderCenterScreen(viewModel = viewModel, merchantMode = true, onBack = { viewModel.navigateTo(Screen.MerchantHub) })
                 }
             }
         }

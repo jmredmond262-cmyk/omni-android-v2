@@ -70,6 +70,11 @@ sealed class Screen(val title: String) {
     object TripPlanner : Screen("Buscador de Viaje")
     object OmniAi : Screen("Omni AI Assistant")
     object MorningBriefing : Screen("OMNI Buenos Días")
+    object Routine : Screen("Modo Rutina")
+    object JobBoard : Screen("Bolsa de Trabajo y Servicios")
+    object Events : Screen("Eventos OMNI")
+    object OrderCenter : Screen("Pedidos QR")
+    object MerchantOrders : Screen("Pedidos y Delivery")
 }
 
 data class CommunityAlert(
@@ -189,6 +194,26 @@ class MainViewModel : ViewModel() {
     // Billetera Virtual y Pagos
     private val _wallet = MutableStateFlow(UserWallet())
     val wallet: StateFlow<UserWallet> = _wallet.asStateFlow()
+
+    /** Actualiza la billetera desde el ledger DEMO central de Firebase. */
+    fun applyRemoteDemoWallet(
+        balance: Double,
+        cashbackTotal: Double,
+        transactions: List<WalletTransaction>,
+        alias: String,
+        cvu: String
+    ) {
+        _wallet.value = _wallet.value.copy(
+            balance = balance.coerceAtLeast(0.0),
+            totalCashbackEarned = cashbackTotal.coerceAtLeast(0.0),
+            cards = emptyList(),
+            transactions = transactions
+        )
+        _userProfile.value = _userProfile.value.copy(
+            walletAlias = alias,
+            cvuCbu = cvu
+        )
+    }
 
     // Recompensas, Puntos & Rendimiento del Usuario
     private val _userRewards = MutableStateFlow(UserRewards())
@@ -625,7 +650,9 @@ class MainViewModel : ViewModel() {
             minSpendDiscountThreshold = 5000.0,
             minSpendDiscountPercent = 10,
             comboDeals = listOf(ComboDeal("Ahorro Barrial", "Descuento en compras", "-10%")),
-            inventory = SampleData.generateInventoryForStore(mappedType, kotlin.math.abs(id.hashCode())),
+            // Los resultados de mapas/directorios no incluyen precios ni stock verificados.
+            // No inventar un catálogo: solo comparar o pedir productos cargados por el comercio.
+            inventory = emptyList(),
             mapOffsetX = 0.5f,
             mapOffsetY = 0.5f,
             openTime = if (is24) "00:00" else "08:30",
@@ -639,9 +666,15 @@ class MainViewModel : ViewModel() {
     }
 
     private fun onlySelectedLocality(items: List<Store>): List<Store> {
+        val withinRadius = items.filter { it.distanceMeters <= _searchRadiusMeters.value }
         val selectedLocality = _currentCity.value.substringBefore(",").trim()
-        if (selectedLocality.isBlank() || selectedLocality.contains("Detectando", ignoreCase = true) || selectedLocality.equals("Tu zona", ignoreCase = true)) return emptyList()
-        return items.filter { it.address.contains(selectedLocality, ignoreCase = true) }
+        if (selectedLocality.isBlank() || selectedLocality.contains("Detectando", ignoreCase = true) || selectedLocality.equals("Tu zona", ignoreCase = true)) {
+            return withinRadius
+        }
+        val confirmedLocality = withinRadius.filter { it.address.contains(selectedLocality, ignoreCase = true) }
+        // Algunas fichas de OpenStreetMap/Places no repiten la localidad en la dirección.
+        // Si no hay coincidencias textuales, conservar solo los resultados geográficos dentro del radio.
+        return confirmedLocality.ifEmpty { withinRadius }
     }
 
     fun searchOmniDirectory(
@@ -731,9 +764,8 @@ class MainViewModel : ViewModel() {
 
             // Cargar comercios reales con Google Places API (New) y base local verificada
             val localStores = RealPlacesApi.fetchNearbyRealStores(lat, lon, _searchRadiusMeters.value, city, context)
-            if (localStores.isNotEmpty()) {
-                _stores.value = localStores
-            }
+            // Nunca conservar resultados de otra localidad ni dejar visibles comercios fuera de la zona elegida.
+            _stores.value = onlySelectedLocality(localStores)
 
             // Actualizar viaje con origen real
             searchTrip(address, _tripDestination.value)
@@ -982,6 +1014,7 @@ class MainViewModel : ViewModel() {
 
     // Funciones de Billetera Virtual (OmniPay)
     fun payWithWallet(storeName: String, amount: Double, cashbackPercent: Double = 5.0): Boolean {
+        if (!amount.isFinite() || amount <= 0.0) return false
         val currentBalance = _wallet.value.balance
         if (currentBalance < amount) return false
 
@@ -1061,22 +1094,6 @@ class MainViewModel : ViewModel() {
             estimatedRemisCost = newRemisCost,
             steps = updatedSteps,
             landmarksOnRoute = listOf("⭐ Parada: $stopName") + current.landmarksOnRoute
-        )
-    }
-
-    fun addFunds(amount: Double) {
-        val newBalance = _wallet.value.balance + amount
-        val newTx = WalletTransaction(
-            id = UUID.randomUUID().toString(),
-            title = "Carga de Saldo",
-            storeOrEntityName = "Transferencia Bancaria",
-            amount = amount,
-            type = TransactionType.CARGA_SALDO,
-            dateText = "Recién"
-        )
-        _wallet.value = _wallet.value.copy(
-            balance = newBalance,
-            transactions = listOf(newTx) + _wallet.value.transactions
         )
     }
 
