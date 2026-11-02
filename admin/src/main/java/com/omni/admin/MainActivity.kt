@@ -285,11 +285,11 @@ private fun PasswordLinkScreen(
     val firebaseAuthError = ex as? com.google.firebase.auth.FirebaseAuthException
     val firebaseError = ex as? com.google.firebase.FirebaseException
     message = buildString {
-      append("Etapa: ").append(authStep).append("\\n")
+      append("Etapa: ").append(authStep).append("\n")
       append("Tipo: ").append(ex.javaClass.simpleName)
-      if (firebaseAuthError != null) append("\\nCódigo Firebase: ").append(firebaseAuthError.errorCode)
-      append("\\nDetalle: ").append(ex.localizedMessage ?: firebaseError?.message ?: "Sin detalle")
-      ex.cause?.let { append("\\nCausa: ").append(it.javaClass.simpleName).append(": ").append(it.localizedMessage ?: "sin detalle") }
+      if (firebaseAuthError != null) append("\nCódigo Firebase: ").append(firebaseAuthError.errorCode)
+      append("\nDetalle: ").append(ex.localizedMessage ?: firebaseError?.message ?: "Sin detalle")
+      ex.cause?.let { append("\nCausa: ").append(it.javaClass.simpleName).append(": ").append(it.localizedMessage ?: "sin detalle") }
     }
     loading = false
   }
