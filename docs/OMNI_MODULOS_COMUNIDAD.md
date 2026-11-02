@@ -7,7 +7,7 @@
 - La primera vez Android solicita permiso para notificaciones en versiones compatibles.
 - Los modos silencioso y sonoro usan canales de notificación separados.
 - El modo voz deja el texto listo para lectura al abrir el aviso; no reproduce audio por sorpresa mientras la app está cerrada.
-- La programación actual no se sincroniza entre dispositivos y Android puede retrasar avisos por ahorro de batería. La reprogramación tras reinicio queda pendiente de una siguiente mejora.
+- La programación es local a cada dispositivo y se restaura al reiniciar el teléfono. Android puede retrasar avisos por ahorro de batería; para mayor puntualidad conviene permitir notificaciones y no restringir OMNI en el ahorro de batería.
 
 ## Bolsa de Trabajo y Servicios
 - Las publicaciones se almacenan en Firestore en `jobPosts`.
