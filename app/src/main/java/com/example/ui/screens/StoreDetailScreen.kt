@@ -343,6 +343,16 @@ fun StoreDetailScreen(
                         color = SlateNavy.copy(alpha = 0.85f),
                         lineHeight = 19.sp
                     )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = { viewModel.navigateTo(Screen.OrderCenter) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF087EAB)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("🛍️ Hacer pedido QR · Pagar al retirar", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
 
