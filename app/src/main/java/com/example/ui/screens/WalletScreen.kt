@@ -196,7 +196,7 @@ fun WalletScreen(
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text(
-                                text = "5% Cashback Activo",
+                                text = "MODO PRUEBA",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
