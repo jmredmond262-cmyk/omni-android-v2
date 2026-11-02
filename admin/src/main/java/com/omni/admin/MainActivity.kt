@@ -62,7 +62,7 @@ private val tabs = listOf(
   AdminTab("dashboard", "Resumen"), AdminTab("users", "Usuarios", "users"),
   AdminTab("wallets", "Billeteras", "walletAccounts"), AdminTab("operations", "Operaciones", "walletOperations"),
   AdminTab("stores", "Comercios", "merchantProfiles"), AdminTab("orders", "Pedidos", "storeOrders"),
-  AdminTab("feedback", "Comentarios", "appFeedback"), AdminTab("modules", "Módulos", "moduleRegistry"),
+  AdminTab("feedback", "Comentarios", "appFeedback"), AdminTab("activity", "Actividad", "usageEvents"), AdminTab("modules", "Módulos", "moduleRegistry"),
   AdminTab("audit", "Auditoría", "adminAuditLogs"), AdminTab("settings", "Configuración")
 )
 
@@ -366,10 +366,13 @@ private val fieldLabels = mapOf(
   "paymentStatus" to "Estado del pago", "paymentMethod" to "Medio de pago",
   "fulfillmentType" to "Entrega", "action" to "Acción", "target" to "Destino",
   "message" to "Mensaje", "description" to "Descripción", "enabled" to "Habilitado",
+  "eventName" to "Evento", "screen" to "Pantalla", "platform" to "Plataforma", "appVersion" to "Versión",
   "createdAt" to "Fecha de registro", "updatedAt" to "Última actualización", "lastSeenAt" to "Última actividad",
   "cvu" to "CVU"
 )
 private fun friendlyEnum(value: String): String = when (value.uppercase()) {
+  "SESSION_START" -> "Inicio de sesión"
+  "SCREEN_VIEW" -> "Visita de pantalla"
   "DEPOSIT" -> "Carga de saldo DEMO"
   "TRANSFER" -> "Transferencia"
   "QR_PAYMENT" -> "Pago con QR"
@@ -403,6 +406,7 @@ private fun RecordCard(item: Map<String, Any?>, type: String) {
     "merchantProfiles" -> firstPresentValue(item, "storeName", "name").ifBlank { "Comercio OMNI" }
     "storeOrders" -> "Pedido " + firstPresentValue(item, "orderNumber", "status").ifBlank { "OMNI" }
     "appFeedback" -> "Comentario de usuario"
+    "usageEvents" -> friendlyEnum(firstPresentValue(item, "eventName").ifBlank { "Actividad OMNI" })
     "adminAuditLogs" -> friendlyEnum(firstPresentValue(item, "action").ifBlank { "Actividad administrativa" })
     else -> firstPresentValue(item, "title", "name", "action").ifBlank { "Registro OMNI" }
   }
@@ -413,6 +417,7 @@ private fun RecordCard(item: Map<String, Any?>, type: String) {
     "merchantProfiles" -> listOf("description", "category", "address", "status", "createdAt")
     "storeOrders" -> listOf("total", "paymentStatus", "fulfillmentType", "createdAt")
     "appFeedback" -> listOf("message", "createdAt")
+    "usageEvents" -> listOf("screen", "platform", "appVersion", "createdAt")
     else -> listOf("status", "createdAt", "updatedAt")
   }
   val visible = preferred.mapNotNull { key ->
