@@ -61,6 +61,13 @@ jobs:
               "gcm_defaultSenderId": project["project_number"],
               "google_storage_bucket": project.get("storage_bucket", ""),
           }
+          web_client = next(
+              (item["oauth_client"][0]["client_id"] for item in data["client"]
+               if any(oauth.get("client_type") == 3 for oauth in item.get("oauth_client", []))),
+              None
+          )
+          if web_client:
+              values["default_web_client_id"] = web_client
           os.makedirs("admin/src/main/res/values", exist_ok=True)
           with open("admin/src/main/res/values/firebase_config.xml", "w", encoding="utf-8") as f:
               f.write("<resources>\n")
