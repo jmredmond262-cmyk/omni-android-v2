@@ -114,16 +114,18 @@ class AuthRepository(
             "updatedAt" to FieldValue.serverTimestamp(),
             "lastSeenAt" to FieldValue.serverTimestamp()
         )
-        firestore.collection("users").document(user.uid).get()
-            .addOnSuccessListener { snapshot ->
-                if (!snapshot.exists()) profile["createdAt"] = FieldValue.serverTimestamp()
-                firestore.collection("users").document(user.uid).set(profile, com.google.firebase.firestore.SetOptions.merge())
-                    .addOnSuccessListener { done(Result.success(Unit)) }
-                    .addOnFailureListener { error ->
-                        // Authentication is valid even if profile synchronization is temporarily unavailable.
-                        done(Result.failure(error))
-                    }
+        // Use the Firebase Auth creation time as a stable profile creation date.
+        // This avoids requiring a Firestore read before writing the user's own profile.
+        user.metadata?.creationTimestamp
+            ?.takeIf { it > 0L }
+            ?.let { profile["createdAt"] = java.util.Date(it) }
+
+        firestore.collection("users").document(user.uid)
+            .set(profile, com.google.firebase.firestore.SetOptions.merge())
+            .addOnSuccessListener { done(Result.success(Unit)) }
+            .addOnFailureListener { error ->
+                // Authentication is valid even if profile synchronization is temporarily unavailable.
+                done(Result.failure(error))
             }
-            .addOnFailureListener { done(Result.failure(it)) }
     }
 }
