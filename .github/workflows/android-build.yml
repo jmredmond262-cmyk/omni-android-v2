@@ -40,9 +40,11 @@ jobs:
       - name: Configure Firebase Android apps
         env:
           FIREBASE_GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON_BASE64 }}
+          ADMIN_FIREBASE_JSON: ${{ secrets.OMNI_ADMIN_GOOGLE_SERVICES_JSON_BASE64 }}
         run: |
-          if [ -n "$FIREBASE_GOOGLE_SERVICES_JSON_BASE64" ]; then
+          if [ -n "$FIREBASE_GOOGLE_SERVICES_JSON_BASE64" ] && [ -n "$ADMIN_FIREBASE_JSON" ]; then
             printf '%s' "$FIREBASE_GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > app/google-services.json
+            printf '%s' "$ADMIN_FIREBASE_JSON" | base64 --decode > admin/google-services.json
             python3 - <<'PY'
           import json
           import os
@@ -52,7 +54,7 @@ jobs:
               data = json.load(f)
           client = next(
               item for item in data["client"]
-              if item["client_info"]["android_client_info"]["package_name"] == "com.omni.admin"
+              if item["client_info"]["android_client_info"]["package_name"] == "com.omni.adminpanel"
           )
           project = data["project_info"]
           values = {
@@ -79,7 +81,7 @@ jobs:
           PY
             echo "Firebase project resources configured for OMNI Admin."
           else
-            echo "::error::Falta FIREBASE_GOOGLE_SERVICES_JSON_BASE64. Se cancela la compilación para no publicar un APK de OMNI Admin sin conexión funcional a Firebase."
+            echo "::error::Faltan las configuraciones Firebase de OMNI o de OMNI Admin. Se cancela la compilación para no publicar APK sin conexión funcional."
             exit 1
           fi
       - name: Configure optional API keys
