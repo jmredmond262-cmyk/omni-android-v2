@@ -101,8 +101,10 @@ fun StoresListScreen(
     var searchQuery by remember { mutableStateOf("") }
     var selectedType by remember { mutableStateOf<StoreType?>(null) }
 
-    val filteredAndRankedStores = remember(stores, searchQuery, selectedType, scheduleFilter, simulatedHour, isSimulatedHoliday) {
+    val filteredAndRankedStores = remember(stores, searchQuery, selectedType, scheduleFilter, simulatedHour, isSimulatedHoliday, currentCity) {
         stores.filter { store ->
+            val localityToken = currentCity.substringBefore(",").trim()
+            val matchesLocality = localityToken.isNotBlank() && store.address.contains(localityToken, ignoreCase = true)
             val matchesSearch = searchQuery.isBlank() ||
                 store.name.contains(searchQuery, ignoreCase = true) ||
                 store.address.contains(searchQuery, ignoreCase = true) ||
@@ -118,7 +120,7 @@ fun StoresListScreen(
                 StoreScheduleFilter.FERIADOS -> store.openOnHolidays || store.is24Hours || store.isOnDuty
             }
 
-            matchesSearch && matchesType && matchesSchedule
+            matchesLocality && matchesSearch && matchesType && matchesSchedule
         }.sortedWith(
             // Priorizar los que están abiertos o de turno en ese horario sobre los cerrados
             compareByDescending<Store> {
