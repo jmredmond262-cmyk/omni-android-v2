@@ -95,6 +95,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.MainViewModel
 import com.example.data.auth.AuthRepository
+import com.example.data.wallet.DemoWalletRepository
 import com.example.ui.screens.AuthScreen
 import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.runtime.DisposableEffect
@@ -173,6 +174,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun AuthGate(activity: ComponentActivity, viewModel: MainViewModel) {
     val auth = remember { FirebaseAuth.getInstance() }
+    val demoWalletRepository = remember { DemoWalletRepository() }
     var currentUser by remember { mutableStateOf(auth.currentUser) }
     var authReady by remember { mutableStateOf(false) }
 
@@ -194,6 +196,14 @@ private fun AuthGate(activity: ComponentActivity, viewModel: MainViewModel) {
                 phone = user.phoneNumber.orEmpty(),
                 photoUrl = user.photoUrl?.toString().orEmpty()
             )
+            // La cuenta DEMO se provisiona al iniciar sesión, no al abrir la billetera.
+            demoWalletRepository.ensureWallet { result ->
+                result.onSuccess { account ->
+                    viewModel.applyRemoteDemoWallet(
+                        account.balance, 0.0, emptyList(), account.alias, account.cvu
+                    )
+                }
+            }
         }
     }
 
