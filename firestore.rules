@@ -153,6 +153,9 @@ service cloud.firestore {
         && request.resource.data.status == "RECIBIDO"
         && request.resource.data.paymentStatus == "PENDIENTE"
         && request.resource.data.paymentMethod == "PAGO_AL_RETIRAR"
+        && request.resource.data.fulfillmentType in ["RETIRO", "DELIVERY"]
+        && (request.resource.data.fulfillmentType == "RETIRO"
+          || (request.resource.data.deliveryAddress is string && request.resource.data.deliveryAddress.size() > 0))
         && request.resource.data.total is number
         && request.resource.data.total > 0
         && request.resource.data.total <= 500000
