@@ -41,10 +41,15 @@ private val Money = NumberFormat.getNumberInstance(Locale("es", "AR"))
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    setContent { MaterialTheme(colorScheme = darkColorScheme(
-      primary = Mint, background = Navy, surface = Panel, onPrimary = Navy,
-      onBackground = White, onSurface = White, secondary = Muted
-    )) { OmniAdminApp() } }
+    // Firebase is initialized by FirebaseInitProvider before the Activity starts.
+    // Check it here, outside Compose, to keep platform initialization out of composition.
+    val firebaseConfigured = FirebaseApp.getApps(this).isNotEmpty()
+    setContent {
+      MaterialTheme(colorScheme = darkColorScheme(
+        primary = Mint, background = Navy, surface = Panel, onPrimary = Navy,
+        onBackground = White, onSurface = White, secondary = Muted
+      )) { OmniAdminApp(firebaseConfigured) }
+    }
   }
 }
 
@@ -58,10 +63,8 @@ private data class DashboardData(
 )
 
 @Composable
-private fun OmniAdminApp() {
-  val context = androidx.compose.ui.platform.LocalContext.current
-  val contextReady = remember(context) { FirebaseApp.getApps(context).isNotEmpty() }
-  var user by remember { mutableStateOf(if (contextReady) FirebaseAuth.getInstance().currentUser else null) }
+private fun OmniAdminApp(firebaseConfigured: Boolean) {
+  var user by remember { mutableStateOf(if (firebaseConfigured) FirebaseAuth.getInstance().currentUser else null) }
   var authorized by remember { mutableStateOf(false) }
   var checking by remember { mutableStateOf(false) }
   var error by remember { mutableStateOf("") }
@@ -74,7 +77,7 @@ private fun OmniAdminApp() {
     FirebaseFirestore.getInstance().collection("systemAdmins").document(uid).get()
       .addOnSuccessListener { doc ->
         val role = doc.getString("role") ?: ""
-        authorized = doc.exists() && doc.getBoolean("enabled") != false && role in listOf("owner", "admin")
+        authorized = doc.exists() && doc.getBoolean("enabled") == true && role in listOf("owner", "admin")
         checking = false
         if (!authorized) error = "Esta cuenta no tiene permisos administrativos. El propietario debe habilitarla en systemAdmins."
       }
@@ -92,7 +95,7 @@ private fun OmniAdminApp() {
 
   Surface(Modifier.fillMaxSize(), color = Navy) {
     when {
-      !contextReady -> SetupNotice()
+      !firebaseConfigured -> SetupNotice()
       user == null -> LoginScreen(email, { email = it }, password, { password = it }, error) {
         error = ""
         FirebaseAuth.getInstance().signInWithEmailAndPassword(email.trim(), password)
