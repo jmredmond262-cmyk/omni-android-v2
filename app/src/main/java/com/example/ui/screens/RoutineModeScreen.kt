@@ -113,6 +113,14 @@ private object RoutineAlarmScheduler {
     }
 }
 
+class RoutineBootReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
+            RoutineStore.load(context).forEach { RoutineAlarmScheduler.schedule(context, it) }
+        }
+    }
+}
+
 class RoutineReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val id = intent.getStringExtra("routine_id") ?: return
