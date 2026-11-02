@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import com.example.model.Store
 import com.example.model.StoreProduct
 import com.example.ui.MainViewModel
+import com.example.data.analytics.UsageAnalyticsRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -194,6 +195,7 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
                         "createdAt" to FieldValue.serverTimestamp(),
                         "updatedAt" to FieldValue.serverTimestamp()
                     )).addOnSuccessListener {
+                        UsageAnalyticsRepository.trackAction(uid, "STORE_ORDER_CREATED", "orders")
                         sending = false
                         createdOrder = OmniStoreOrder(
                             ref.id, store.id, store.name, merchantUid, uid,
@@ -238,7 +240,9 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
     fun advanceOrder(order: OmniStoreOrder, next: String) {
         db.collection("storeOrders").document(order.id).update(
             mapOf("status" to next, "updatedAt" to FieldValue.serverTimestamp())
-        ).addOnFailureListener { feedback = it.localizedMessage ?: "No se pudo actualizar el estado." }
+        ).addOnSuccessListener {
+            UsageAnalyticsRepository.trackAction(uid, "ORDER_STATUS_$next", "orders")
+        }.addOnFailureListener { feedback = it.localizedMessage ?: "No se pudo actualizar el estado." }
     }
 
     Column(Modifier.fillMaxSize().background(Color(0xFF070A14)).padding(16.dp)) {
