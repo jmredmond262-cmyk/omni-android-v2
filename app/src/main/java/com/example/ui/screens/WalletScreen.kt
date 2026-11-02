@@ -118,7 +118,7 @@ fun WalletScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "OmniPay • Billetera Barrial",
+                            text = "OMNI Pay Virtual • DEMO",
                             fontSize = 13.sp,
                             color = Color.White.copy(alpha = 0.8f),
                             fontWeight = FontWeight.Medium
@@ -139,15 +139,21 @@ fun WalletScreen(
 
                     Spacer(modifier = Modifier.height(14.dp))
                     Text(
-                        text = "Saldo Disponible",
+                        text = "Saldo virtual de prueba",
                         fontSize = 12.sp,
                         color = Color.White.copy(alpha = 0.7f)
                     )
                     Text(
-                        text = "$${String.format("%,.2f", wallet.balance)}",
+                        text = "OM$ ${String.format("%,.2f", wallet.balance)}",
                         fontSize = 32.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = Color.White
+                    )
+                    Text(
+                        text = "Crédito ficticio para probar flujos. No es dinero real ni permite retiros.",
+                        fontSize = 10.sp,
+                        color = Color(0xFF9CC7DF),
+                        modifier = Modifier.padding(top = 4.dp)
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -169,7 +175,7 @@ fun WalletScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Total ahorrado en reintegros: $${String.format("%,.2f", wallet.totalCashbackEarned)}",
+                                text = "Reintegros virtuales acumulados: OM$ ${String.format("%,.2f", wallet.totalCashbackEarned)}",
                                 color = Color.White,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold
@@ -205,7 +211,7 @@ fun WalletScreen(
                         ) {
                             Icon(imageVector = Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "Cargar Saldo", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text(text = "Cargar demo", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                     }
                 }
@@ -481,7 +487,7 @@ fun WalletScreen(
                             val success = viewModel.payWithWallet(currentStore.name, amount)
                             showPayQrDialog = false
                             if (success) {
-                                paymentSuccessMessage = "¡Pago exitoso de $${String.format("%,.2f", amount)} en ${currentStore.name}! Recibiste un reintegro de $${String.format("%,.2f", amount * 0.05)}."
+                                paymentSuccessMessage = "¡Pago de prueba exitoso por OM$ ${String.format("%,.2f", amount)} en ${currentStore.name}! Reintegro virtual: OM$ ${String.format("%,.2f", amount * 0.05)}."
                             } else {
                                 paymentSuccessMessage = "Saldo insuficiente en tu billetera. Por favor carga saldo antes de pagar."
                             }
@@ -505,7 +511,7 @@ fun WalletScreen(
         var addAmount by remember { mutableStateOf("10000") }
         AlertDialog(
             onDismissRequest = { showAddFundsDialog = false },
-            title = { Text("Cargar Saldo a OmniPay") },
+            title = { Text("Agregar saldo virtual de prueba") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("Ingresa el monto a transferir desde tu cuenta bancaria o tarjeta:", fontSize = 13.sp)
@@ -524,7 +530,7 @@ fun WalletScreen(
                         if (amount > 0) {
                             viewModel.addFunds(amount)
                             showAddFundsDialog = false
-                            paymentSuccessMessage = "¡Carga exitosa de $${String.format("%,.2f", amount)} a tu billetera!"
+                            paymentSuccessMessage = "¡Carga virtual de prueba por OM$ ${String.format("%,.2f", amount)}!"
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
