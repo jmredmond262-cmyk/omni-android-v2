@@ -48,6 +48,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -84,6 +85,12 @@ fun WalletScreen(
 ) {
     val wallet by viewModel.wallet.collectAsState()
     val stores by viewModel.stores.collectAsState()
+    val profile by viewModel.userProfile.collectAsState()
+    var showMyQrDialog by remember { mutableStateOf(false) }
+
+    // Restaurar primero y persistir cada cambio de saldo o historial.
+    remember(context = androidx.compose.ui.platform.LocalContext.current) { viewModel.restoreDemoWallet(androidx.compose.ui.platform.LocalContext.current) }
+    LaunchedEffect(wallet) { viewModel.persistDemoWallet(androidx.compose.ui.platform.LocalContext.current) }
 
     var showPayQrDialog by remember { mutableStateOf(false) }
     var showAddFundsDialog by remember { mutableStateOf(false) }
@@ -247,6 +254,30 @@ fun WalletScreen(
                             Spacer(modifier = Modifier.width(5.dp))
                             Text("Recibir demo", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
+                    }
+                }
+            }
+        }
+
+        // Identidad virtual de prueba: alias y CVU ficticios.
+        item {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF101D34)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Tu cuenta OMNI Pay DEMO", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text("Alias: ${profile.walletAlias}", color = Color(0xFFBCEEFF), fontSize = 13.sp)
+                    Text("CVU virtual: ${profile.cvuCbu}", color = Color.White, fontSize = 12.sp)
+                    Text("Identificadores ficticios: no reciben transferencias bancarias reales.", color = Color(0xFF9AAAC2), fontSize = 10.sp)
+                    Button(
+                        onClick = { showMyQrDialog = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF174A66))
+                    ) {
+                        Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Mostrar mi QR demo")
                     }
                 }
             }
@@ -429,6 +460,23 @@ fun WalletScreen(
         item {
             Spacer(modifier = Modifier.height(20.dp))
         }
+    }
+
+    if (showMyQrDialog) {
+        AlertDialog(
+            onDismissRequest = { showMyQrDialog = false },
+            title = { Text("Mi QR OMNI Pay · DEMO") },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Icon(Icons.Default.QrCodeScanner, contentDescription = null, tint = EmeraldPrimary, modifier = Modifier.size(100.dp))
+                    Text("QR de identidad virtual", fontWeight = FontWeight.Bold)
+                    Text("Alias: ${profile.walletAlias}", fontSize = 13.sp)
+                    Text("CVU: ${profile.cvuCbu}", fontSize = 12.sp)
+                    Text("Representación visual de prueba. No contiene una orden bancaria ni permite cobrar dinero real.", fontSize = 11.sp, color = Color.Gray)
+                }
+            },
+            confirmButton = { TextButton(onClick = { showMyQrDialog = false }) { Text("Cerrar") } }
+        )
     }
 
     // Modal de Pago con QR en Comercio Barrial
@@ -964,6 +1012,7 @@ fun WalletTransactionCard(transaction: WalletTransaction, modifier: Modifier = M
                     fontSize = 11.sp,
                     color = Color.Gray
                 )
+                Text(transaction.status, fontSize = 9.sp, color = EmeraldDark, fontWeight = FontWeight.SemiBold)
             }
 
             Column(horizontalAlignment = Alignment.End) {
