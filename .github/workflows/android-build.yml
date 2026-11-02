@@ -67,7 +67,7 @@ jobs:
               for key, value in values.items():
                   f.write(f'  <string name="{key}" translatable="false">{xml.escape(value)}</string>\n')
               f.write("</resources>\n")
-PY
+          PY
             echo "Firebase project resources configured for OMNI Admin."
           else
             echo "::error::Falta FIREBASE_GOOGLE_SERVICES_JSON_BASE64. Se cancela la compilación para no publicar un APK de OMNI Admin sin conexión funcional a Firebase."
