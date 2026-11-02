@@ -173,14 +173,6 @@ fun DailyHubScreen(
             }
         ),
         HomeCategoryItem(
-            id = "contacts",
-            title = "Contactos",
-            subtitle = "Agenda y servicios del barrio",
-            icon = Icons.Default.People,
-            accentColor = Color(0xFF54E5FF),
-            onClick = { viewModel.navigateTo(Screen.Contacts) }
-        ),
-        HomeCategoryItem(
             id = "health",
             title = "Salud",
             subtitle = "Farmacias y emergencias",
