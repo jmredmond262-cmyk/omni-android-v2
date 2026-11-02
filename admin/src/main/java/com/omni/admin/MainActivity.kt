@@ -41,7 +41,7 @@ private val Mint = Color(0xFF55E0B8)
 private val Muted = Color(0xFF9EADC3)
 private val White = Color(0xFFF4F7FC)
 private val Danger = Color(0xFFFF8585)
-private const val ADMIN_API_URL = "https://us-central1-omni-57f69.cloudfunctions.net/omniAdminApi"
+private const val ADMIN_API_URL = "https://omni-admin-api.jmredmond262.workers.dev"
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
