@@ -277,6 +277,14 @@ private fun PasswordLinkScreen(
   var loading by remember { mutableStateOf(false) }
   var message by remember { mutableStateOf("") }
   val email = user.email.orEmpty()
+  val context = LocalContext.current
+  val scope = rememberCoroutineScope()
+
+  fun showAuthError(ex: Exception) {
+    val firebaseError = ex as? com.google.firebase.FirebaseException
+    message = (ex.localizedMessage ?: "No se pudo completar la autenticación.") + " (" + (firebaseError?.message ?: ex.javaClass.simpleName) + ")"
+    loading = false
+  }
 
   Column(Modifier.fillMaxSize().padding(26.dp), verticalArrangement = Arrangement.Center) {
     Text("OMNI", color = White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -301,19 +309,38 @@ private fun PasswordLinkScreen(
         email.isBlank() -> message = "La cuenta de Google no tiene un correo disponible."
         else -> {
           loading = true
-          message = ""
-          val credential = EmailAuthProvider.getCredential(email, newPassword)
-          user.linkWithCredential(credential)
-            .addOnSuccessListener { result ->
-              loading = false
-              val linked = result.user ?: FirebaseAuth.getInstance().currentUser
-              if (linked != null) onLinked(linked)
-              else message = "La vinculación se completó, pero no se pudo recuperar la sesión. Volvé a ingresar."
+          message = "Volvé a verificar tu cuenta de Google para autorizar el cambio…"
+          scope.launch {
+            try {
+              val clientIdResource = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
+              if (clientIdResource == 0) throw IllegalStateException("No se encontró el cliente OAuth web de Firebase.")
+              val serverClientId = context.getString(clientIdResource)
+              val googleOption = GetSignInWithGoogleOption.Builder(serverClientId).build()
+              val request = GetCredentialRequest.Builder().addCredentialOption(googleOption).build()
+              val credential = CredentialManager.create(context).getCredential(context, request).credential
+              if (credential !is CustomCredential || credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                throw IllegalStateException("Google no devolvió una credencial válida.")
+              }
+              val token = GoogleIdTokenCredential.createFrom(credential.data).idToken
+              val googleCredential = com.google.firebase.auth.GoogleAuthProvider.getCredential(token, null)
+              // Reauthenticate the exact current Firebase user before linking the password.
+              user.reauthenticate(googleCredential)
+                .addOnSuccessListener {
+                  val passwordCredential = EmailAuthProvider.getCredential(email, newPassword)
+                  user.linkWithCredential(passwordCredential)
+                    .addOnSuccessListener { result ->
+                      loading = false
+                      val linked = result.user ?: FirebaseAuth.getInstance().currentUser
+                      if (linked != null && linked.uid == user.uid) onLinked(linked)
+                      else message = "La operación terminó, pero no pudimos confirmar el mismo UID. No vuelvas a crear la cuenta; contactá soporte."
+                    }
+                    .addOnFailureListener(::showAuthError)
+                }
+                .addOnFailureListener(::showAuthError)
+            } catch (ex: Exception) {
+              showAuthError(ex)
             }
-            .addOnFailureListener { ex ->
-              loading = false
-              message = ex.localizedMessage ?: "No se pudo vincular la contraseña."
-            }
+          }
         }
       }
     }, Modifier.fillMaxWidth().height(50.dp), enabled = !loading) {
