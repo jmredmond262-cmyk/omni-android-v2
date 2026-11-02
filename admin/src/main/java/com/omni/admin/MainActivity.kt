@@ -74,6 +74,9 @@ private fun OmniAdminRoot() {
   var payload by remember { mutableStateOf(JSONObject()) }
   var loading by remember { mutableStateOf(false) }
   var error by remember { mutableStateOf("") }
+  var nextPageToken by remember { mutableStateOf("") }
+  var nextOffset by remember { mutableStateOf(0) }
+  var hasMore by remember { mutableStateOf(false) }
   val scope = rememberCoroutineScope()
 
   fun refresh() {
@@ -84,12 +87,41 @@ private fun OmniAdminRoot() {
       try {
         val token = current.getIdToken(true).await().token ?: throw IllegalStateException("No se pudo renovar la sesión.")
         val tab = tabs.first { it.id == selected }
+        nextPageToken = ""; nextOffset = 0; hasMore = false
         payload = when (selected) {
           "dashboard" -> AdminApi.call(token, "dashboard")
           "settings" -> AdminApi.call(token, "getConfig")
           else -> AdminApi.call(token, "list", JSONObject().put("collection", tab.collection).put("limit", 100))
         }
+        nextPageToken = payload.optString("nextPageToken", "")
+        nextOffset = payload.optInt("nextOffset", 0)
+        hasMore = payload.optBoolean("hasMore", false)
       } catch (ex: Exception) { error = ex.message ?: "No se pudo conectar con OMNI Admin." }
+      finally { loading = false }
+    }
+  }
+
+  fun loadMore() {
+    val current = auth.currentUser ?: return
+    if (!hasMore || loading) return
+    scope.launch {
+      loading = true; error = ""
+      try {
+        val token = current.getIdToken(true).await().token ?: throw IllegalStateException("No se pudo renovar la sesión.")
+        val tab = tabs.first { it.id == selected }
+        val data = JSONObject().put("collection", tab.collection).put("limit", 100)
+        if (selected == "activity") data.put("offset", nextOffset) else if (nextPageToken.isNotBlank()) data.put("pageToken", nextPageToken)
+        val page = AdminApi.call(token, "list", data)
+        val merged = JSONArray()
+        val previous = payload.optJSONArray("items") ?: JSONArray()
+        val incoming = page.optJSONArray("items") ?: JSONArray()
+        for (i in 0 until previous.length()) merged.put(previous.get(i))
+        for (i in 0 until incoming.length()) merged.put(incoming.get(i))
+        payload.put("items", merged)
+        nextPageToken = page.optString("nextPageToken", "")
+        nextOffset = page.optInt("nextOffset", nextOffset + incoming.length())
+        hasMore = page.optBoolean("hasMore", false)
+      } catch (ex: Exception) { error = ex.message ?: "No se pudieron cargar más registros." }
       finally { loading = false }
     }
   }
@@ -118,7 +150,7 @@ private fun OmniAdminRoot() {
   } else {
     AdminHome(
       email = user?.email ?: "Administrador", selected = selected, payload = payload,
-      loading = loading, error = error, onSelect = { selected = it }, onRefresh = ::refresh,
+      loading = loading, error = error, onSelect = { selected = it }, onRefresh = ::refresh, onLoadMore = ::loadMore, hasMore = hasMore,
       onSignOut = {
         auth.signOut(); user = null; payload = JSONObject(); error = ""; selected = "dashboard"
       },
@@ -198,7 +230,7 @@ private fun AdminLogin(onLogin: (String, String) -> Unit, onReset: (String) -> U
 @Composable
 private fun AdminHome(
   email: String, selected: String, payload: JSONObject, loading: Boolean, error: String,
-  onSelect: (String) -> Unit, onRefresh: () -> Unit, onSignOut: () -> Unit,
+  onSelect: (String) -> Unit, onRefresh: () -> Unit, onLoadMore: () -> Unit, hasMore: Boolean, onSignOut: () -> Unit,
   onSaveConfig: (JSONObject) -> Unit, onSaveModule: (String, String, String, Boolean) -> Unit,
   onInvite: (String) -> Unit
 ) {
@@ -229,7 +261,7 @@ private fun AdminHome(
         "settings" -> ConfigContent(payload.optJSONObject("config") ?: JSONObject(), onSaveConfig)
         "modules" -> ModuleContent(payload.optJSONArray("items") ?: JSONArray(), onSaveModule)
         "audit" -> InvitationContent(payload.optJSONArray("items") ?: JSONArray(), onInvite)
-        else -> RecordsContent(selected, payload.optJSONArray("items") ?: JSONArray())
+        else -> RecordsContent(selected, payload.optJSONArray("items") ?: JSONArray(), hasMore, onLoadMore)
       }
     }
   }
@@ -371,15 +403,18 @@ private fun DashboardContent(payload: JSONObject) {
 }
 
 @Composable
-private fun RecordsContent(selected: String, array: JSONArray) {
+private fun RecordsContent(selected: String, array: JSONArray, hasMore: Boolean, onLoadMore: () -> Unit) {
   val records = jsonArrayToList(array)
   LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), contentPadding = PaddingValues(vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
     item {
       Text(tabs.first { it.id == selected }.label, color = White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-      Text(records.size.toString() + (if (records.size == 1) " registro encontrado" else " registros encontrados") + " · mostrando hasta 100", color = Muted, fontSize = 12.sp)
+      Text(records.size.toString() + (if (records.size == 1) " registro cargado" else " registros cargados") + if (selected == "activity") " · orden cronológico" else " · historial paginado", color = Muted, fontSize = 12.sp)
     }
     if (records.isEmpty()) item { EmptyState("Todavía no hay registros para mostrar.") }
     items(records) { RecordCard(it, selected) }
+    if (hasMore) item {
+      Button(onClick = onLoadMore, modifier = Modifier.fillMaxWidth()) { Text("Cargar más registros") }
+    }
   }
 }
 
