@@ -5,7 +5,8 @@
 - Admiten título, mensaje, hora, días de repetición, activar/pausar, editar y eliminar.
 - Los avisos se programan con AlarmManager y se publican como notificaciones.
 - La primera vez Android solicita permiso para notificaciones en versiones compatibles.
-- Los modos silencioso y sonoro usan canales de notificación separados.
+- Los modos silencioso, sonoro y voz usan canales de notificación separados. Las notificaciones incluyen acciones rápidas para posponer 10 minutos o marcar como hecho.
+- La acción Hecho registra la fecha de cumplimiento en el dispositivo.
 - El modo voz usa el motor de texto a voz de Android para leer el título y el mensaje a la hora programada. Si el dispositivo no tiene voz en español disponible, la notificación visual sigue funcionando.
 - La programación es local a cada dispositivo y se restaura al reiniciar el teléfono. Android puede retrasar avisos por ahorro de batería; para mayor puntualidad conviene permitir notificaciones y no restringir OMNI en el ahorro de batería.
 
