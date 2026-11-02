@@ -42,8 +42,8 @@ class DemoWalletRepository(
         }
         val accountRef = firestore.collection("walletAccounts").document(uid)
         val alias = "omni-" + uid.takeLast(8).lowercase(Locale.ROOT)
-        val numeric = (uid.hashCode().toLong() and 0x7fffffffL).toString()
-        val cvu = (numeric + "00000000000000000000").take(22)
+        val cvu = UUID.nameUUIDFromBytes(uid.toByteArray())
+            .toString().filter { it.isDigit() }.padEnd(22, '0').take(22)
         firestore.runTransaction { transaction ->
             val existing = transaction.get(accountRef)
             if (existing.exists()) {
@@ -65,7 +65,7 @@ class DemoWalletRepository(
                 transaction.set(accountRef.collection("transactions").document("welcome"), mapOf(
                     "operationId" to "welcome", "type" to TransactionType.CARGA_SALDO.name,
                     "title" to "Crédito inicial de prueba", "peerName" to "OMNI Pay DEMO",
-                    "amount" to 50000.0, "status" to "ACREDITADA · DEMO",
+                    "amount" to 50000.0, "status" to "APROBADA · DEMO",
                     "createdAt" to FieldValue.serverTimestamp()
                 ))
                 DemoWalletAccount(uid, alias, cvu, 50000.0)
