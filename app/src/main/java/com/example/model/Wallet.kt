@@ -30,7 +30,7 @@ data class PaymentCard(
 )
 
 data class UserWallet(
-    val balance: Double = 50000.0,
+    val balance: Double = 0.0,
     val totalCashbackEarned: Double = 0.0,
     val cards: List<PaymentCard> = emptyList(),
     val transactions: List<WalletTransaction> = emptyList()
