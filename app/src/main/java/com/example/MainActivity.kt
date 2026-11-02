@@ -562,11 +562,9 @@ fun OmniApp(viewModel: MainViewModel) {
                                     }
                                 )
                                 DropdownMenuItem(
-                                    text = {
-                                        Text("👥 Contactos y servicios del barrio")
-                                    },
+                                    text = { Text("🏪 Portal de Comerciante") },
                                     onClick = {
-                                        viewModel.navigateTo(Screen.Contacts)
+                                        viewModel.navigateTo(Screen.MerchantHub)
                                         overflowMenuExpanded = false
                                     }
                                 )
