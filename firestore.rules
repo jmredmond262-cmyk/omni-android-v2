@@ -6,5 +6,21 @@ service cloud.firestore {
       allow read, create, update, delete: if request.auth != null
         && request.auth.uid == userId;
     }
+
+    // Los saldos y movimientos solo se modifican desde Cloud Functions (Admin SDK).
+    match /walletAccounts/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create, update, delete: if false;
+
+      match /transactions/{transactionId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow create, update, delete: if false;
+      }
+    }
+
+    // El índice de alias no se expone directamente al cliente.
+    match /walletAliases/{alias} {
+      allow read, write: if false;
+    }
   }
 }
