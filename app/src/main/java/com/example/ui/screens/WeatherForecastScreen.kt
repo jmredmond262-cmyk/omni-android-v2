@@ -132,12 +132,16 @@ fun WeatherForecastScreen(viewModel: MainViewModel) {
             val today = w.daily.firstOrNull()
             if (today != null) {
                 Card(colors = CardDefaults.cardColors(containerColor = panel), shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
-                    Row(Modifier.fillMaxWidth().padding(13.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Column {
+                    Row(Modifier.fillMaxWidth().padding(13.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
                             Text("🌅 Amanecer", color = Color(0xFFB8C8D9), fontSize = 10.sp)
                             Text(today.sunrise.takeLast(5).ifBlank { "—" }, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         }
-                        Column(horizontalAlignment = Alignment.End) {
+                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(moonEmoji(today.date) + " Fase lunar", color = Color(0xFFB8C8D9), fontSize = 10.sp)
+                            Text(moonPhaseName(today.date), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
                             Text("🌇 Atardecer", color = Color(0xFFB8C8D9), fontSize = 10.sp)
                             Text(today.sunset.takeLast(5).ifBlank { "—" }, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         }
@@ -195,18 +199,40 @@ fun WeatherForecastScreen(viewModel: MainViewModel) {
             Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
                 w.daily.forEachIndexed { index, day ->
                     Card(colors = CardDefaults.cardColors(containerColor = panel), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
-                        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(if (index == 0) "Hoy" else day.date.takeLast(5), color = Color.White, fontSize = 12.sp, modifier = Modifier.weight(1f))
-                            Text(weatherEmoji(day.weatherCode, 0.0), fontSize = 19.sp)
-                            Text("${day.precipitationProbability}% ", color = cyan, fontSize = 11.sp, modifier = Modifier.padding(start = 10.dp))
-                            Text("${day.minC.toInt()}° / ${day.maxC.toInt()}°", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                            Text("🌅 ${day.sunrise.takeLast(5)}  🌇 ${day.sunset.takeLast(5)}  ${moonEmoji(day.date)}", color = Color(0xFF9BAFC5), fontSize = 8.sp)
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Text(if (index == 0) "Hoy" else day.date.takeLast(5), color = Color.White, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                                Text(weatherEmoji(day.weatherCode, 0.0), fontSize = 19.sp)
+                                Text("${day.precipitationProbability}% lluvia", color = cyan, fontSize = 10.sp, modifier = Modifier.padding(start = 9.dp))
+                                Text("${day.minC.toInt()}° / ${day.maxC.toInt()}°", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp))
+                            }
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("🌅 ${day.sunrise.takeLast(5)}", color = Color(0xFF9BAFC5), fontSize = 9.sp)
+                                Text("${moonEmoji(day.date)} ${moonPhaseName(day.date)}", color = Color(0xFF9BAFC5), fontSize = 9.sp)
+                                Text("🌇 ${day.sunset.takeLast(5)}", color = Color(0xFF9BAFC5), fontSize = 9.sp)
+                            }
                         }
                     }
                 }
             }
             Text("Pronóstico basado en modelos meteorológicos de Open-Meteo. Puede diferir de una estación de observación local.", color = Color(0xFF8196AC), fontSize = 10.sp)
         }
+    }
+}
+
+private fun moonPhaseName(dateText: String): String {
+    val date = runCatching { LocalDate.parse(dateText) }.getOrNull() ?: LocalDate.now()
+    val knownNewMoon = LocalDate.of(2000, 1, 6)
+    val age = (ChronoUnit.DAYS.between(knownNewMoon, date).toDouble() % 29.530588853 + 29.530588853) % 29.530588853
+    return when {
+        age < 1.85 || age >= 27.68 -> "Nueva"
+        age < 7.38 -> "Creciente"
+        age < 9.23 -> "Cuarto creciente"
+        age < 14.76 -> "Gibosa creciente"
+        age < 16.61 -> "Llena"
+        age < 22.15 -> "Gibosa menguante"
+        age < 24.00 -> "Cuarto menguante"
+        else -> "Menguante"
     }
 }
 
