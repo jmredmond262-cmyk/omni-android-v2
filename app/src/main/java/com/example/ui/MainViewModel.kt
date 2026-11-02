@@ -1079,6 +1079,46 @@ class MainViewModel : ViewModel() {
         )
     }
 
+    /** Simula una transferencia saliente entre usuarios de prueba. No usa redes bancarias. */
+    fun sendDemoTransfer(recipient: String, amount: Double): Boolean {
+        val destination = recipient.trim()
+        val current = _wallet.value
+        if (destination.isBlank() || !amount.isFinite() || amount <= 0.0 || current.balance < amount) return false
+        val transaction = WalletTransaction(
+            id = UUID.randomUUID().toString(),
+            title = "Transferencia enviada",
+            storeOrEntityName = destination,
+            amount = -amount,
+            type = TransactionType.TRANSFERENCIA_ENVIADA,
+            dateText = "Recién"
+        )
+        _wallet.value = current.copy(
+            balance = current.balance - amount,
+            transactions = listOf(transaction) + current.transactions
+        )
+        return true
+    }
+
+    /** Acredita un ingreso ficticio para probar el flujo de recepción. */
+    fun simulateIncomingTransfer(sender: String, amount: Double): Boolean {
+        val origin = sender.trim()
+        if (origin.isBlank() || !amount.isFinite() || amount <= 0.0) return false
+        val current = _wallet.value
+        val transaction = WalletTransaction(
+            id = UUID.randomUUID().toString(),
+            title = "Transferencia recibida (demo)",
+            storeOrEntityName = origin,
+            amount = amount,
+            type = TransactionType.TRANSFERENCIA_RECIBIDA,
+            dateText = "Recién"
+        )
+        _wallet.value = current.copy(
+            balance = current.balance + amount,
+            transactions = listOf(transaction) + current.transactions
+        )
+        return true
+    }
+
     fun toggleContactFavorite(contactId: String) {
         _contacts.value = _contacts.value.map {
             if (it.id == contactId) it.copy(isFavorite = !it.isFavorite) else it
