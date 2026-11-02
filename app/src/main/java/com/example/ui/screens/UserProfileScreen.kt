@@ -138,7 +138,7 @@ fun UserProfileScreen(
             .fillMaxSize()
             .testTag("user_profile_screen"),
         contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 100.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         // 1. Barra de Navegación Superior con Regreso y Título
         item {
