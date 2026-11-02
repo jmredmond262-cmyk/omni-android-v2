@@ -6,6 +6,7 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
+import com.example.data.analytics.UsageAnalyticsRepository
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -194,8 +195,10 @@ class DemoWalletRepository(
                 "OMNI Pay DEMO", amount
             ))
             "CARGA ACREDITADA · DEMO"
-        }.addOnSuccessListener { done(Result.success(it)) }
-            .addOnFailureListener { done(Result.failure(it)) }
+        }.addOnSuccessListener {
+            UsageAnalyticsRepository.trackWalletOperation(uid, "DEMO_DEPOSIT")
+            done(Result.success(it))
+        }.addOnFailureListener { done(Result.failure(it)) }
     }
 
     private fun executeTransfer(
@@ -248,8 +251,10 @@ class DemoWalletRepository(
                 senderAlias, amount
             ))
             if (isQr) "PAGO QR APROBADO · DEMO" else "TRANSFERENCIA APROBADA · DEMO"
-        }.addOnSuccessListener { done(Result.success(it)) }
-            .addOnFailureListener { done(Result.failure(it)) }
+        }.addOnSuccessListener {
+            UsageAnalyticsRepository.trackWalletOperation(senderUid, if (isQr) "DEMO_QR_PAYMENT" else "DEMO_TRANSFER")
+            done(Result.success(it))
+        }.addOnFailureListener { done(Result.failure(it)) }
     }
 
     private fun transactionData(
