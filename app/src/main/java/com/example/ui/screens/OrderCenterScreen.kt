@@ -73,6 +73,7 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
     var sending by remember { mutableStateOf(false) }
     var feedback by remember { mutableStateOf<String?>(null) }
     var createdOrder by remember { mutableStateOf<OmniStoreOrder?>(null) }
+    var showOrderReview by remember { mutableStateOf(false) }
     var scannedOrderId by remember { mutableStateOf<String?>(null) }
 
     fun decodeOrder(doc: com.google.firebase.firestore.DocumentSnapshot): OmniStoreOrder? = runCatching {
@@ -282,8 +283,8 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
                         if (fulfillmentType == "DELIVERY") {
                             OutlinedTextField(deliveryAddress, { deliveryAddress = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Dirección de entrega") }, singleLine = true)
                         }
-                        Button(onClick = { submitOrder() }, enabled = !sending, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF087EAB))) {
-                            Text(if (sending) "Enviando…" else "Enviar pedido QR")
+                        Button(onClick = { showOrderReview = true }, enabled = !sending, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF087EAB))) {
+                            Text("Revisar y confirmar pedido")
                         }
                     }
                 }
@@ -313,6 +314,26 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
         }
     }
 
+    if (showOrderReview) {
+        AlertDialog(
+            onDismissRequest = { if (!sending) showOrderReview = false },
+            containerColor = Color(0xFF101B30),
+            title = { Text("Confirmar pedido", color = Color.White) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text(store.name, color = Color(0xFF57DDF5), fontWeight = FontWeight.Bold)
+                    cartLines.forEach { line ->
+                        Text("${line.quantity} × ${line.name} · OM$ ${String.format("%,.2f", line.price * line.quantity)}", color = Color.White, fontSize = 11.sp)
+                    }
+                    Text("Total: OM$ ${String.format("%,.2f", total)}", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(if (fulfillmentType == "DELIVERY") "Entrega: ${deliveryAddress.trim()}" else "Modalidad: Retiro en el comercio", color = Color(0xFFB8C8D9), fontSize = 11.sp)
+                    Text("Pago pendiente. Se abona al retirar o recibir; el QR solo identifica el pedido.", color = Color(0xFFFFC978), fontSize = 10.sp)
+                }
+            },
+            confirmButton = { Button(onClick = { showOrderReview = false; submitOrder() }, enabled = !sending) { Text("Confirmar y generar QR") } },
+            dismissButton = { TextButton(onClick = { showOrderReview = false }, enabled = !sending) { Text("Volver al carrito") } }
+        )
+    }
     createdOrder?.let { order ->
         val payload = "OMNI-ORDER|${order.id}|${order.qrNonce}"
         val bitmap = remember(payload) {
