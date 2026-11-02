@@ -3,7 +3,9 @@ package com.example.model
 enum class TransactionType {
     COMPRA_LOCAL,
     REINTEGRO_CASHBACK,
-    CARGA_SALDO
+    CARGA_SALDO,
+    TRANSFERENCIA_ENVIADA,
+    TRANSFERENCIA_RECIBIDA
 }
 
 data class WalletTransaction(
