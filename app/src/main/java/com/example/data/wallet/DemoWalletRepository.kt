@@ -129,25 +129,27 @@ class DemoWalletRepository(
             return
         }
         val input = identifier.trim().lowercase(Locale.ROOT)
-        val directory = firestore.collection("walletDirectory")
-        val lookup = if (input.startsWith("omni-")) {
-            directory.document(input).get()
-        } else {
-            directory.whereEqualTo("cvu", input).limit(1).get().continueWith { task ->
-                task.result?.documents?.firstOrNull()
-            }
+        if (input.isBlank()) {
+            done(Result.failure(IllegalArgumentException("Ingresá un alias o CVU.")))
+            return
         }
-        lookup.addOnSuccessListener { doc ->
-            val recipientUid = when (doc) {
-                is com.google.firebase.firestore.DocumentSnapshot -> doc.getString("uid")
-                else -> doc?.getString("uid")
-            }
+        val directory = firestore.collection("walletDirectory")
+        val onResolved: (String?) -> Unit = { recipientUid ->
             if (recipientUid.isNullOrBlank()) {
                 done(Result.failure(IllegalArgumentException("No encontramos una cuenta OMNI Pay con ese alias o CVU.")))
             } else {
                 executeTransfer(recipientUid, amount, false, done)
             }
-        }.addOnFailureListener { done(Result.failure(it)) }
+        }
+        if (input.startsWith("omni-")) {
+            directory.document(input).get()
+                .addOnSuccessListener { onResolved(it.getString("uid")) }
+                .addOnFailureListener { done(Result.failure(it)) }
+        } else {
+            directory.whereEqualTo("cvu", input).limit(1).get()
+                .addOnSuccessListener { onResolved(it.documents.firstOrNull()?.getString("uid")) }
+                .addOnFailureListener { done(Result.failure(it)) }
+        }
     }
 
     fun payDemoQr(payload: String, amount: Double, done: (Result<String>) -> Unit) {
