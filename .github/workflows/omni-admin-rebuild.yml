@@ -1,0 +1,76 @@
+name: OMNI Admin Rebuild
+
+on:
+  push:
+    branches: ["omni-admin-rebuild"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    name: Validate and build OMNI Admin
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Configure Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Configure Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.3.1"
+      - name: Configure Android SDK
+        run: |
+          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
+          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36.1" "build-tools;36.0.0"
+      - name: Install dedicated Admin Firebase configuration
+        env:
+          ADMIN_FIREBASE_JSON: ${{ secrets.OMNI_ADMIN_GOOGLE_SERVICES_JSON_BASE64 }}
+          ADMIN_AUTH_PROJECT_ID: ${{ secrets.OMNI_ADMIN_AUTH_PROJECT_ID }}
+        run: |
+          test -n "$ADMIN_FIREBASE_JSON" || { echo "::error::Falta OMNI_ADMIN_GOOGLE_SERVICES_JSON_BASE64"; exit 1; }
+          test -n "$ADMIN_AUTH_PROJECT_ID" || { echo "::error::Falta OMNI_ADMIN_AUTH_PROJECT_ID"; exit 1; }
+          printf '%s' "$ADMIN_FIREBASE_JSON" | base64 --decode > admin/google-services.json
+          python3 - <<'PY'
+          import json, os, sys
+          with open("admin/google-services.json", encoding="utf-8") as f:
+              cfg = json.load(f)
+          project = cfg["project_info"]["project_id"]
+          packages = [c["client_info"]["android_client_info"]["package_name"] for c in cfg["client"]]
+          if project != os.environ["ADMIN_AUTH_PROJECT_ID"]:
+              raise SystemExit(f"El proyecto del google-services.json ({project}) no coincide con OMNI_ADMIN_AUTH_PROJECT_ID.")
+          if "com.omni.adminpanel" not in packages:
+              raise SystemExit("El archivo Firebase no contiene una app Android registrada como com.omni.adminpanel.")
+          print("Configuración de autenticación administrativa validada.")
+          PY
+      - name: Build standalone Admin APK
+        run: gradle :admin:assembleDebug
+      - name: Upload OMNI Admin APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: omni-admin-rebuild-debug-apk
+          path: admin/build/outputs/apk/debug/admin-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  backend:
+    name: Validate secure Admin API
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Configure Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install function dependencies
+        working-directory: functions
+        run: npm install --no-package-lock
+      - name: TypeScript validation
+        working-directory: functions
+        run: npx tsc --noEmit
