@@ -38,6 +38,7 @@ También se pueden copiar las reglas del archivo `firestore.rules` en Firebase C
 La versión más reciente de `firestore.rules` también protege las colecciones de comunidad:
 - `jobPosts` y `jobApplications` para Bolsa de Trabajo y Servicios.
 - `omniEvents` para Agenda y Eventos.
+- `merchantProfiles` y `storeOrders` para pedidos QR y estados de delivery.
 
 Si ya habías publicado las reglas de OMNI Pay antes de esta actualización, debés volver a publicar el archivo completo actualizado. No alcanza con conservar la versión anterior: los módulos nuevos recibirían `PERMISSION_DENIED`.
 
