@@ -141,7 +141,7 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
         var listener: ListenerRegistration? = null
         if (uid.isNotBlank() && (!merchantMode || merchantReady)) {
             val query = if (merchantMode) {
-                db.collection("storeOrders").whereEqualTo("storeId", store.id)
+                db.collection("storeOrders").whereEqualTo("merchantUid", uid).whereEqualTo("storeId", store.id)
             } else {
                 db.collection("storeOrders").whereEqualTo("customerUid", uid)
             }
