@@ -125,9 +125,9 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
         }
     }
 
-    DisposableEffect(merchantMode, store.id, uid) {
+    DisposableEffect(merchantMode, merchantReady, store.id, uid) {
         var listener: ListenerRegistration? = null
-        if (uid.isNotBlank()) {
+        if (uid.isNotBlank() && (!merchantMode || merchantReady)) {
             val query = if (merchantMode) {
                 db.collection("storeOrders").whereEqualTo("storeId", store.id)
             } else {
