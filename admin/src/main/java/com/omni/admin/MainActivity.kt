@@ -26,7 +26,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.NoCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.PhoneAuthOptions
@@ -221,11 +223,19 @@ private fun LoginScreen(
         try {
           val clientIdResource = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
           if (clientIdResource == 0) throw IllegalStateException("Falta configurar el cliente OAuth web de Google en Firebase.")
+          val serverClientId = context.getString(clientIdResource)
+          val credentialManager = CredentialManager.create(context)
           val option = GetGoogleIdOption.Builder().setFilterByAuthorizedAccounts(false)
-            .setServerClientId(context.getString(clientIdResource)).setAutoSelectEnabled(false).build()
-          val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
-          val result = CredentialManager.create(context).getCredential(context, request)
-          val credential = result.credential
+            .setServerClientId(serverClientId).setAutoSelectEnabled(false).build()
+          val credential = try {
+            val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
+            credentialManager.getCredential(context, request).credential
+          } catch (noCredential: NoCredentialException) {
+            // If no saved/eligible credential is available, explicitly launch Google's account picker.
+            val signInOption = GetSignInWithGoogleOption.Builder(serverClientId).build()
+            val signInRequest = GetCredentialRequest.Builder().addCredentialOption(signInOption).build()
+            credentialManager.getCredential(context, signInRequest).credential
+          }
           if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
             val token = GoogleIdTokenCredential.createFrom(credential.data).idToken
             complete(auth.signInWithCredential(com.google.firebase.auth.GoogleAuthProvider.getCredential(token, null)))
