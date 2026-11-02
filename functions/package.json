@@ -2,11 +2,19 @@
   "name": "omni-functions",
   "private": true,
   "main": "lib/index.js",
-  "engines": { "node": "20" },
-  "scripts": { "build": "tsc", "lint": "tsc --noEmit" },
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "tsc --noEmit"
+  },
   "dependencies": {
     "firebase-admin": "^13.0.2",
     "firebase-functions": "^6.3.1"
   },
-  "devDependencies": { "typescript": "^5.7.3" }
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "@types/node": "^22.10.2"
+  }
 }
