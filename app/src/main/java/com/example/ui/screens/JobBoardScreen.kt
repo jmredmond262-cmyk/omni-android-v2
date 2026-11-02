@@ -66,6 +66,7 @@ fun JobBoardScreen(onBack: () -> Unit) {
     var experience by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf(user?.phoneNumber.orEmpty()) }
     var email by remember { mutableStateOf(user?.email.orEmpty()) }
+    var cvLinks by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var feedback by remember { mutableStateOf<String?>(null) }
 
@@ -164,6 +165,7 @@ fun JobBoardScreen(onBack: () -> Unit) {
                         "applicantEmail" to user?.email.orEmpty(),
                         "applicantPhone" to user?.phoneNumber.orEmpty(),
                         "message" to "Me interesa esta oportunidad. Podemos conversar.",
+                        "cvAndCertificatesLinks" to cvLinks.trim().take(1500),
                         "status" to "RECIBIDA",
                         "createdAt" to FieldValue.serverTimestamp()
                     )).addOnSuccessListener {
@@ -205,6 +207,7 @@ fun JobBoardScreen(onBack: () -> Unit) {
                     FilterChip(selected = category == value, onClick = { category = value }, label = { Text(value, fontSize = 10.sp) })
                 }
             }
+            OutlinedTextField(cvLinks, { cvLinks = it }, modifier = Modifier.fillMaxWidth(), label = { Text("CV / títulos / certificados (enlace opcional)") }, singleLine = true, supportingText = { Text("Pegá un enlace compartido de Drive u otro servicio. OMNI no aloja documentos en esta etapa gratuita.") })
             when {
                 loading -> Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFF57DDF5)) }
                 error != null -> Text(error.orEmpty(), color = Color(0xFFFFA7A7), fontSize = 12.sp, modifier = Modifier.padding(12.dp))
