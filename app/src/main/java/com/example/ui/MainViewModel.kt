@@ -72,6 +72,7 @@ sealed class Screen(val title: String) {
     object MorningBriefing : Screen("OMNI Buenos Días")
     object Routine : Screen("Modo Rutina")
     object JobBoard : Screen("Bolsa de Trabajo y Servicios")
+    object Events : Screen("Eventos OMNI")
 }
 
 data class CommunityAlert(
