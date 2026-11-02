@@ -95,6 +95,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.MainViewModel
 import com.example.data.auth.AuthRepository
+import com.example.data.analytics.UsageAnalyticsRepository
 import com.example.data.wallet.DemoWalletRepository
 import com.example.ui.screens.AuthScreen
 import com.google.firebase.auth.FirebaseAuth
@@ -179,6 +180,7 @@ class MainActivity : ComponentActivity() {
 private fun AuthGate(activity: ComponentActivity, viewModel: MainViewModel) {
     val auth = remember { FirebaseAuth.getInstance() }
     val demoWalletRepository = remember { DemoWalletRepository() }
+    val authRepository = remember { AuthRepository() }
     var currentUser by remember { mutableStateOf(auth.currentUser) }
     var authReady by remember { mutableStateOf(false) }
 
@@ -193,6 +195,8 @@ private fun AuthGate(activity: ComponentActivity, viewModel: MainViewModel) {
 
     LaunchedEffect(currentUser?.uid) {
         currentUser?.let { user ->
+            authRepository.syncCurrentProfile()
+            UsageAnalyticsRepository.startSession(user.uid)
             viewModel.applyAuthenticatedIdentity(
                 uid = user.uid,
                 name = user.displayName.orEmpty(),
@@ -229,6 +233,10 @@ fun OmniApp(viewModel: MainViewModel) {
     val activeTheme by viewModel.themeMode.collectAsState()
     val liveWeather by viewModel.liveWeatherData.collectAsState()
     val userProfile by viewModel.userProfile.collectAsState()
+
+    LaunchedEffect(currentScreen, userProfile.id) {
+        if (userProfile.id.isNotBlank()) UsageAnalyticsRepository.trackScreen(userProfile.id, currentScreen.title)
+    }
 
     var overflowMenuExpanded by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
