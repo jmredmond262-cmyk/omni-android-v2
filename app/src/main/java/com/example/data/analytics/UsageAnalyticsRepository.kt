@@ -28,6 +28,10 @@ object UsageAnalyticsRepository {
         record(uid, module, action)
     }
 
+    fun trackWalletOperation(uid: String, operation: String) {
+        trackAction(uid, operation, "wallet")
+    }
+
     private fun record(requestedUid: String, module: String, eventName: String) {
         // Resolve identity from Firebase Auth as the source of truth; the UI profile
         // can still be initializing when the first screen is composed.
