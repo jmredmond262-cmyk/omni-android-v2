@@ -348,9 +348,6 @@ fun WalletScreen(
                         Spacer(Modifier.width(6.dp))
                         Text("Mostrar mi QR demo")
                     }
-                    TextButton(onClick = { viewModel.resetDemoWallet(context) }) {
-                        Text("Reiniciar billetera de prueba", color = Color(0xFF9CC7DF), fontSize = 11.sp)
-                    }
                 }
             }
         }
