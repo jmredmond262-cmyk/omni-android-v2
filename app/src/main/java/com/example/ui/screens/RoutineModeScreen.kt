@@ -164,12 +164,16 @@ class RoutineReminderReceiver : BroadcastReceiver() {
                             pendingResult.finish()
                         }
                     })
-                    speech.speak(
+                    val speakResult = speech.speak(
                         "${routine.title}. ${routine.message.ifBlank { "Es momento de completar tu rutina." }}",
                         TextToSpeech.QUEUE_FLUSH,
                         null,
                         "omni-routine-${routine.id}"
                     )
+                    if (speakResult == TextToSpeech.ERROR) {
+                        speech.shutdown()
+                        pendingResult.finish()
+                    }
                 } else {
                     speech.shutdown()
                     pendingResult.finish()
