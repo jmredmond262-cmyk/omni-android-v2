@@ -115,6 +115,7 @@ import com.example.ui.screens.WalletScreen
 import com.example.ui.screens.RoutineModeScreen
 import com.example.ui.screens.JobBoardScreen
 import com.example.ui.screens.EventsScreen
+import com.example.ui.screens.OrderCenterScreen
 import com.example.ui.theme.AppThemeMode
 import com.example.ui.theme.MyApplicationTheme
 
@@ -293,7 +294,9 @@ fun OmniApp(viewModel: MainViewModel) {
                 currentScreen is Screen.MorningBriefing ||
                 currentScreen is Screen.Routine ||
                 currentScreen is Screen.JobBoard ||
-                currentScreen is Screen.Events
+                currentScreen is Screen.Events ||
+                currentScreen is Screen.OrderCenter ||
+                currentScreen is Screen.MerchantOrders
     ) {
         when (currentScreen) {
             is Screen.InteractiveRoute -> viewModel.navigateTo(Screen.StoreDetail)
@@ -308,6 +311,8 @@ fun OmniApp(viewModel: MainViewModel) {
             is Screen.Routine -> viewModel.navigateTo(Screen.DailyHub)
             is Screen.JobBoard -> viewModel.navigateTo(Screen.DailyHub)
             is Screen.Events -> viewModel.navigateTo(Screen.DailyHub)
+            is Screen.OrderCenter -> viewModel.navigateTo(Screen.StoreDetail)
+            is Screen.MerchantOrders -> viewModel.navigateTo(Screen.MerchantHub)
             else -> viewModel.navigateTo(Screen.DailyHub)
         }
     }
@@ -646,6 +651,8 @@ fun OmniApp(viewModel: MainViewModel) {
                     Screen.Routine -> RoutineModeScreen(onBack = { viewModel.navigateTo(Screen.DailyHub) })
                     Screen.JobBoard -> JobBoardScreen(onBack = { viewModel.navigateTo(Screen.DailyHub) })
                     Screen.Events -> EventsScreen(onBack = { viewModel.navigateTo(Screen.DailyHub) })
+                    Screen.OrderCenter -> OrderCenterScreen(viewModel = viewModel, merchantMode = false, onBack = { viewModel.navigateTo(Screen.StoreDetail) })
+                    Screen.MerchantOrders -> OrderCenterScreen(viewModel = viewModel, merchantMode = true, onBack = { viewModel.navigateTo(Screen.MerchantHub) })
                 }
             }
         }
