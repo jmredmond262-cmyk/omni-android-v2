@@ -46,8 +46,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.UUID
-import org.json.JSONArray
-import org.json.JSONObject
 
 enum class StoreScheduleFilter(val label: String, val iconDescription: String) {
     TODOS("Todos", "Todos los comercios"),
@@ -191,91 +189,6 @@ class MainViewModel : ViewModel() {
     // Billetera Virtual y Pagos
     private val _wallet = MutableStateFlow(UserWallet())
     val wallet: StateFlow<UserWallet> = _wallet.asStateFlow()
-
-    /** Restaura únicamente datos locales del monedero DEMO. No se sincroniza con bancos ni servidores. */
-    fun restoreDemoWallet(context: Context) {
-        val prefs = context.getSharedPreferences("omni_pay_demo", Context.MODE_PRIVATE)
-        val raw = prefs.getString("wallet_json", null) ?: return
-        try {
-            val saved = JSONObject(raw)
-            val savedTransactions = mutableListOf<WalletTransaction>()
-            val array = saved.optJSONArray("transactions") ?: JSONArray()
-            for (index in 0 until array.length()) {
-                val item = array.optJSONObject(index) ?: continue
-                val type = runCatching {
-                    TransactionType.valueOf(item.optString("type", TransactionType.CARGA_SALDO.name))
-                }.getOrDefault(TransactionType.CARGA_SALDO)
-                savedTransactions += WalletTransaction(
-                    id = item.optString("id"),
-                    title = item.optString("title"),
-                    storeOrEntityName = item.optString("entity"),
-                    amount = item.optDouble("amount"),
-                    type = type,
-                    dateText = item.optString("date"),
-                    cashbackEarned = item.optDouble("cashback"),
-                    status = item.optString("status", "APROBADA · DEMO")
-                )
-            }
-            _wallet.value = _wallet.value.copy(
-                balance = saved.optDouble("balance", _wallet.value.balance).coerceAtLeast(0.0),
-                totalCashbackEarned = saved.optDouble("cashbackTotal", _wallet.value.totalCashbackEarned),
-                transactions = if (saved.has("transactions")) savedTransactions else _wallet.value.transactions
-            )
-        } catch (_: Exception) {
-            // Si el archivo local estuviera dañado, se conserva la billetera demo inicial.
-        }
-    }
-
-    /** Reinicia el entorno de prueba sin tocar puntos ni datos bancarios. */
-    fun resetDemoWallet(context: Context) {
-        _wallet.value = UserWallet()
-        persistDemoWallet(context)
-    }
-
-    /** Guarda saldo y movimientos localmente en el dispositivo. */
-    fun persistDemoWallet(context: Context) {
-        val current = _wallet.value
-        val transactions = JSONArray()
-        current.transactions.forEach { tx ->
-            transactions.put(JSONObject().apply {
-                put("id", tx.id)
-                put("title", tx.title)
-                put("entity", tx.storeOrEntityName)
-                put("amount", tx.amount)
-                put("type", tx.type.name)
-                put("date", tx.dateText)
-                put("cashback", tx.cashbackEarned)
-                put("status", tx.status)
-            })
-        }
-        val payload = JSONObject().apply {
-            put("balance", current.balance)
-            put("cashbackTotal", current.totalCashbackEarned)
-            put("transactions", transactions)
-        }
-        context.getSharedPreferences("omni_pay_demo", Context.MODE_PRIVATE)
-            .edit().putString("wallet_json", payload.toString()).apply()
-    }
-
-    /** Actualiza la billetera desde el ledger DEMO central de Firebase. */
-    fun applyRemoteDemoWallet(
-        balance: Double,
-        cashbackTotal: Double,
-        transactions: List<WalletTransaction>,
-        alias: String,
-        cvu: String
-    ) {
-        _wallet.value = _wallet.value.copy(
-            balance = balance.coerceAtLeast(0.0),
-            totalCashbackEarned = cashbackTotal.coerceAtLeast(0.0),
-            cards = emptyList(),
-            transactions = transactions
-        )
-        _userProfile.value = _userProfile.value.copy(
-            walletAlias = alias,
-            cvuCbu = cvu
-        )
-    }
 
     // Recompensas, Puntos & Rendimiento del Usuario
     private val _userRewards = MutableStateFlow(UserRewards())
@@ -1149,63 +1062,6 @@ class MainViewModel : ViewModel() {
             steps = updatedSteps,
             landmarksOnRoute = listOf("⭐ Parada: $stopName") + current.landmarksOnRoute
         )
-    }
-
-    fun addFunds(amount: Double) {
-        if (!amount.isFinite() || amount <= 0.0) return
-        val newBalance = _wallet.value.balance + amount
-        val newTx = WalletTransaction(
-            id = UUID.randomUUID().toString(),
-            title = "Carga de Saldo",
-            storeOrEntityName = "Transferencia Bancaria",
-            amount = amount,
-            type = TransactionType.CARGA_SALDO,
-            dateText = "Recién"
-        )
-        _wallet.value = _wallet.value.copy(
-            balance = newBalance,
-            transactions = listOf(newTx) + _wallet.value.transactions
-        )
-    }
-
-    /** Simula una transferencia saliente entre usuarios de prueba. No usa redes bancarias. */
-    fun sendDemoTransfer(recipient: String, amount: Double): Boolean {
-        val destination = recipient.trim()
-        val current = _wallet.value
-        if (destination.isBlank() || !amount.isFinite() || amount <= 0.0 || current.balance < amount) return false
-        val transaction = WalletTransaction(
-            id = UUID.randomUUID().toString(),
-            title = "Transferencia enviada",
-            storeOrEntityName = destination,
-            amount = -amount,
-            type = TransactionType.TRANSFERENCIA_ENVIADA,
-            dateText = "Recién"
-        )
-        _wallet.value = current.copy(
-            balance = current.balance - amount,
-            transactions = listOf(transaction) + current.transactions
-        )
-        return true
-    }
-
-    /** Acredita un ingreso ficticio para probar el flujo de recepción. */
-    fun simulateIncomingTransfer(sender: String, amount: Double): Boolean {
-        val origin = sender.trim()
-        if (origin.isBlank() || !amount.isFinite() || amount <= 0.0) return false
-        val current = _wallet.value
-        val transaction = WalletTransaction(
-            id = UUID.randomUUID().toString(),
-            title = "Transferencia recibida (demo)",
-            storeOrEntityName = origin,
-            amount = amount,
-            type = TransactionType.TRANSFERENCIA_RECIBIDA,
-            dateText = "Recién"
-        )
-        _wallet.value = current.copy(
-            balance = current.balance + amount,
-            transactions = listOf(transaction) + current.transactions
-        )
-        return true
     }
 
     fun toggleContactFavorite(contactId: String) {
