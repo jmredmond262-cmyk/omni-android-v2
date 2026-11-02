@@ -177,22 +177,24 @@ async function audit(env, actor, action, target, details = {}) {
   });
 }
 async function dashboard(env) {
-  const collections = ["users", "walletAccounts", "walletOperations", "merchantProfiles", "storeOrders", "omniEvents", "appFeedback", "usageEvents"];
+  const collections = ["users", "walletAccounts", "walletOperations", "merchantProfiles", "storeOrders", "omniEvents", "appFeedback", "usageEvents", "moduleRegistry", "adminAuditLogs"];
   const counts = await Promise.all(collections.map(name => countDocuments(env, name)));
-  const [wallets, users, operations, userProfiles] = await Promise.all([
+  const [wallets, operations, userProfiles] = await Promise.all([
     listDocuments(env, "walletAccounts", 1000),
-    recentDocuments(env, "users"),
     recentDocuments(env, "walletOperations"),
     listDocuments(env, "users", 200)
   ]);
   const resolvedCounts = Object.fromEntries(collections.map((name, index) => [
     name, name === "users" ? Math.max(counts[index], userProfiles.length) : counts[index]
   ]));
+  const recentUsers = [...userProfiles]
+    .sort((a, b) => String(b.createdAt || b.updatedAt || "").localeCompare(String(a.createdAt || a.updatedAt || "")))
+    .slice(0, 8);
   return {
     counts: resolvedCounts,
     walletBalanceSample: wallets.reduce((sum, item) => sum + (Number(item.balance) || 0), 0),
     walletSampleSize: wallets.length,
-    recentUsers: users, recentOperations: operations
+    recentUsers, recentOperations: operations
   };
 }
 async function handleAction(env, actor, action, data) {
