@@ -13,6 +13,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import androidx.core.app.NotificationCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -126,9 +128,9 @@ class RoutineReminderReceiver : BroadcastReceiver() {
         val id = intent.getStringExtra("routine_id") ?: return
         val routine = RoutineStore.load(context).firstOrNull { it.id == id && it.enabled } ?: return
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val channelId = if (routine.mode == "SILENT") "omni_routines_silent" else "omni_routines_sound"
+        val channelId = if (routine.mode == "SILENT" || routine.mode == "VOICE") "omni_routines_silent" else "omni_routines_sound"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val importance = if (routine.mode == "SILENT") NotificationManager.IMPORTANCE_LOW else NotificationManager.IMPORTANCE_HIGH
+            val importance = if (routine.mode == "SILENT" || routine.mode == "VOICE") NotificationManager.IMPORTANCE_LOW else NotificationManager.IMPORTANCE_HIGH
             if (manager.getNotificationChannel(channelId) == null) {
                 manager.createNotificationChannel(NotificationChannel(channelId, "Recordatorios OMNI", importance))
             }
@@ -142,6 +144,38 @@ class RoutineReminderReceiver : BroadcastReceiver() {
             .setPriority(if (routine.mode == "SILENT") NotificationCompat.PRIORITY_LOW else NotificationCompat.PRIORITY_HIGH)
             .build()
         manager.notify(id.hashCode(), notification)
+        if (routine.mode == "VOICE") {
+            val pendingResult = goAsync()
+            lateinit var speech: TextToSpeech
+            speech = TextToSpeech(context.applicationContext) { status ->
+                if (status == TextToSpeech.SUCCESS) {
+                    val languageResult = speech.setLanguage(java.util.Locale("es", "AR"))
+                    if (languageResult == TextToSpeech.LANG_MISSING_DATA || languageResult == TextToSpeech.LANG_NOT_SUPPORTED) {
+                        speech.setLanguage(java.util.Locale("es"))
+                    }
+                    speech.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                        override fun onStart(utteranceId: String?) = Unit
+                        override fun onDone(utteranceId: String?) {
+                            speech.shutdown()
+                            pendingResult.finish()
+                        }
+                        override fun onError(utteranceId: String?) {
+                            speech.shutdown()
+                            pendingResult.finish()
+                        }
+                    })
+                    speech.speak(
+                        "${routine.title}. ${routine.message.ifBlank { "Es momento de completar tu rutina." }}",
+                        TextToSpeech.QUEUE_FLUSH,
+                        null,
+                        "omni-routine-${routine.id}"
+                    )
+                } else {
+                    speech.shutdown()
+                    pendingResult.finish()
+                }
+            }
+        }
         RoutineAlarmScheduler.schedule(context, routine)
     }
 }
@@ -226,7 +260,7 @@ fun RoutineModeScreen(onBack: () -> Unit) {
                             Text(item.message.ifBlank { "Recordatorio sin mensaje adicional" }, color = Color(0xFFB8C8D9), fontSize = 11.sp)
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(if (item.enabled) "ACTIVA" else "PAUSADA", color = if (item.enabled) Color(0xFF5DE0A0) else Color(0xFFFFC66D), fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                                Spacer(Modifier.width(8.dp)); Text(if (item.mode == "SILENT") "Silenciosa" else if (item.mode == "VOICE") "Voz (lectura al abrir)" else "Con sonido", color = Color(0xFF9AAAC2), fontSize = 10.sp)
+                                Spacer(Modifier.width(8.dp)); Text(if (item.mode == "SILENT") "Silenciosa" else if (item.mode == "VOICE") "Aviso por voz" else "Con sonido", color = Color(0xFF9AAAC2), fontSize = 10.sp)
                             }
                         }
                     }
@@ -265,7 +299,7 @@ fun RoutineModeScreen(onBack: () -> Unit) {
                             SegmentedButton(selected = mode == option.first, onClick = { mode = option.first }, shape = SegmentedButtonDefaults.itemShape(index, 3)) { Text(option.second, fontSize = 10.sp) }
                         }
                     }
-                    if (mode == "VOICE") Text("La opción voz muestra el mensaje para lectura al abrir el aviso; no inicia audio inesperado en segundo plano.", color = Color(0xFFFFC66D), fontSize = 10.sp)
+                    if (mode == "VOICE") Text("La opción voz leerá el título y el mensaje en voz alta a la hora programada. Usá esta opción solo cuando puedas escuchar el aviso.", color = Color(0xFFFFC66D), fontSize = 10.sp)
                 }
             },
             confirmButton = {
