@@ -80,6 +80,11 @@ class AuthRepository(
 
     fun signOut() = auth.signOut()
 
+    /** Re-synchronizes an already authenticated session on app startup. */
+    fun syncCurrentProfile(done: (Result<Unit>) -> Unit = {}) {
+        persistProfile(done)
+    }
+
     private fun persistProfile(done: (Result<Unit>) -> Unit) {
         val user = auth.currentUser
         if (user == null) {
