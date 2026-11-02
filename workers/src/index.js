@@ -232,7 +232,14 @@ async function dashboard(env) {
     usageSampleLimit: 5000,
     usageSampleComplete: usageEvents.length < 5000,
     recentUsers, recentOperations: operations,
-    recentUsageEvents: usageEvents.slice(0, 8)
+    recentUsageEvents: usageEvents.slice(0, 8),
+    diagnostics: {
+      usageEventsVisibleLast7Days: usageEvents.length,
+      diagnosticEventSeen: usageEvents.some(event => event.event === "DIAGNOSTIC_TEST"),
+      latestUsageEventAt: usageEvents[0]?.createdAt || null,
+      userProfilesVisible: userProfiles.length,
+      usageQueryWindowDays: 7
+    }
   };
 }
 async function handleAction(env, actor, action, data) {
