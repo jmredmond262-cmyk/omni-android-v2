@@ -362,6 +362,7 @@ private fun OrderProductRow(product: StoreProduct, quantity: Int, onAdd: () -> U
 
 @Composable
 private fun OrderStatusCard(order: OmniStoreOrder, merchantMode: Boolean, onAdvance: (String) -> Unit) {
+    val context = LocalContext.current
     val next = when (order.status) {
         "RECIBIDO" -> "ACEPTADO"
         "ACEPTADO" -> "EN_PREPARACION"
@@ -393,6 +394,12 @@ private fun OrderStatusCard(order: OmniStoreOrder, merchantMode: Boolean, onAdva
             order.items.forEach { Text("${it.quantity} × ${it.name}", color = Color(0xFFB8C8D9), fontSize = 10.sp) }
             Text(if (order.fulfillmentType == "DELIVERY") "Delivery · ${order.deliveryAddress}" else "Retiro en el comercio", color = Color(0xFFB8C8D9), fontSize = 9.sp)
             Text("Pago: pendiente · efectivo al retirar/recibir", color = Color(0xFFFFC978), fontSize = 9.sp)
+            if (merchantMode && order.customerPhone.isNotBlank()) {
+                TextButton(onClick = {
+                    val phoneNumber = order.customerPhone.filter { it.isDigit() }
+                    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$phoneNumber"))) }
+                }) { Text("Contactar cliente por WhatsApp", color = Color(0xFF57DDF5), fontSize = 10.sp) }
+            }
             if (merchantMode && next.isNotBlank()) {
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     Button(onClick = { onAdvance(next) }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF087EAB))) {
