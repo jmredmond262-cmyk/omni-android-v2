@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import { FieldValue, getFirestore, Timestamp } from "firebase-admin/firestore";
+import { FieldValue, getFirestore, Timestamp, type QuerySnapshot } from "firebase-admin/firestore";
 import { defineString } from "firebase-functions/params";
 import { HttpsError, onRequest } from "firebase-functions/v2/https";
 
@@ -8,9 +8,11 @@ const REGION = "us-central1";
 const ADMIN_AUTH_PROJECT_ID = defineString("OMNI_ADMIN_AUTH_PROJECT_ID");
 const primaryApp = getApps().find((app) => app.name === "[DEFAULT]") ?? initializeApp();
 const db = getFirestore(primaryApp);
-const authVerifierApp = getApps().find((app) => app.name === "omni-admin-auth-verifier")
-  ?? initializeApp({ projectId: ADMIN_AUTH_PROJECT_ID.value() }, "omni-admin-auth-verifier");
-const authVerifier = getAuth(authVerifierApp);
+function getAuthVerifier() {
+  const app = getApps().find((item) => item.name === "omni-admin-auth-verifier")
+    ?? initializeApp({ projectId: ADMIN_AUTH_PROJECT_ID.value() }, "omni-admin-auth-verifier");
+  return getAuth(app);
+}
 
 type AdminContext = { uid: string; email: string; role: "owner" | "admin" };
 
@@ -20,7 +22,7 @@ function bearerToken(header: string | undefined): string {
 }
 
 async function authenticate(header: string | undefined): Promise<AdminContext> {
-  const decoded = await authVerifier.verifyIdToken(bearerToken(header), true);
+  const decoded = await getAuthVerifier().verifyIdToken(bearerToken(header), true);
   const adminSnap = await db.collection("systemAdmins").doc(decoded.uid).get();
   const role = adminSnap.get("role");
   if (!adminSnap.exists || adminSnap.get("enabled") !== true || (role !== "owner" && role !== "admin")) {
@@ -40,7 +42,7 @@ function clean(value: unknown): unknown {
   return value;
 }
 
-function docList(snapshot: FirebaseFirestore.QuerySnapshot, limit = 100) {
+function docList(snapshot: QuerySnapshot, limit = 100) {
   return snapshot.docs.slice(0, limit).map((doc) => ({ id: doc.id, ...clean(doc.data()) as object }));
 }
 
