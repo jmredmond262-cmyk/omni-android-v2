@@ -244,13 +244,15 @@ private fun DashboardContent(payload: JSONObject) {
     "Pedidos" to counts.optInt("storeOrders"), "Eventos" to counts.optInt("omniEvents"),
     "Comentarios" to counts.optInt("appFeedback"), "Eventos de uso" to counts.optInt("usageEvents")
   )
-  LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), contentPadding = PaddingValues(vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+  BoxWithConstraints(Modifier.fillMaxSize()) {
+    val columns = if (maxWidth >= 600.dp) 2 else 1
+    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), contentPadding = PaddingValues(vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
     item { Text("Vista general", color = White, fontSize = 25.sp, fontWeight = FontWeight.Bold); Text("Estado de la plataforma OMNI", color = Muted, fontSize = 13.sp) }
-    items(cards.chunked(2)) { pair ->
-      Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    items(cards.chunked(columns)) { pair ->
+      Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         pair.forEach { entry ->
           Card(Modifier.weight(1f), colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(18.dp)) {
-            Column(Modifier.padding(16.dp)) {
+            Column(Modifier.fillMaxWidth().padding(16.dp)) {
               Text(entry.first, color = Muted, fontSize = 12.sp)
               Text(entry.second.toString(), color = Mint, fontSize = 27.sp, fontWeight = FontWeight.Bold)
             }
@@ -274,6 +276,7 @@ private fun DashboardContent(payload: JSONObject) {
     items(jsonArrayToList(payload.optJSONArray("recentUsers"))) { RecordCard(it, "users") }
     item { Text("Últimas operaciones", color = White, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
     items(jsonArrayToList(payload.optJSONArray("recentOperations"))) { RecordCard(it, "walletOperations") }
+    }
   }
 }
 
@@ -283,35 +286,94 @@ private fun RecordsContent(selected: String, array: JSONArray) {
   LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), contentPadding = PaddingValues(vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
     item {
       Text(tabs.first { it.id == selected }.label, color = White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-      Text(records.size.toString() + " registros cargados · máximo 100", color = Muted, fontSize = 12.sp)
+      Text(records.size.toString() + (if (records.size == 1) " registro encontrado" else " registros encontrados") + " · mostrando hasta 100", color = Muted, fontSize = 12.sp)
     }
     if (records.isEmpty()) item { EmptyState("Todavía no hay registros para mostrar.") }
     items(records) { RecordCard(it, selected) }
   }
 }
 
+private val technicalFields = setOf(
+  "id", "uid", "ownerUid", "senderUid", "recipientUid", "customerUid", "merchantUid",
+  "operationId", "storeId", "targetUid", "createdBy", "updatedBy", "photoUrl", "providerIds",
+  "qrNonce", "lastOperationId", "cvu", "reference", "rawData"
+)
+private val fieldLabels = mapOf(
+  "displayName" to "Nombre", "fullName" to "Nombre", "name" to "Nombre",
+  "email" to "Correo", "phoneNumber" to "Teléfono", "phone" to "Teléfono",
+  "alias" to "Alias", "balance" to "Saldo", "cashbackTotal" to "Cashback acumulado",
+  "amount" to "Importe", "kind" to "Tipo", "type" to "Tipo", "status" to "Estado",
+  "storeName" to "Comercio", "orderNumber" to "Pedido", "total" to "Total",
+  "paymentStatus" to "Estado del pago", "paymentMethod" to "Medio de pago",
+  "fulfillmentType" to "Entrega", "action" to "Acción", "target" to "Destino",
+  "message" to "Mensaje", "description" to "Descripción", "enabled" to "Habilitado",
+  "createdAt" to "Fecha de creación", "updatedAt" to "Última actualización",
+  "cvu" to "CVU"
+)
+private fun friendlyEnum(value: String): String = when (value.uppercase()) {
+  "DEPOSIT" -> "Carga de saldo DEMO"
+  "TRANSFER" -> "Transferencia"
+  "QR_PAYMENT" -> "Pago con QR"
+  "COMPRA_LOCAL" -> "Compra en comercio"
+  "REINTEGRO_CASHBACK" -> "Reintegro de cashback"
+  "CARGA_SALDO" -> "Carga de saldo"
+  "TRANSFERENCIA_ENVIADA" -> "Transferencia enviada"
+  "TRANSFERENCIA_RECIBIDA" -> "Transferencia recibida"
+  "QR_PAGO" -> "Pago con QR"
+  "QR_COBRO" -> "Cobro con QR"
+  "RECIBIDO" -> "Recibido"
+  "ACEPTADO" -> "Aceptado"
+  "EN_PREPARACION" -> "En preparación"
+  "LISTO" -> "Listo"
+  "EN_CAMINO" -> "En camino"
+  "ENTREGADO" -> "Entregado"
+  "PENDIENTE" -> "Pendiente"
+  "APROBADA" -> "Aprobada"
+  "RECHAZADO" -> "Rechazado"
+  else -> value.replace('_', ' ').lowercase().replaceFirstChar { it.uppercase() }
+}
+private fun looksLikeTechnicalId(value: String): Boolean =
+  value.length >= 22 && value.all { it.isLetterOrDigit() || it == '-' || it == '_' }
+
 @Composable
 private fun RecordCard(item: Map<String, Any?>, type: String) {
   val title = when (type) {
-    "users" -> firstValue(item, "displayName", "name", "email", "username", "id")
-    "walletAccounts" -> firstValue(item, "displayName", "alias", "uid", "id")
-    "walletOperations" -> firstValue(item, "title", "kind", "type", "status", "id")
-    "merchantProfiles" -> firstValue(item, "storeName", "name", "id")
-    "storeOrders" -> firstValue(item, "orderNumber", "status", "storeId", "id")
-    "appFeedback" -> firstValue(item, "message", "title", "id")
-    "adminAuditLogs" -> firstValue(item, "action", "target", "id")
-    else -> firstValue(item, "title", "name", "action", "id")
+    "users" -> firstValue(item, "displayName", "fullName", "name", "email").ifBlank { "Usuario OMNI" }
+    "walletAccounts" -> firstValue(item, "alias").ifBlank { "Billetera OMNI Pay" }
+    "walletOperations" -> friendlyEnum(firstValue(item, "kind", "type", "title").ifBlank { "Operación" })
+    "merchantProfiles" -> firstValue(item, "storeName", "name").ifBlank { "Comercio OMNI" }
+    "storeOrders" -> "Pedido " + firstValue(item, "orderNumber", "status").ifBlank { "OMNI" }
+    "appFeedback" -> "Comentario de usuario"
+    "adminAuditLogs" -> friendlyEnum(firstValue(item, "action").ifBlank { "Actividad administrativa" })
+    else -> firstValue(item, "title", "name", "action").ifBlank { "Registro OMNI" }
   }
-  val details = item.entries.filter { it.key !in listOf("id", "displayName", "name", "email", "message", "title", "createdAt", "updatedAt") }
-    .take(4).joinToString("  ·  ") { it.key + ": " + displayValue(it.value).take(80) }
-  Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp)) {
+  val preferred = when (type) {
+    "users" -> listOf("email", "phoneNumber", "phone", "createdAt")
+    "walletAccounts" -> listOf("balance", "cashbackTotal", "createdAt")
+    "walletOperations" -> listOf("amount", "status", "createdAt")
+    "merchantProfiles" -> listOf("description", "category", "address", "status", "createdAt")
+    "storeOrders" -> listOf("total", "paymentStatus", "fulfillmentType", "createdAt")
+    "appFeedback" -> listOf("message", "createdAt")
+    else -> listOf("status", "createdAt", "updatedAt")
+  }
+  val visible = preferred.mapNotNull { key ->
+    val value = item[key] ?: return@mapNotNull null
+    val rendered = displayValue(value)
+    if (rendered.isBlank() || looksLikeTechnicalId(rendered)) null
+    else (fieldLabels[key] ?: key) + ": " + if (key == "kind" || key == "type" || key == "status" || key == "paymentStatus") friendlyEnum(rendered) else rendered
+  }
+  val extraMessage = if (type == "appFeedback") item["message"]?.toString().orEmpty() else ""
+  Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp)) {
     Column(Modifier.fillMaxWidth().padding(15.dp)) {
-      Text(title.take(110), color = White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-      if (details.isNotBlank()) { Spacer(Modifier.height(5.dp)); Text(details, color = Muted, fontSize = 11.sp, maxLines = 3) }
-      val date = displayValue(item["createdAt"] ?: item["updatedAt"])
-      if (date.isNotBlank()) { Spacer(Modifier.height(6.dp)); Text(date, color = Muted, fontSize = 10.sp) }
-      val message = item["message"]?.toString()
-      if (!message.isNullOrBlank() && title != message) { Spacer(Modifier.height(4.dp)); Text(message.take(300), color = Muted, fontSize = 12.sp) }
+      Text(title.take(100), color = White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 2)
+      visible.forEach { line ->
+        Spacer(Modifier.height(5.dp))
+        Text(line.take(140), color = Muted, fontSize = 12.sp, maxLines = 2)
+      }
+      if (extraMessage.isNotBlank() && extraMessage != title) {
+        Spacer(Modifier.height(5.dp))
+        Text(extraMessage.take(240), color = Muted, fontSize = 12.sp, maxLines = 4)
+      }
     }
   }
 }
