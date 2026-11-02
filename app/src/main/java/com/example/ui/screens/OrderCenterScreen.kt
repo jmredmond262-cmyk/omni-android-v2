@@ -215,8 +215,10 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
                     db.collection("storeOrders").document(parts[1]).get()
                         .addOnSuccessListener { doc ->
                             val order = decodeOrder(doc)
-                            if (order == null || order.storeId != store.id || order.merchantUid != uid || order.qrNonce != parts[2]) {
-                                feedback = "QR inválido, vencido o no corresponde a este comercio."
+                            val createdAt = doc.getTimestamp("createdAt")?.toDate()?.time ?: 0L
+                            val expired = createdAt == 0L || System.currentTimeMillis() - createdAt > 24L * 60L * 60L * 1000L
+                            if (order == null || order.storeId != store.id || order.merchantUid != uid || order.qrNonce != parts[2] || expired || order.status in listOf("ENTREGADO", "RECHAZADO", "CANCELADO")) {
+                                feedback = "QR inválido, vencido, ya cerrado o no corresponde a este comercio."
                             } else {
                                 scannedOrderId = order.id
                                 feedback = "Pedido verificado: ${order.id.take(8)} · ${order.status}"
@@ -386,14 +388,21 @@ private fun OrderStatusCard(order: OmniStoreOrder, merchantMode: Boolean, onAdva
             Text(if (order.fulfillmentType == "DELIVERY") "Delivery · ${order.deliveryAddress}" else "Retiro en el comercio", color = Color(0xFFB8C8D9), fontSize = 9.sp)
             Text("Pago: pendiente · efectivo al retirar/recibir", color = Color(0xFFFFC978), fontSize = 9.sp)
             if (merchantMode && next.isNotBlank()) {
-                Button(onClick = { onAdvance(next) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF087EAB))) {
-                    Text(when (next) {
-                        "ACEPTADO" -> "Aceptar pedido"
-                        "EN_PREPARACION" -> "Comenzar preparación"
-                        "LISTO" -> "Marcar listo"
-                        "EN_CAMINO" -> "Enviar delivery"
-                        else -> "Marcar entregado"
-                    }, fontSize = 10.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Button(onClick = { onAdvance(next) }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF087EAB))) {
+                        Text(when (next) {
+                            "ACEPTADO" -> "Aceptar pedido"
+                            "EN_PREPARACION" -> "Comenzar preparación"
+                            "LISTO" -> "Marcar listo"
+                            "EN_CAMINO" -> "Enviar delivery"
+                            else -> "Marcar entregado"
+                        }, fontSize = 10.sp)
+                    }
+                    if (order.status == "RECIBIDO") {
+                        OutlinedButton(onClick = { onAdvance("RECHAZADO") }) {
+                            Text("Rechazar", fontSize = 10.sp)
+                        }
+                    }
                 }
             }
         }
