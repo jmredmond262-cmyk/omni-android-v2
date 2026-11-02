@@ -1,6 +1,9 @@
 package com.example.ui.screens
 
 import androidx.activity.compose.BackHandler
+import android.content.ClipData
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +30,7 @@ import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.PlayCircleFilled
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.Phone
 import coil.compose.AsyncImage
@@ -504,9 +508,17 @@ fun StoreDetailScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        if (!product.photoUri.isNullOrBlank()) {
+                            AsyncImage(
+                                model = product.photoUri,
+                                contentDescription = product.name,
+                                modifier = Modifier.size(68.dp),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                            )
+                        }
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = product.name,
@@ -525,7 +537,7 @@ fun StoreDetailScreen(
                             }
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "$${String.format("%,.0f", product.price)}",
+                                    text = "${String.format("%,.0f", product.price)}",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 14.sp,
                                     color = EmeraldPrimary
@@ -533,7 +545,7 @@ fun StoreDetailScreen(
                                 if (product.originalPrice != null) {
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "$${String.format("%,.0f", product.originalPrice)}",
+                                        text = "${String.format("%,.0f", product.originalPrice)}",
                                         fontSize = 11.sp,
                                         textDecoration = TextDecoration.LineThrough,
                                         color = Color.Gray
@@ -542,18 +554,51 @@ fun StoreDetailScreen(
                             }
                         }
 
-                        Button(
-                            onClick = {
-                                viewModel.addNeed(product.name, product.category, 1, product.unitLabel)
-                                addedMessage = "¡${product.name} agregado a tu lista!"
-                            },
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = EmeraldContainer),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
-                        ) {
-                            Icon(imageVector = Icons.Default.Add, contentDescription = null, tint = EmeraldDark, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(text = "A mi lista", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = EmeraldDark)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            IconButton(
+                                onClick = {
+                                    val message = buildString {
+                                        appendLine("🛍️ ${product.name}")
+                                        if (product.description.isNotBlank()) appendLine(product.description)
+                                        appendLine("Precio: ${String.format("%,.0f", product.price)}")
+                                        product.originalPrice?.let { appendLine("Precio anterior: ${String.format("%,.0f", it)}") }
+                                        appendLine("Comercio: ${store.name}")
+                                        appendLine("Dirección: ${store.address}")
+                                        append("Compartido desde OMNI")
+                                    }
+                                    val imageUri = product.photoUri?.let { Uri.parse(it) }
+                                    val canAttachImage = imageUri != null &&
+                                        imageUri.scheme in listOf("content", "file", "android.resource")
+                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                        putExtra(Intent.EXTRA_SUBJECT, product.name)
+                                        putExtra(Intent.EXTRA_TEXT, message)
+                                        if (canAttachImage) {
+                                            type = "image/*"
+                                            putExtra(Intent.EXTRA_STREAM, imageUri)
+                                            clipData = ClipData.newUri(context.contentResolver, product.name, imageUri)
+                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        } else {
+                                            type = "text/plain"
+                                        }
+                                    }
+                                    context.startActivity(Intent.createChooser(shareIntent, "Compartir producto"))
+                                }
+                            ) {
+                                Icon(Icons.Default.Share, contentDescription = "Compartir producto", tint = EmeraldPrimary)
+                            }
+                            Button(
+                                onClick = {
+                                    viewModel.addNeed(product.name, product.category, 1, product.unitLabel)
+                                    addedMessage = "¡${product.name} agregado a tu lista!"
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = EmeraldContainer),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Icon(imageVector = Icons.Default.Add, contentDescription = null, tint = EmeraldDark, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(text = "A mi lista", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = EmeraldDark)
+                            }
                         }
                     }
                 }
