@@ -134,7 +134,8 @@ export const topUpDemoWallet = onCall({ region: REGION }, async (request) => {
   const amount = parseAmount(request.data?.amount);
   if (amount > MAX_TOPUP_PER_CALL) throw new HttpsError("invalid-argument", "La carga máxima por operación es OM$ 50.000.");
   const ref = accountRef(uid);
-  const operationId = typeof request.data?.operationId === "string" ? request.data.operationId : randomUUID();
+  const operationId = typeof request.data?.operationId === "string" && /^[A-Za-z0-9_-]{12,80}$/.test(request.data.operationId)
+    ? request.data.operationId : randomUUID();
   const txRef = ref.collection("transactions").doc(operationId);
   return db.runTransaction(async (tx) => {
     const [account, existingTx] = await Promise.all([tx.get(ref), tx.get(txRef)]);
