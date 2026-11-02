@@ -249,10 +249,14 @@ fun RoutineModeScreen(onBack: () -> Unit) {
                         OutlinedTextField(minute, { minute = it.filter(Char::isDigit).take(2) }, label = { Text("Minutos") }, modifier = Modifier.weight(1f), singleLine = true)
                     }
                     Text("Repetir", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                        listOf("D","L","M","X","J","V","S").forEachIndexed { index, label ->
-                            val day = index + 1
-                            FilterChip(selected = days.contains(day), onClick = { days = if (days.contains(day)) days - day else days + day }, label = { Text(label) })
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        listOf(listOf("D", "L", "M", "X"), listOf("J", "V", "S")).forEachIndexed { rowIndex, labels ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                labels.forEachIndexed { columnIndex, label ->
+                                    val day = if (rowIndex == 0) columnIndex + 1 else columnIndex + 5
+                                    FilterChip(selected = days.contains(day), onClick = { days = if (days.contains(day)) days - day else days + day }, label = { Text(label) })
+                                }
+                            }
                         }
                     }
                     Text("Aviso", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
