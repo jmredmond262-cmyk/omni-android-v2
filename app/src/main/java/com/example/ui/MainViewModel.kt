@@ -641,6 +641,12 @@ class MainViewModel : ViewModel() {
         )
     }
 
+    private fun onlySelectedLocality(items: List<Store>): List<Store> {
+        val selectedLocality = _currentCity.value.substringBefore(",").trim()
+        if (selectedLocality.isBlank() || selectedLocality.contains("Detectando", ignoreCase = true) || selectedLocality.equals("Tu zona", ignoreCase = true)) return emptyList()
+        return items.filter { it.address.contains(selectedLocality, ignoreCase = true) }
+    }
+
     fun searchOmniDirectory(
         context: Context,
         category: String = "all",
@@ -657,9 +663,10 @@ class MainViewModel : ViewModel() {
                 // 1. Priorizar Google Places API (New) con la clave de demostración o producción
                 val googleStores = GooglePlacesApi.searchNearbyGooglePlaces(context, latitude, longitude, radiusMeters, _currentCity.value)
                 if (requestId != directorySearchRequestId) return@launch
-                if (googleStores.isNotEmpty()) {
-                    _stores.value = googleStores.sortedBy { it.distanceMeters }
-                    _omniDirectoryMessage.value = "📍 ${googleStores.size} comercios reales verificados con Google Places API (New) en ${_currentCity.value}."
+                val googleLocalStores = onlySelectedLocality(googleStores)
+                if (googleLocalStores.isNotEmpty()) {
+                    _stores.value = googleLocalStores.sortedBy { it.distanceMeters }
+                    _omniDirectoryMessage.value = "📍 ${googleLocalStores.size} comercios de ${_currentCity.value} verificados con Google Places API (New)."
                 } else {
                     // Respaldo secundario si aún no hay clave o para servicios ampliados
                     val found = OmniDirectorySearch.search(context, latitude, longitude, radiusMeters, category)
@@ -668,20 +675,20 @@ class MainViewModel : ViewModel() {
                         _omniDirectoryResults.value = found
                         val mappedStores = found.map { it.toOmniStore() }
                         val localVerified = RealPlacesApi.fetchNearbyRealStores(latitude, longitude, radiusMeters, _currentCity.value, context)
-                        val merged = (localVerified + mappedStores).distinctBy { it.id.lowercase() }.sortedBy { it.distanceMeters }
+                        val merged = onlySelectedLocality(localVerified + mappedStores).distinctBy { it.id.lowercase() }.sortedBy { it.distanceMeters }
                         _stores.value = merged
-                        _omniDirectoryMessage.value = "${merged.size} comercios y servicios verificados en el área."
+                        _omniDirectoryMessage.value = if (merged.isEmpty()) "No encontramos comercios publicados en ${_currentCity.value}. Podés elegir otra localidad para ampliar la búsqueda." else "${merged.size} comercios y servicios de ${_currentCity.value}."
                     } else {
-                        val fallback = RealPlacesApi.fetchNearbyRealStores(latitude, longitude, radiusMeters, _currentCity.value, context)
+                        val fallback = onlySelectedLocality(RealPlacesApi.fetchNearbyRealStores(latitude, longitude, radiusMeters, _currentCity.value, context))
                         _stores.value = fallback
-                        _omniDirectoryMessage.value = "${fallback.size} comercios verificados en ${_currentCity.value}."
+                        _omniDirectoryMessage.value = if (fallback.isEmpty()) "No encontramos comercios publicados en ${_currentCity.value}. Podés elegir otra localidad para ampliar la búsqueda." else "${fallback.size} comercios de ${_currentCity.value}."
                     }
                 }
             } catch (e: Exception) {
                 if (requestId == directorySearchRequestId) {
-                    val fallback = RealPlacesApi.fetchNearbyRealStores(latitude, longitude, radiusMeters, _currentCity.value, context)
+                    val fallback = onlySelectedLocality(RealPlacesApi.fetchNearbyRealStores(latitude, longitude, radiusMeters, _currentCity.value, context))
                     _stores.value = fallback
-                    _omniDirectoryMessage.value = "${fallback.size} comercios verificados en ${_currentCity.value}."
+                    _omniDirectoryMessage.value = if (fallback.isEmpty()) "No encontramos comercios publicados en ${_currentCity.value}. Podés elegir otra localidad para ampliar la búsqueda." else "${fallback.size} comercios de ${_currentCity.value}."
                 }
             } finally {
                 if (requestId == directorySearchRequestId) _isSearchingOmniDirectory.value = false
