@@ -62,8 +62,9 @@ jobs:
               "google_storage_bucket": project.get("storage_bucket", ""),
           }
           web_client = next(
-              (item["oauth_client"][0]["client_id"] for item in data["client"]
-               if any(oauth.get("client_type") == 3 for oauth in item.get("oauth_client", []))),
+              (oauth["client_id"] for item in data["client"]
+               for oauth in item.get("oauth_client", [])
+               if oauth.get("client_type") == 3),
               None
           )
           if web_client:
