@@ -30,6 +30,7 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
+import com.example.data.analytics.UsageAnalyticsRepository
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -121,6 +122,7 @@ fun EventsScreen(onBack: () -> Unit) {
             "location" to location.trim(), "contact" to contact.trim(),
             "status" to "PUBLISHED", "createdAt" to FieldValue.serverTimestamp()
         )).addOnSuccessListener {
+            UsageAnalyticsRepository.trackAction(uid, "EVENT_PUBLISHED", "community")
             busy = false; showPublish = false
             title = ""; description = ""; dateTime = ""; location = ""; contact = ""
             feedback = "Evento publicado para la comunidad OMNI."
