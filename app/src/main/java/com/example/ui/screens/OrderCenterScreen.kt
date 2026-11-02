@@ -48,6 +48,8 @@ private data class OmniStoreOrder(
     val total: Double,
     val status: String,
     val paymentStatus: String,
+    val fulfillmentType: String,
+    val deliveryAddress: String,
     val qrNonce: String
 )
 
@@ -65,6 +67,8 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
     var merchantError by remember { mutableStateOf<String?>(null) }
     var orders by remember { mutableStateOf<List<OmniStoreOrder>>(emptyList()) }
     var cart by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+    var fulfillmentType by remember { mutableStateOf("RETIRO") }
+    var deliveryAddress by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
     var feedback by remember { mutableStateOf<String?>(null) }
     var createdOrder by remember { mutableStateOf<OmniStoreOrder?>(null) }
@@ -92,6 +96,8 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
             total = (doc.get("total") as? Number)?.toDouble() ?: 0.0,
             status = doc.getString("status").orEmpty(),
             paymentStatus = doc.getString("paymentStatus").orEmpty(),
+            fulfillmentType = doc.getString("fulfillmentType").orEmpty(),
+            deliveryAddress = doc.getString("deliveryAddress").orEmpty(),
             qrNonce = doc.getString("qrNonce").orEmpty()
         )
     }.getOrNull()
@@ -151,7 +157,7 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
     val total = cartLines.sumOf { it.price * it.quantity }
 
     fun submitOrder() {
-        if (uid.isBlank() || cartLines.isEmpty() || total <= 0.0) {
+        if (uid.isBlank() || cartLines.isEmpty() || total <= 0.0 || (fulfillmentType == "DELIVERY" && deliveryAddress.isBlank())) {
             feedback = "Agregá al menos un producto disponible antes de enviar el pedido."
             return
         }
@@ -175,7 +181,9 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
                         "customerName" to profile.fullName, "customerPhone" to profile.phone,
                         "items" to payloadItems, "total" to total,
                         "status" to "RECIBIDO", "paymentStatus" to "PENDIENTE",
-                        "paymentMethod" to "PAGO_AL_RETIRAR", "qrNonce" to nonce,
+                        "paymentMethod" to "PAGO_AL_RETIRAR",
+                        "fulfillmentType" to fulfillmentType, "deliveryAddress" to deliveryAddress.trim(),
+                        "qrNonce" to nonce,
                         "createdAt" to FieldValue.serverTimestamp(),
                         "updatedAt" to FieldValue.serverTimestamp()
                     )).addOnSuccessListener {
@@ -183,7 +191,7 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
                         createdOrder = OmniStoreOrder(
                             ref.id, store.id, store.name, merchantUid, uid,
                             profile.fullName, profile.phone, cartLines, total,
-                            "RECIBIDO", "PENDIENTE", nonce
+                            "RECIBIDO", "PENDIENTE", fulfillmentType, deliveryAddress.trim(), nonce
                         )
                         cart = emptyMap()
                     }.addOnFailureListener { e ->
@@ -258,6 +266,13 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
                 Surface(color = Color(0xFF101B30), shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text("${cartLines.sumOf { it.quantity }} productos · Total estimado OM$ ${String.format("%,.2f", total)}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            FilterChip(selected = fulfillmentType == "RETIRO", onClick = { fulfillmentType = "RETIRO" }, label = { Text("Retirar") })
+                            FilterChip(selected = fulfillmentType == "DELIVERY", onClick = { fulfillmentType = "DELIVERY" }, label = { Text("Delivery") })
+                        }
+                        if (fulfillmentType == "DELIVERY") {
+                            OutlinedTextField(deliveryAddress, { deliveryAddress = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Dirección de entrega") }, singleLine = true)
+                        }
                         Button(onClick = { submitOrder() }, enabled = !sending, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF087EAB))) {
                             Text(if (sending) "Enviando…" else "Enviar pedido QR")
                         }
@@ -368,7 +383,8 @@ private fun OrderStatusCard(order: OmniStoreOrder, merchantMode: Boolean, onAdva
                 Text("OM$ ${String.format("%,.2f", order.total)}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp)
             }
             order.items.forEach { Text("${it.quantity} × ${it.name}", color = Color(0xFFB8C8D9), fontSize = 10.sp) }
-            Text("Pago: pendiente · efectivo/al retirar", color = Color(0xFFFFC978), fontSize = 9.sp)
+            Text(if (order.fulfillmentType == "DELIVERY") "Delivery · ${order.deliveryAddress}" else "Retiro en el comercio", color = Color(0xFFB8C8D9), fontSize = 9.sp)
+            Text("Pago: pendiente · efectivo al retirar/recibir", color = Color(0xFFFFC978), fontSize = 9.sp)
             if (merchantMode && next.isNotBlank()) {
                 Button(onClick = { onAdvance(next) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF087EAB))) {
                     Text(when (next) {
