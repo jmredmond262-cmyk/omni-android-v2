@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   android:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     name: Build installable OMNI Admin APK
     runs-on: ubuntu-latest
     steps:
