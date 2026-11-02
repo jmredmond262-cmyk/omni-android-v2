@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -48,7 +49,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,9 +60,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.wallet.DemoWalletRepository
+import com.google.firebase.auth.FirebaseAuth
+import com.google.android.gms.code.Scanner
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.qrcode.QRCodeWriter
+import com.google.firebase.firestore.ListenerRegistration
 import com.example.model.PaymentCard
 import com.example.model.TransactionType
 import com.example.model.WalletTransaction
@@ -84,27 +93,70 @@ fun WalletScreen(
     modifier: Modifier = Modifier
 ) {
     val wallet by viewModel.wallet.collectAsState()
-    val stores by viewModel.stores.collectAsState()
     val profile by viewModel.userProfile.collectAsState()
     val context = androidx.compose.ui.platform.LocalContext.current
+    val currentUid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+    val walletRepository = remember { DemoWalletRepository() }
     var showMyQrDialog by remember { mutableStateOf(false) }
-
-    // Restaurar primero y persistir cada cambio de saldo o historial.
-    remember(context) { viewModel.restoreDemoWallet(context) }
-    LaunchedEffect(wallet) { viewModel.persistDemoWallet(context) }
-
-    var showPayQrDialog by remember { mutableStateOf(false) }
+    var showQrPaymentDialog by remember { mutableStateOf(false) }
     var showAddFundsDialog by remember { mutableStateOf(false) }
     var showTransferDialog by remember { mutableStateOf(false) }
-    var showReceiveDemoDialog by remember { mutableStateOf(false) }
     var transferRecipient by remember { mutableStateOf("") }
     var transferAmount by remember { mutableStateOf("1500") }
-    var incomingSender by remember { mutableStateOf("Usuario OMNI de prueba") }
-    var incomingAmount by remember { mutableStateOf("2500") }
-    var payAmountText by remember { mutableStateOf("3500") }
-    var selectedStoreIndex by remember { mutableStateOf(0) }
-    var storeDropdownExpanded by remember { mutableStateOf(false) }
+    var qrPaymentPayload by remember { mutableStateOf("") }
+    var qrPaymentAmount by remember { mutableStateOf("1500") }
     var paymentSuccessMessage by remember { mutableStateOf<String?>(null) }
+
+    DisposableEffect(currentUid) {
+        var disposed = false
+        var registrations: List<ListenerRegistration> = emptyList()
+        if (currentUid.isNotBlank()) {
+            walletRepository.ensureWallet { accountResult ->
+                if (!disposed) {
+                    accountResult.fold(
+                        onSuccess = {
+                            registrations = walletRepository.observeWallet(currentUid) { remoteResult ->
+                                if (!disposed) remoteResult.fold(
+                                    onSuccess = { snapshot ->
+                                        viewModel.applyRemoteDemoWallet(
+                                            snapshot.balance, snapshot.cashbackTotal,
+                                            snapshot.transactions, snapshot.alias, snapshot.cvu
+                                        )
+                                    },
+                                    onFailure = { error ->
+                                        paymentSuccessMessage = "No se pudo sincronizar OMNI Pay: ${error.localizedMessage ?: "error de conexión"}"
+                                    }
+                                )
+                            }
+                            if (disposed) registrations.forEach { it.remove() }
+                        },
+                        onFailure = { error ->
+                            paymentSuccessMessage = "No se pudo inicializar tu cuenta DEMO: ${error.localizedMessage ?: "revisá la conexión"}"
+                        }
+                    )
+                }
+            }
+        }
+        onDispose {
+            disposed = true
+            registrations.forEach { it.remove() }
+        }
+    }
+
+    val myQrPayload = remember(currentUid, profile.walletAlias) {
+        if (currentUid.isNotBlank() && profile.walletAlias.isNotBlank())
+            DemoWalletRepository.qrPayload(currentUid, profile.walletAlias) else ""
+    }
+    val myQrBitmap = remember(myQrPayload) {
+        if (myQrPayload.isBlank()) null else runCatching {
+            val matrix = QRCodeWriter().encode(myQrPayload, BarcodeFormat.QR_CODE, 560, 560)
+            android.graphics.Bitmap.createBitmap(560, 560, android.graphics.Bitmap.Config.RGB_565).also { bitmap ->
+                for (x in 0 until 560) for (y in 0 until 560) {
+                    bitmap.setPixel(x, y, if (matrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+                }
+            }
+        }.getOrNull()
+    }
 
     val receipts by viewModel.receipts.collectAsState()
     var selectedWalletTab by remember { mutableStateOf(0) } // 0: Movimientos, 1: Comprobantes & Tickets
@@ -205,7 +257,22 @@ fun WalletScreen(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Button(
-                            onClick = { showPayQrDialog = true },
+                            onClick = {
+                                GmsBarcodeScanning.getClient(context).startScan()
+                                    .addOnSuccessListener { barcode ->
+                                        val scanned = barcode.rawValue.orEmpty()
+                                        if (scanned.startsWith("OMNI-DEMO|")) {
+                                            qrPaymentPayload = scanned
+                                            qrPaymentAmount = "1500"
+                                            showQrPaymentDialog = true
+                                        } else {
+                                            paymentSuccessMessage = "El código escaneado no corresponde a una cuenta OMNI Pay DEMO."
+                                        }
+                                    }
+                                    .addOnFailureListener { error ->
+                                        paymentSuccessMessage = error.localizedMessage ?: "No se pudo leer el código QR."
+                                    }
+                            },
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = CyberGlowCyan),
                             modifier = Modifier
@@ -245,14 +312,14 @@ fun WalletScreen(
                             Text("Transferir", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
                         Button(
-                            onClick = { showReceiveDemoDialog = true },
+                            onClick = { showMyQrDialog = true },
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF245A52)),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Icon(Icons.Default.ArrowDownward, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(5.dp))
-                            Text("Recibir demo", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Text("Cobrar QR", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
                     }
                 }
@@ -470,124 +537,71 @@ fun WalletScreen(
             onDismissRequest = { showMyQrDialog = false },
             title = { Text("Mi QR OMNI Pay · DEMO") },
             text = {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Icon(Icons.Default.QrCodeScanner, contentDescription = null, tint = EmeraldPrimary, modifier = Modifier.size(100.dp))
-                    Text("QR de identidad virtual", fontWeight = FontWeight.Bold)
-                    Text("Alias: ${profile.walletAlias}", fontSize = 13.sp)
-                    Text("CVU: ${profile.cvuCbu}", fontSize = 12.sp)
-                    Text("Representación visual de prueba. No contiene una orden bancaria ni permite cobrar dinero real.", fontSize = 11.sp, color = Color.Gray)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (myQrBitmap != null) {
+                        Image(
+                            bitmap = myQrBitmap.asImageBitmap(),
+                            contentDescription = "QR de cobro OMNI Pay DEMO",
+                            modifier = Modifier.size(220.dp)
+                        )
+                    } else {
+                        Text("Preparando tu QR…", color = Color.Gray)
+                    }
+                    Text("Alias: ${profile.walletAlias}", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text("CVU virtual: ${profile.cvuCbu}", fontSize = 12.sp)
+                    Text("Compartí este QR para recibir OM$ ficticios de otra cuenta OMNI.", fontSize = 11.sp, color = Color.Gray)
+                    Text("Solo funciona dentro del entorno OMNI Pay DEMO. No recibe dinero real.", fontSize = 10.sp, color = Color(0xFF9A5B12))
                 }
             },
             confirmButton = { TextButton(onClick = { showMyQrDialog = false }) { Text("Cerrar") } }
         )
     }
 
-    // Modal de Pago con QR en Comercio Barrial
-    if (showPayQrDialog) {
-        val currentStore = stores.getOrNull(selectedStoreIndex) ?: stores.first()
+    if (showQrPaymentDialog) {
         AlertDialog(
-            onDismissRequest = { showPayQrDialog = false },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = null, tint = EmeraldPrimary)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Pagar con QR en el Local")
-                }
-            },
+            onDismissRequest = { showQrPaymentDialog = false },
+            title = { Text("Confirmar pago QR · DEMO") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        text = "Selecciona el comercio y el monto. ¡Recibes 5% de reintegro en el acto en tu saldo!",
-                        fontSize = 12.sp,
-                        color = Color.DarkGray
-                    )
-
-                    // Selector de Comercio
-                    ExposedDropdownMenuBox(
-                        expanded = storeDropdownExpanded,
-                        onExpandedChange = { storeDropdownExpanded = !storeDropdownExpanded }
-                    ) {
-                        OutlinedTextField(
-                            value = currentStore.name,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Comercio a pagar") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = storeDropdownExpanded) },
-                            modifier = Modifier
-                                .menuAnchor()
-                                .fillMaxWidth()
-                        )
-                        ExposedDropdownMenu(
-                            expanded = storeDropdownExpanded,
-                            onDismissRequest = { storeDropdownExpanded = false }
-                        ) {
-                            stores.forEachIndexed { index, store ->
-                                DropdownMenuItem(
-                                    text = { Text(store.name) },
-                                    onClick = {
-                                        selectedStoreIndex = index
-                                        storeDropdownExpanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("El pago se acreditará en la cuenta OMNI que emitió el QR.", fontSize = 12.sp, color = Color.Gray)
                     OutlinedTextField(
-                        value = payAmountText,
-                        onValueChange = { payAmountText = it },
-                        label = { Text("Monto a pagar ($)") },
-                        modifier = Modifier.fillMaxWidth()
+                        value = qrPaymentAmount,
+                        onValueChange = { qrPaymentAmount = it },
+                        label = { Text("Importe OM$") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
                     )
-
-                    val amountToPay = payAmountText.toDoubleOrNull() ?: 0.0
-                    if (amountToPay > 0) {
-                        Surface(
-                            color = EmeraldContainer,
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(imageVector = Icons.Default.LocalOffer, contentDescription = null, tint = EmeraldDark, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "Reintegro estimado: +$${String.format("%,.2f", amountToPay * 0.05)}",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp,
-                                    color = EmeraldDark
-                                )
-                            }
-                        }
-                    }
+                    Text("Disponible: OM$ ${String.format("%,.2f", wallet.balance)}", fontSize = 11.sp, color = EmeraldDark)
+                    Text("Operación ficticia entre cuentas OMNI autenticadas.", fontSize = 10.sp, color = Color.Gray)
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        val amount = payAmountText.toDoubleOrNull() ?: 0.0
-                        if (amount > 0) {
-                            val success = viewModel.payWithWallet(currentStore.name, amount)
-                            showPayQrDialog = false
-                            if (success) {
-                                paymentSuccessMessage = "¡Pago de prueba exitoso por OM$ ${String.format("%,.2f", amount)} en ${currentStore.name}! Reintegro virtual: OM$ ${String.format("%,.2f", amount * 0.05)}."
-                            } else {
-                                paymentSuccessMessage = "Saldo insuficiente en tu billetera. Por favor carga saldo antes de pagar."
+                        val amount = qrPaymentAmount.toDoubleOrNull() ?: 0.0
+                        if (amount <= 0.0) {
+                            paymentSuccessMessage = "Ingresá un importe mayor que cero."
+                        } else {
+                            walletRepository.payDemoQr(qrPaymentPayload, amount) { result ->
+                                result.fold(
+                                    onSuccess = {
+                                        paymentSuccessMessage = "Pago QR aprobado en el entorno DEMO por OM$ ${String.format("%,.2f", amount)}. El saldo del destinatario se actualiza automáticamente."
+                                        showQrPaymentDialog = false
+                                    },
+                                    onFailure = { error ->
+                                        paymentSuccessMessage = error.localizedMessage ?: "No se pudo completar el pago DEMO."
+                                    }
+                                )
                             }
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
-                ) {
-                    Text("Confirmar Pago QR")
-                }
+                ) { Text("Confirmar pago DEMO") }
             },
-            dismissButton = {
-                TextButton(onClick = { showPayQrDialog = false }) {
-                    Text("Cancelar")
-                }
-            }
+            dismissButton = { TextButton(onClick = { showQrPaymentDialog = false }) { Text("Cancelar") } }
         )
     }
 
@@ -613,9 +627,17 @@ fun WalletScreen(
                     onClick = {
                         val amount = addAmount.toDoubleOrNull() ?: 0.0
                         if (amount > 0) {
-                            viewModel.addFunds(amount)
-                            showAddFundsDialog = false
-                            paymentSuccessMessage = "¡Carga virtual de prueba por OM$ ${String.format("%,.2f", amount)}!"
+                            walletRepository.topUpDemo(amount) { result ->
+                                result.fold(
+                                    onSuccess = {
+                                        showAddFundsDialog = false
+                                        paymentSuccessMessage = "Carga DEMO aprobada por OM$ ${String.format("%,.2f", amount)}."
+                                    },
+                                    onFailure = { error ->
+                                        paymentSuccessMessage = error.localizedMessage ?: "No se pudo cargar saldo DEMO."
+                                    }
+                                )
+                            }
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
@@ -660,16 +682,20 @@ fun WalletScreen(
                 Button(
                     onClick = {
                         val amount = transferAmount.toDoubleOrNull() ?: 0.0
-                        val success = viewModel.sendDemoTransfer(transferRecipient, amount)
-                        if (success) {
-                            paymentSuccessMessage = "Transferencia de prueba enviada a ${transferRecipient.trim()} por OM$ ${String.format("%,.2f", amount)}. No se movió dinero real."
-                            transferRecipient = ""
-                            showTransferDialog = false
+                        if (amount <= 0.0 || !amount.isFinite() || transferRecipient.isBlank()) {
+                            paymentSuccessMessage = "Revisá el alias/CVU y el importe."
                         } else {
-                            paymentSuccessMessage = if (amount > wallet.balance) {
-                                "Saldo virtual insuficiente para realizar la transferencia."
-                            } else {
-                                "Revisa el alias/CVU y el importe. Deben ser válidos y mayores que cero."
+                            walletRepository.transferDemoFunds(transferRecipient, amount) { result ->
+                                result.fold(
+                                    onSuccess = {
+                                        paymentSuccessMessage = "Transferencia DEMO aprobada por OM$ ${String.format("%,.2f", amount)}. La cuenta destinataria recibe el importe automáticamente."
+                                        transferRecipient = ""
+                                        showTransferDialog = false
+                                    },
+                                    onFailure = { error ->
+                                        paymentSuccessMessage = error.localizedMessage ?: "No se pudo realizar la transferencia DEMO."
+                                    }
+                                )
                             }
                         }
                     },
@@ -678,51 +704,6 @@ fun WalletScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showTransferDialog = false }) { Text("Cancelar") }
-            }
-        )
-    }
-
-    // Simulación de una transferencia entrante para probar acreditaciones
-    if (showReceiveDemoDialog) {
-        AlertDialog(
-            onDismissRequest = { showReceiveDemoDialog = false },
-            title = { Text("Simular dinero recibido") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Genera un ingreso ficticio para probar el flujo de recepción.", fontSize = 12.sp, color = Color.Gray)
-                    OutlinedTextField(
-                        value = incomingSender,
-                        onValueChange = { incomingSender = it },
-                        label = { Text("Remitente de prueba") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = incomingAmount,
-                        onValueChange = { incomingAmount = it },
-                        label = { Text("Importe OM$") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val amount = incomingAmount.toDoubleOrNull() ?: 0.0
-                        val success = viewModel.simulateIncomingTransfer(incomingSender, amount)
-                        if (success) {
-                            paymentSuccessMessage = "Ingreso virtual de OM$ ${String.format("%,.2f", amount)} acreditado desde ${incomingSender.trim()}. Operación de prueba."
-                            showReceiveDemoDialog = false
-                        } else {
-                            paymentSuccessMessage = "Ingresa un remitente y un importe mayor que cero."
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
-                ) { Text("Acreditar demo") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showReceiveDemoDialog = false }) { Text("Cancelar") }
             }
         )
     }
