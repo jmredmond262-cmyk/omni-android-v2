@@ -6,7 +6,7 @@
 - Los avisos se programan con AlarmManager y se publican como notificaciones.
 - La primera vez Android solicita permiso para notificaciones en versiones compatibles.
 - Los modos silencioso y sonoro usan canales de notificación separados.
-- El modo voz deja el texto listo para lectura al abrir el aviso; no reproduce audio por sorpresa mientras la app está cerrada.
+- El modo voz usa el motor de texto a voz de Android para leer el título y el mensaje a la hora programada. Si el dispositivo no tiene voz en español disponible, la notificación visual sigue funcionando.
 - La programación es local a cada dispositivo y se restaura al reiniciar el teléfono. Android puede retrasar avisos por ahorro de batería; para mayor puntualidad conviene permitir notificaciones y no restringir OMNI en el ahorro de batería.
 
 ## Bolsa de Trabajo y Servicios
