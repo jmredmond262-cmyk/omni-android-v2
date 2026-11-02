@@ -1,4 +1,5 @@
 name: OMNI Android Build
+# Includes user profile sync and product analytics from the admin rebuild branch.
 
 on:
   push:
