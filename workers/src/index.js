@@ -131,10 +131,33 @@ async function firestore(env, path, options = {}) {
 async function getDocument(env, collection, id) {
   return firestore(env, "/" + encodeURIComponent(collection) + "/" + encodeURIComponent(id));
 }
-async function listDocuments(env, collection, limit = 100) {
+async function listDocumentsPage(env, collection, limit = 100, pageToken = "") {
   const pageSize = Math.min(Math.max(Number(limit) || 100, 1), 200);
-  const data = await firestore(env, "/" + encodeURIComponent(collection) + "?pageSize=" + pageSize);
-  return (data.documents || []).map(documentData);
+  const params = new URLSearchParams({ pageSize: String(pageSize) });
+  if (pageToken) params.set("pageToken", pageToken);
+  const data = await firestore(env, "/" + encodeURIComponent(collection) + "?" + params.toString());
+  return { items: (data.documents || []).map(documentData), nextPageToken: data.nextPageToken || "" };
+}
+async function recentDocuments(env, collection, limit = 8, offset = 0) {
+  const structuredQuery = {
+    from: [{ collectionId: collection }],
+    orderBy: [{ field: { fieldPath: "createdAt" }, direction: "DESCENDING" }],
+    limit: Math.min(Math.max(Number(limit) || 8, 1), 5000)
+  };
+  if (Number(offset) > 0) structuredQuery.offset = Math.min(Number(offset), 50000);
+  const rows = await firestore(env, ":runQuery", { method: "POST", body: JSON.stringify({ structuredQuery }) });
+  return (rows || []).filter(row => row.document).map(row => documentData(row.document));
+}
+async function usageEventsLast7Days(env) {
+  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const structuredQuery = {
+    from: [{ collectionId: "usageEvents" }],
+    where: { fieldFilter: { field: { fieldPath: "createdAt" }, op: "GREATER_THAN_OR_EQUAL", value: { timestampValue: cutoff } } },
+    orderBy: [{ field: { fieldPath: "createdAt" }, direction: "DESCENDING" }],
+    limit: 5000
+  };
+  const rows = await firestore(env, ":runQuery", { method: "POST", body: JSON.stringify({ structuredQuery }) });
+  return (rows || []).filter(row => row.document).map(row => documentData(row.document));
 }
 async function countDocuments(env, collection) {
   const query = {
@@ -179,12 +202,13 @@ async function audit(env, actor, action, target, details = {}) {
 async function dashboard(env) {
   const collections = ["users", "walletAccounts", "walletOperations", "merchantProfiles", "storeOrders", "omniEvents", "appFeedback", "usageEvents", "moduleRegistry", "adminAuditLogs"];
   const counts = await Promise.all(collections.map(name => countDocuments(env, name)));
-  const [wallets, operations, userProfiles, usageEvents] = await Promise.all([
-    listDocuments(env, "walletAccounts", 1000),
-    recentDocuments(env, "walletOperations"),
-    listDocuments(env, "users", 200),
-    recentDocuments(env, "usageEvents", 300)
+  const [walletPage, operations, userProfiles, usageEvents] = await Promise.all([
+    listDocumentsPage(env, "walletAccounts", 200),
+    recentDocuments(env, "walletOperations", 8),
+    recentDocuments(env, "users", 200),
+    usageEventsLast7Days(env)
   ]);
+  const wallets = walletPage.items;
   const resolvedCounts = Object.fromEntries(collections.map((name, index) => [
     name, name === "users" ? Math.max(counts[index], userProfiles.length) : counts[index]
   ]));
@@ -216,6 +240,8 @@ async function dashboard(env) {
     usageTrend,
     walletBalanceSample: wallets.reduce((sum, item) => sum + (Number(item.balance) || 0), 0),
     walletSampleSize: wallets.length,
+    usageSampleLimit: 5000,
+    usageSampleComplete: usageEvents.length < 5000,
     recentUsers, recentOperations: operations,
     recentUsageEvents: usageEvents.slice(0, 8)
   };
@@ -227,7 +253,15 @@ async function handleAction(env, actor, action, data) {
       const collection = String(data.collection || "");
       const allowed = new Set(["users", "walletAccounts", "walletOperations", "merchantProfiles", "storeOrders", "omniEvents", "appFeedback", "usageEvents", "moduleRegistry", "adminAuditLogs", "betaInvitations"]);
       if (!allowed.has(collection)) throw new ApiError(400, "invalid-argument", "Colección no disponible.");
-      return { items: await listDocuments(env, collection, data.limit) };
+      if (collection === "usageEvents") {
+        const offset = Math.max(0, Math.min(Number(data.offset) || 0, 50000));
+        const pageSize = Math.min(Math.max(Number(data.limit) || 100, 1), 100);
+        const items = await recentDocuments(env, collection, pageSize + 1, offset);
+        const hasMore = items.length > pageSize;
+        return { items: items.slice(0, pageSize), hasMore, nextOffset: hasMore ? offset + pageSize : null };
+      }
+      const page = await listDocumentsPage(env, collection, data.limit, String(data.pageToken || ""));
+      return { items: page.items, nextPageToken: page.nextPageToken, hasMore: Boolean(page.nextPageToken) };
     }
     case "getConfig": {
       const snap = await getDocument(env, "adminConfig", "global");
