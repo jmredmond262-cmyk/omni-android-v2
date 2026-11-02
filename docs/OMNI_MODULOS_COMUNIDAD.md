@@ -21,6 +21,12 @@
 - Incluye búsqueda, filtros por categoría, favoritos locales, apertura de ubicación en mapas y envío de evento al calendario del teléfono.
 - La opción Recordarme utiliza la aplicación de calendario disponible en el dispositivo; no crea una alarma propia de OMNI.
 
+## Difusión y enlaces compartibles
+- Las novedades manuales del portal de comerciante exponen una acción de compartir en cada tarjeta.
+- Los eventos y las oportunidades laborales/servicios incluyen compartir el resumen por el menú nativo de Android.
+- OMNI Buenos Días mantiene su acción de compartir el resumen.
+- Las acciones usan el selector de aplicaciones instalado en el teléfono; no requieren API paga ni permisos adicionales.
+
 ## Reglas de Firestore
 La versión actual de `firestore.rules` incorpora permisos para `jobPosts`, `jobApplications` y `omniEvents`. Después de actualizar la app, publicar el archivo completo desde Firebase Console → Firestore Database → Rules. No reemplazar las reglas por reglas abiertas ni activar facturación.
 
