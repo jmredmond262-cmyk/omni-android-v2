@@ -636,11 +636,12 @@ fun MerchantHubScreen(
                                     }
                                     context.startActivity(Intent.createChooser(intent, "Compartir desde OMNI"))
                                 },
-                                modifier = Modifier.align(Alignment.End)
+                                modifier = Modifier.align(Alignment.End).testTag("share_manual_news_${news.id}"),
+                                colors = ButtonDefaults.textButtonColors(contentColor = RosePromo)
                             ) {
-                                Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Icon(imageVector = Icons.Default.Share, contentDescription = "Compartir novedad", modifier = Modifier.size(14.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Compartir", fontSize = 11.sp)
+                                Text("Compartir", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                         Spacer(modifier = Modifier.height(6.dp))
