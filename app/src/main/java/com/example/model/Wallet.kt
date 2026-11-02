@@ -25,7 +25,7 @@ data class PaymentCard(
 )
 
 data class UserWallet(
-    val balance: Double = 18450.0,
+    val balance: Double = 50000.0,
     val totalCashbackEarned: Double = 2340.0,
     val cards: List<PaymentCard> = listOf(
         PaymentCard("c1", "Banco Galicia", "4821", "Visa Débito", true),
