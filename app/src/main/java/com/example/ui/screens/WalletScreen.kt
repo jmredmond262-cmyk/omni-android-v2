@@ -86,11 +86,12 @@ fun WalletScreen(
     val wallet by viewModel.wallet.collectAsState()
     val stores by viewModel.stores.collectAsState()
     val profile by viewModel.userProfile.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
     var showMyQrDialog by remember { mutableStateOf(false) }
 
     // Restaurar primero y persistir cada cambio de saldo o historial.
-    remember(context = androidx.compose.ui.platform.LocalContext.current) { viewModel.restoreDemoWallet(androidx.compose.ui.platform.LocalContext.current) }
-    LaunchedEffect(wallet) { viewModel.persistDemoWallet(androidx.compose.ui.platform.LocalContext.current) }
+    remember(context) { viewModel.restoreDemoWallet(context) }
+    LaunchedEffect(wallet) { viewModel.persistDemoWallet(context) }
 
     var showPayQrDialog by remember { mutableStateOf(false) }
     var showAddFundsDialog by remember { mutableStateOf(false) }
@@ -108,7 +109,6 @@ fun WalletScreen(
     val receipts by viewModel.receipts.collectAsState()
     var selectedWalletTab by remember { mutableStateOf(0) } // 0: Movimientos, 1: Comprobantes & Tickets
     var selectedReceiptForModal by remember { mutableStateOf<com.example.model.DigitalReceipt?>(null) }
-    val context = androidx.compose.ui.platform.LocalContext.current
 
     LazyColumn(
         modifier = modifier
