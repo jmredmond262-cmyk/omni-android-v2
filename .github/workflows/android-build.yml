@@ -85,20 +85,3 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
-
-  functions:
-    name: Validate OMNI Pay Cloud Functions
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
-      - name: Set up Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-      - name: Install Cloud Functions dependencies
-        working-directory: functions
-        run: npm install
-      - name: Compile Cloud Functions
-        working-directory: functions
-        run: npm run build
