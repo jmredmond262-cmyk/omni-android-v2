@@ -128,6 +128,23 @@ class RoutineReminderReceiver : BroadcastReceiver() {
         val id = intent.getStringExtra("routine_id") ?: return
         val routine = RoutineStore.load(context).firstOrNull { it.id == id && it.enabled } ?: return
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (intent.action == "com.example.omni.ROUTINE_DONE") {
+            manager.cancel(id.hashCode())
+            val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+            context.getSharedPreferences("omni_routines", 0).edit().putString("done_$id", today).apply()
+            return
+        }
+        if (intent.action == "com.example.omni.ROUTINE_SNOOZE") {
+            val snoozeIntent = Intent(context, RoutineReminderReceiver::class.java).putExtra("routine_id", id)
+            val snoozePending = PendingIntent.getBroadcast(
+                context, id.hashCode() + 1, snoozeIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 10 * 60 * 1000L, snoozePending)
+            manager.cancel(id.hashCode())
+            return
+        }
         val channelId = if (routine.mode == "SILENT" || routine.mode == "VOICE") "omni_routines_silent" else "omni_routines_sound"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val importance = if (routine.mode == "SILENT" || routine.mode == "VOICE") NotificationManager.IMPORTANCE_LOW else NotificationManager.IMPORTANCE_HIGH
@@ -135,13 +152,27 @@ class RoutineReminderReceiver : BroadcastReceiver() {
                 manager.createNotificationChannel(NotificationChannel(channelId, "Recordatorios OMNI", importance))
             }
         }
+        val snoozeIntent = Intent(context, RoutineReminderReceiver::class.java)
+            .setAction("com.example.omni.ROUTINE_SNOOZE").putExtra("routine_id", id)
+        val doneIntent = Intent(context, RoutineReminderReceiver::class.java)
+            .setAction("com.example.omni.ROUTINE_DONE").putExtra("routine_id", id)
+        val snoozePending = PendingIntent.getBroadcast(
+            context, id.hashCode() + 10, snoozeIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val donePending = PendingIntent.getBroadcast(
+            context, id.hashCode() + 20, doneIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
         val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(routine.title)
             .setContentText(routine.message.ifBlank { "Es momento de completar tu rutina." })
             .setStyle(NotificationCompat.BigTextStyle().bigText(routine.message.ifBlank { "Es momento de completar tu rutina." }))
+            .addAction(android.R.drawable.ic_lock_idle_alarm, "Posponer 10 min", snoozePending)
+            .addAction(android.R.drawable.checkbox_on_background, "Hecho", donePending)
             .setAutoCancel(true)
-            .setPriority(if (routine.mode == "SILENT") NotificationCompat.PRIORITY_LOW else NotificationCompat.PRIORITY_HIGH)
+            .setPriority(if (routine.mode == "SILENT" || routine.mode == "VOICE") NotificationCompat.PRIORITY_LOW else NotificationCompat.PRIORITY_HIGH)
             .build()
         manager.notify(id.hashCode(), notification)
         if (routine.mode == "VOICE") {
