@@ -1,0 +1,35 @@
+name: Deploy OMNI Admin API
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy secure Admin API to existing OMNI project
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Configure Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Configure primary Firebase credentials
+        env:
+          SERVICE_ACCOUNT_BASE64: ${{ secrets.OMNI_PRIMARY_FIREBASE_SERVICE_ACCOUNT_BASE64 }}
+          ADMIN_AUTH_PROJECT_ID: ${{ secrets.OMNI_ADMIN_AUTH_PROJECT_ID }}
+        run: |
+          test -n "$SERVICE_ACCOUNT_BASE64" || { echo "::error::Falta OMNI_PRIMARY_FIREBASE_SERVICE_ACCOUNT_BASE64"; exit 1; }
+          test -n "$ADMIN_AUTH_PROJECT_ID" || { echo "::error::Falta OMNI_ADMIN_AUTH_PROJECT_ID"; exit 1; }
+          printf '%s' "$SERVICE_ACCOUNT_BASE64" | base64 --decode > "$RUNNER_TEMP/omni-primary-service-account.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/omni-primary-service-account.json" >> "$GITHUB_ENV"
+          printf 'OMNI_ADMIN_AUTH_PROJECT_ID=%s\n' "$ADMIN_AUTH_PROJECT_ID" > functions/.env.omni-57f69
+      - name: Install Firebase CLI and functions
+        run: |
+          npm install --global firebase-tools
+          npm install --prefix functions --no-package-lock
+      - name: Deploy only the Admin API
+        run: firebase deploy --only functions:omniAdminApi --project omni-57f69 --non-interactive
