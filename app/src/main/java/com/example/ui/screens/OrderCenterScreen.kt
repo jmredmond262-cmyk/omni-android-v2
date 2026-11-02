@@ -141,7 +141,7 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
         var listener: ListenerRegistration? = null
         if (uid.isNotBlank() && (!merchantMode || merchantReady)) {
             val query = if (merchantMode) {
-                db.collection("storeOrders").whereEqualTo("merchantUid", uid).whereEqualTo("storeId", store.id)
+                db.collection("storeOrders").whereEqualTo("merchantUid", uid)
             } else {
                 db.collection("storeOrders").whereEqualTo("customerUid", uid)
             }
@@ -150,6 +150,7 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
                     feedback = error.localizedMessage ?: "No se pudieron sincronizar los pedidos."
                 } else {
                     orders = snapshot?.documents.orEmpty().mapNotNull(::decodeOrder)
+                        .filter { !merchantMode || it.storeId == store.id }
                         .sortedByDescending { it.id }
                 }
             }
