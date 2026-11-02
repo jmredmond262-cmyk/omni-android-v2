@@ -102,7 +102,12 @@ function encodeValue(value) {
   return { stringValue: String(value) };
 }
 function encodeFields(data) {
-  return Object.fromEntries(Object.entries(data).map(([key, value]) => [key, encodeValue(value)]));
+  return Object.fromEntries(Object.entries(data).map(([key, value]) => {
+    if (typeof value === "string" && /(?:At|_at)$/.test(key) && Number.isFinite(Date.parse(value))) {
+      return [key, { timestampValue: new Date(value).toISOString() }];
+    }
+    return [key, encodeValue(value)];
+  }));
 }
 function documentData(doc) {
   return { id: doc.name.split("/").pop(), ...decodeFields(doc.fields || {}) };
