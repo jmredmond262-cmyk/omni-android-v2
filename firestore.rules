@@ -166,9 +166,11 @@ service cloud.firestore {
         && request.resource.data.qrNonce.size() >= 20
         && get(/databases/$(database)/documents/merchantProfiles/$(request.resource.data.storeId)).data.ownerUid
           == request.resource.data.merchantUid;
+      // Queries must constrain customerUid or merchantUid to the signed-in user.
+      // merchantUid is copied from the claimed merchant profile at order creation.
       allow read: if signedIn()
         && (resource.data.customerUid == request.auth.uid
-          || get(merchantProfilePath()).data.ownerUid == request.auth.uid);
+          || resource.data.merchantUid == request.auth.uid);
       allow update: if signedIn()
         && get(merchantProfilePath()).data.ownerUid == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "updatedAt"])
