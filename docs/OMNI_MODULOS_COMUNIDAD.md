@@ -27,6 +27,9 @@
 - OMNI Buenos Días mantiene su acción de compartir el resumen.
 - Las acciones usan el selector de aplicaciones instalado en el teléfono; no requieren API paga ni permisos adicionales.
 
+## Pedidos QR y Delivery
+El flujo de pedidos del comercio y sus límites DEMO están documentados en `docs/OMNI_PEDIDOS_QR.md`. El QR identifica una orden y nunca confirma pago. Los estados de preparación y entrega se actualizan desde el panel del comercio.
+
 ## Reglas de Firestore
 La versión actual de `firestore.rules` incorpora permisos para `jobPosts`, `jobApplications` y `omniEvents`. Después de actualizar la app, publicar el archivo completo desde Firebase Console → Firestore Database → Rules. No reemplazar las reglas por reglas abiertas ni activar facturación.
 
