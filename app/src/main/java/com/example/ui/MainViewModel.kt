@@ -650,7 +650,9 @@ class MainViewModel : ViewModel() {
             minSpendDiscountThreshold = 5000.0,
             minSpendDiscountPercent = 10,
             comboDeals = listOf(ComboDeal("Ahorro Barrial", "Descuento en compras", "-10%")),
-            inventory = SampleData.generateInventoryForStore(mappedType, kotlin.math.abs(id.hashCode())),
+            // Los resultados de mapas/directorios no incluyen precios ni stock verificados.
+            // No inventar un catálogo: solo comparar o pedir productos cargados por el comercio.
+            inventory = emptyList(),
             mapOffsetX = 0.5f,
             mapOffsetY = 0.5f,
             openTime = if (is24) "00:00" else "08:30",
@@ -664,9 +666,15 @@ class MainViewModel : ViewModel() {
     }
 
     private fun onlySelectedLocality(items: List<Store>): List<Store> {
+        val withinRadius = items.filter { it.distanceMeters <= _searchRadiusMeters.value }
         val selectedLocality = _currentCity.value.substringBefore(",").trim()
-        if (selectedLocality.isBlank() || selectedLocality.contains("Detectando", ignoreCase = true) || selectedLocality.equals("Tu zona", ignoreCase = true)) return emptyList()
-        return items.filter { it.address.contains(selectedLocality, ignoreCase = true) }
+        if (selectedLocality.isBlank() || selectedLocality.contains("Detectando", ignoreCase = true) || selectedLocality.equals("Tu zona", ignoreCase = true)) {
+            return withinRadius
+        }
+        val confirmedLocality = withinRadius.filter { it.address.contains(selectedLocality, ignoreCase = true) }
+        // Algunas fichas de OpenStreetMap/Places no repiten la localidad en la dirección.
+        // Si no hay coincidencias textuales, conservar solo los resultados geográficos dentro del radio.
+        return confirmedLocality.ifEmpty { withinRadius }
     }
 
     fun searchOmniDirectory(
