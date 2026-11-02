@@ -98,7 +98,7 @@ fun EventsScreen(onBack: () -> Unit) {
     }
 
     val visible = events.filter { event ->
-        (category == "Todos" || event.category == category) &&
+        (category == "Todos" || (category == "Favoritos" && favorites.contains(event.id)) || event.category == category) &&
             (search.isBlank() || listOf(event.title, event.description, event.location).any { it.contains(search, true) })
     }
 
@@ -140,7 +140,7 @@ fun EventsScreen(onBack: () -> Unit) {
         OutlinedTextField(search, { search = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Buscar eventos o lugares") })
         Spacer(Modifier.height(7.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-            listOf("Todos", "Comunidad", "Cultura", "Deportes", "Comercial").forEach { value ->
+            listOf("Todos", "Favoritos", "Comunidad", "Cultura", "Deportes", "Comercial").forEach { value ->
                 FilterChip(selected = category == value, onClick = { category = value }, label = { Text(value, fontSize = 9.sp) })
             }
         }
