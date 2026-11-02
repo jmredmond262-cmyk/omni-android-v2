@@ -338,14 +338,14 @@ private fun looksLikeTechnicalId(value: String): Boolean =
 @Composable
 private fun RecordCard(item: Map<String, Any?>, type: String) {
   val title = when (type) {
-    "users" -> firstValue(item, "displayName", "fullName", "name", "email").ifBlank { "Usuario OMNI" }
-    "walletAccounts" -> firstValue(item, "alias").ifBlank { "Billetera OMNI Pay" }
-    "walletOperations" -> friendlyEnum(firstValue(item, "kind", "type", "title").ifBlank { "Operación" })
-    "merchantProfiles" -> firstValue(item, "storeName", "name").ifBlank { "Comercio OMNI" }
-    "storeOrders" -> "Pedido " + firstValue(item, "orderNumber", "status").ifBlank { "OMNI" }
+    "users" -> firstPresentValue(item, "displayName", "fullName", "name", "email").ifBlank { "Usuario OMNI" }
+    "walletAccounts" -> firstPresentValue(item, "alias").ifBlank { "Billetera OMNI Pay" }
+    "walletOperations" -> friendlyEnum(firstPresentValue(item, "kind", "type", "title").ifBlank { "Operación" })
+    "merchantProfiles" -> firstPresentValue(item, "storeName", "name").ifBlank { "Comercio OMNI" }
+    "storeOrders" -> "Pedido " + firstPresentValue(item, "orderNumber", "status").ifBlank { "OMNI" }
     "appFeedback" -> "Comentario de usuario"
-    "adminAuditLogs" -> friendlyEnum(firstValue(item, "action").ifBlank { "Actividad administrativa" })
-    else -> firstValue(item, "title", "name", "action").ifBlank { "Registro OMNI" }
+    "adminAuditLogs" -> friendlyEnum(firstPresentValue(item, "action").ifBlank { "Actividad administrativa" })
+    else -> firstPresentValue(item, "title", "name", "action").ifBlank { "Registro OMNI" }
   }
   val preferred = when (type) {
     "users" -> listOf("email", "phoneNumber", "phone", "createdAt")
@@ -498,6 +498,8 @@ private fun jsonValue(value: Any?): Any? = when (value) {
   is JSONArray -> (0 until value.length()).map { jsonValue(value.opt(it)) }
   else -> value
 }
+private fun firstPresentValue(item: Map<String, Any?>, vararg keys: String): String =
+  keys.firstNotNullOfOrNull { key -> item[key]?.toString()?.takeIf { it.isNotBlank() && it != "null" && !looksLikeTechnicalId(it) } } ?: ""
 private fun firstValue(item: Map<String, Any?>, vararg keys: String): String =
   keys.firstNotNullOfOrNull { key -> item[key]?.toString()?.takeIf { it.isNotBlank() && it != "null" } } ?: "Registro"
 private fun displayValue(value: Any?): String = when (value) {
