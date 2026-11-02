@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "main", "omni-resto-mejoras", "omni-admin-app" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "omni-resto-mejoras" ]
   workflow_dispatch:
 
 permissions:
