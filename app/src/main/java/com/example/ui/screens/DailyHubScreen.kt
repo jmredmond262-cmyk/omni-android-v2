@@ -282,6 +282,32 @@ fun DailyHubScreen(
         }
 
         // ==========================================
+        // ACCESO A MODO RUTINA
+        // ==========================================
+        item {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF101B30)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, CyberGlowCyan.copy(alpha = 0.35f)),
+                modifier = Modifier.fillMaxWidth().clickable { viewModel.navigateTo(Screen.Routine) }
+                    .testTag("home_routine_mode_entry")
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 13.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(11.dp)
+                ) {
+                    Text("⏰", fontSize = 25.sp)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("Modo Rutina", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("Organizá tus actividades y recordatorios recurrentes", color = Color(0xFF9AAAC2), fontSize = 10.sp)
+                    }
+                    Text("ABRIR ›", color = CyberGlowCyan, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                }
+            }
+        }
+
+        // ==========================================
         // 3. OMNI EXPERIENCE
         // ==========================================
         item {
