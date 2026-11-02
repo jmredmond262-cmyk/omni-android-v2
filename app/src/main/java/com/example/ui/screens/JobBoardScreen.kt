@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Work
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -248,6 +249,16 @@ fun JobBoardScreen(onBack: () -> Unit) {
                                             }
                                         } catch (_: Exception) { feedback = "No se encontró una aplicación para contactar." }
                                     }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF087EAB))) { Text("Contactar", fontSize = 10.sp) }
+                                    IconButton(onClick = {
+                                        val share = "🧰 ${post.title}\n${post.category} · ${post.location}\n\n${post.description}\n\nContacto: ${post.contactPhone.ifBlank { post.contactEmail }}\n\nCompartido desde OMNI."
+                                        val send = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(Intent.EXTRA_SUBJECT, post.title)
+                                            putExtra(Intent.EXTRA_TEXT, share)
+                                        }
+                                        runCatching { context.startActivity(Intent.createChooser(send, "Compartir oportunidad OMNI")) }
+                                            .onFailure { feedback = "No se pudo abrir el menú para compartir." }
+                                    }) { Icon(Icons.Default.Share, "Compartir publicación", tint = Color(0xFF57DDF5)) }
                                 }
                             }
                         }
