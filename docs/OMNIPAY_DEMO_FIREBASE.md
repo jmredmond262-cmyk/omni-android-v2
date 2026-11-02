@@ -33,6 +33,14 @@ firebase deploy --only firestore:rules
 
 También se pueden copiar las reglas del archivo `firestore.rules` en Firebase Console → Firestore Database → Rules y presionar **Publicar**. No activar facturación ni desplegar Functions para probar esta versión.
 
+## Reglas compartidas con otros módulos OMNI
+
+La versión más reciente de `firestore.rules` también protege las colecciones de comunidad:
+- `jobPosts` y `jobApplications` para Bolsa de Trabajo y Servicios.
+- `omniEvents` para Agenda y Eventos.
+
+Si ya habías publicado las reglas de OMNI Pay antes de esta actualización, debés volver a publicar el archivo completo actualizado. No alcanza con conservar la versión anterior: los módulos nuevos recibirían `PERMISSION_DENIED`.
+
 ## Prueba entre dos teléfonos
 
 1. Instalar la misma compilación en dos teléfonos.
