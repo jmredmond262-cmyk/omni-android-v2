@@ -1,6 +1,7 @@
 package com.omni.admin
 
 import android.os.Bundle
+import android.app.Activity
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -21,6 +22,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.platform.LocalContext
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.firebase.auth.PhoneAuthProvider
+import com.google.firebase.auth.PhoneAuthOptions
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.launch
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.FirebaseApp
@@ -48,7 +59,7 @@ class MainActivity : ComponentActivity() {
       MaterialTheme(colorScheme = darkColorScheme(
         primary = Mint, background = Navy, surface = Panel, onPrimary = Navy,
         onBackground = White, onSurface = White, secondary = Muted
-      )) { OmniAdminApp(firebaseConfigured) }
+      )) { OmniAdminApp(firebaseConfigured, this) }
     }
   }
 }
@@ -63,7 +74,7 @@ private data class DashboardData(
 )
 
 @Composable
-private fun OmniAdminApp(firebaseConfigured: Boolean) {
+private fun OmniAdminApp(firebaseConfigured: Boolean, activity: Activity) {
   var user by remember { mutableStateOf(if (firebaseConfigured) FirebaseAuth.getInstance().currentUser else null) }
   var authorized by remember { mutableStateOf(false) }
   var checking by remember { mutableStateOf(false) }
@@ -96,12 +107,8 @@ private fun OmniAdminApp(firebaseConfigured: Boolean) {
   Surface(Modifier.fillMaxSize(), color = Navy) {
     when {
       !firebaseConfigured -> SetupNotice()
-      user == null -> LoginScreen(email, { email = it }, password, { password = it }, error) {
-        error = ""
-        FirebaseAuth.getInstance().signInWithEmailAndPassword(email.trim(), password)
-          .addOnSuccessListener { user = it.user }
-          .addOnFailureListener { error = it.localizedMessage ?: "No se pudo iniciar sesión." }
-      }
+      user == null -> LoginScreen(activity, email, { email = it }, password, { password = it }, error,
+        { authenticated -> user = authenticated }, { error = it })
       checking -> LoadingScreen("Verificando permisos administrativos…")
       !authorized -> AccessDenied(error) {
         FirebaseAuth.getInstance().signOut(); user = null; password = ""; error = ""
@@ -125,21 +132,111 @@ private fun SetupNotice() {
 }
 
 @Composable
-private fun LoginScreen(email: String, onEmail: (String) -> Unit, password: String, onPassword: (String) -> Unit, error: String, onLogin: () -> Unit) {
+private fun LoginScreen(
+  activity: Activity,
+  email: String,
+  onEmail: (String) -> Unit,
+  password: String,
+  onPassword: (String) -> Unit,
+  error: String,
+  onAuthenticated: (com.google.firebase.auth.FirebaseUser?) -> Unit,
+  onError: (String) -> Unit
+) {
+  val context = LocalContext.current
+  val scope = rememberCoroutineScope()
+  val auth = remember { FirebaseAuth.getInstance() }
+  var method by remember { mutableStateOf("email") }
+  var phone by remember { mutableStateOf("+54") }
+  var smsCode by remember { mutableStateOf("") }
+  var verificationId by remember { mutableStateOf<String?>(null) }
+  var loading by remember { mutableStateOf(false) }
+
+  fun complete(task: com.google.android.gms.tasks.Task<com.google.firebase.auth.AuthResult>) {
+    task.addOnSuccessListener { result -> loading = false; onAuthenticated(result.user) }
+      .addOnFailureListener { ex -> loading = false; onError(ex.localizedMessage ?: "No se pudo iniciar sesión.") }
+  }
+
+  val phoneCallbacks = remember {
+    object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
+      override fun onVerificationCompleted(credential: com.google.firebase.auth.PhoneAuthCredential) {
+        loading = true
+        complete(auth.signInWithCredential(credential))
+      }
+      override fun onVerificationFailed(ex: com.google.firebase.FirebaseException) {
+        loading = false
+        onError(ex.localizedMessage ?: "No se pudo verificar el teléfono.")
+      }
+      override fun onCodeSent(id: String, token: PhoneAuthProvider.ForceResendingToken) {
+        verificationId = id
+        loading = false
+        onError("Código enviado por SMS. Ingresalo para continuar.")
+      }
+    }
+  }
+
   Column(Modifier.fillMaxSize().padding(26.dp), verticalArrangement = Arrangement.Center) {
     Text("OMNI", color = White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
     Text("ADMIN", color = Mint, fontSize = 36.sp, fontWeight = FontWeight.Black)
     Spacer(Modifier.height(8.dp))
-    Text("Centro privado de administración del ecosistema", color = Muted)
-    Spacer(Modifier.height(28.dp))
-    OutlinedTextField(email, onEmail, Modifier.fillMaxWidth(), label = { Text("Correo administrativo") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
-    Spacer(Modifier.height(12.dp))
-    OutlinedTextField(password, onPassword, Modifier.fillMaxWidth(), label = { Text("Contraseña") }, singleLine = true, visualTransformation = PasswordVisualTransformation())
+    Text("Ingresá con la misma identidad que usás en OMNI.", color = Muted)
+    Spacer(Modifier.height(24.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+      FilterChip(selected = method == "email", onClick = { method = "email"; onError("") }, label = { Text("Correo") })
+      FilterChip(selected = method == "phone", onClick = { method = "phone"; onError("") }, label = { Text("Teléfono") })
+    }
+    if (method == "email") {
+      OutlinedTextField(email, onEmail, Modifier.fillMaxWidth(), label = { Text("Correo electrónico") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
+      Spacer(Modifier.height(10.dp))
+      OutlinedTextField(password, onPassword, Modifier.fillMaxWidth(), label = { Text("Contraseña") }, singleLine = true, visualTransformation = PasswordVisualTransformation())
+      Spacer(Modifier.height(14.dp))
+      Button(onClick = { loading = true; onError(""); complete(auth.signInWithEmailAndPassword(email.trim(), password)) },
+        Modifier.fillMaxWidth().height(50.dp), enabled = !loading && email.isNotBlank() && password.isNotBlank()) {
+        Text("Ingresar con mi cuenta OMNI", fontWeight = FontWeight.Bold)
+      }
+    } else {
+      OutlinedTextField(phone, { phone = it }, Modifier.fillMaxWidth(), label = { Text("Teléfono con código de país") }, placeholder = { Text("+549...") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone))
+      if (verificationId == null) {
+        Button(onClick = {
+          if (!phone.startsWith("+") || phone.length < 8) onError("Ingresá el número con código de país, por ejemplo +549...")
+          else {
+            loading = true; onError("")
+            val options = PhoneAuthOptions.newBuilder(auth).setPhoneNumber(phone.trim())
+              .setTimeout(60L, TimeUnit.SECONDS).setActivity(activity).setCallbacks(phoneCallbacks).build()
+            PhoneAuthProvider.verifyPhoneNumber(options)
+          }
+        }, Modifier.fillMaxWidth(), enabled = !loading) { Text("Enviar código SMS") }
+      } else {
+        OutlinedTextField(smsCode, { smsCode = it }, Modifier.fillMaxWidth(), label = { Text("Código SMS") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+        Button(onClick = {
+          val id = verificationId
+          if (id == null || smsCode.length < 4) onError("Ingresá el código recibido.")
+          else { loading = true; onError(""); complete(auth.signInWithCredential(PhoneAuthProvider.getCredential(id, smsCode.trim()))) }
+        }, Modifier.fillMaxWidth(), enabled = !loading) { Text("Verificar teléfono") }
+      }
+    }
+    Spacer(Modifier.height(10.dp))
+    OutlinedButton(onClick = {
+      loading = true; onError("")
+      scope.launch {
+        try {
+          val clientIdResource = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
+          if (clientIdResource == 0) throw IllegalStateException("Falta configurar el cliente OAuth web de Google en Firebase.")
+          val option = GetGoogleIdOption.Builder().setFilterByAuthorizedAccounts(false)
+            .setServerClientId(context.getString(clientIdResource)).setAutoSelectEnabled(false).build()
+          val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
+          val result = CredentialManager.create(context).getCredential(context, request)
+          val credential = result.credential
+          if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+            val token = GoogleIdTokenCredential.createFrom(credential.data).idToken
+            complete(auth.signInWithCredential(com.google.firebase.auth.GoogleAuthProvider.getCredential(token, null)))
+          } else throw IllegalStateException("Google no devolvió una credencial compatible.")
+        } catch (ex: Exception) { loading = false; onError(ex.localizedMessage ?: "No se pudo iniciar sesión con Google.") }
+      }
+    }, Modifier.fillMaxWidth(), enabled = !loading) { Text("Continuar con Google") }
+    if (loading) { Spacer(Modifier.height(10.dp)); CircularProgressIndicator(color = Mint, modifier = Modifier.align(Alignment.CenterHorizontally)) }
     if (error.isNotBlank()) { Spacer(Modifier.height(10.dp)); Text(error, color = Color(0xFFFF8B8B), fontSize = 13.sp) }
-    Spacer(Modifier.height(20.dp))
-    Button(onClick = onLogin, Modifier.fillMaxWidth().height(52.dp), enabled = email.isNotBlank() && password.isNotBlank()) { Text("Ingresar a OMNI Admin", fontWeight = FontWeight.Bold) }
-    Spacer(Modifier.height(18.dp))
-    Text("Acceso exclusivo para cuentas habilitadas por el propietario.", color = Muted, fontSize = 12.sp)
+    Spacer(Modifier.height(16.dp))
+    Text("El acceso administrativo se valida por UID. Tener una cuenta OMNI no concede permisos de administrador automáticamente.", color = Muted, fontSize = 12.sp)
   }
 }
 
