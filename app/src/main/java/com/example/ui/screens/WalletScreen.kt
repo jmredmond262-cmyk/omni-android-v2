@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Store
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -86,6 +87,12 @@ fun WalletScreen(
 
     var showPayQrDialog by remember { mutableStateOf(false) }
     var showAddFundsDialog by remember { mutableStateOf(false) }
+    var showTransferDialog by remember { mutableStateOf(false) }
+    var showReceiveDemoDialog by remember { mutableStateOf(false) }
+    var transferRecipient by remember { mutableStateOf("") }
+    var transferAmount by remember { mutableStateOf("1500") }
+    var incomingSender by remember { mutableStateOf("Usuario OMNI de prueba") }
+    var incomingAmount by remember { mutableStateOf("2500") }
     var payAmountText by remember { mutableStateOf("3500") }
     var selectedStoreIndex by remember { mutableStateOf(0) }
     var storeDropdownExpanded by remember { mutableStateOf(false) }
@@ -212,6 +219,33 @@ fun WalletScreen(
                             Icon(imageVector = Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(text = "Cargar demo", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Button(
+                            onClick = { showTransferDialog = true },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF263B68)),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text("Transferir", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+                        Button(
+                            onClick = { showReceiveDemoDialog = true },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF245A52)),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.ArrowDownward, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text("Recibir demo", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
                     }
                 }
@@ -546,6 +580,102 @@ fun WalletScreen(
         )
     }
 
+    // Transferencia saliente entre identidades ficticias de prueba
+    if (showTransferDialog) {
+        AlertDialog(
+            onDismissRequest = { showTransferDialog = false },
+            title = { Text("Transferir con OMNI Pay") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Simulación entre usuarios OMNI. No se envía dinero real.", fontSize = 12.sp, color = Color.Gray)
+                    OutlinedTextField(
+                        value = transferRecipient,
+                        onValueChange = { transferRecipient = it },
+                        label = { Text("Alias o CVU de destino") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = transferAmount,
+                        onValueChange = { transferAmount = it },
+                        label = { Text("Importe OM$") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    Text("Disponible: OM$ ${String.format("%,.2f", wallet.balance)}", fontSize = 11.sp, color = EmeraldDark)
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val amount = transferAmount.toDoubleOrNull() ?: 0.0
+                        val success = viewModel.sendDemoTransfer(transferRecipient, amount)
+                        if (success) {
+                            paymentSuccessMessage = "Transferencia de prueba enviada a ${transferRecipient.trim()} por OM$ ${String.format("%,.2f", amount)}. No se movió dinero real."
+                            transferRecipient = ""
+                            showTransferDialog = false
+                        } else {
+                            paymentSuccessMessage = if (amount > wallet.balance) {
+                                "Saldo virtual insuficiente para realizar la transferencia."
+                            } else {
+                                "Revisa el alias/CVU y el importe. Deben ser válidos y mayores que cero."
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
+                ) { Text("Confirmar transferencia demo") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTransferDialog = false }) { Text("Cancelar") }
+            }
+        )
+    }
+
+    // Simulación de una transferencia entrante para probar acreditaciones
+    if (showReceiveDemoDialog) {
+        AlertDialog(
+            onDismissRequest = { showReceiveDemoDialog = false },
+            title = { Text("Simular dinero recibido") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Genera un ingreso ficticio para probar el flujo de recepción.", fontSize = 12.sp, color = Color.Gray)
+                    OutlinedTextField(
+                        value = incomingSender,
+                        onValueChange = { incomingSender = it },
+                        label = { Text("Remitente de prueba") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = incomingAmount,
+                        onValueChange = { incomingAmount = it },
+                        label = { Text("Importe OM$") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val amount = incomingAmount.toDoubleOrNull() ?: 0.0
+                        val success = viewModel.simulateIncomingTransfer(incomingSender, amount)
+                        if (success) {
+                            paymentSuccessMessage = "Ingreso virtual de OM$ ${String.format("%,.2f", amount)} acreditado desde ${incomingSender.trim()}. Operación de prueba."
+                            showReceiveDemoDialog = false
+                        } else {
+                            paymentSuccessMessage = "Ingresa un remitente y un importe mayor que cero."
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
+                ) { Text("Acreditar demo") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showReceiveDemoDialog = false }) { Text("Cancelar") }
+            }
+        )
+    }
+
     // Modal de feedback de pago
     if (paymentSuccessMessage != null) {
         AlertDialog(
@@ -789,7 +919,7 @@ fun PaymentCardItem(card: PaymentCard, modifier: Modifier = Modifier) {
 
 @Composable
 fun WalletTransactionCard(transaction: WalletTransaction, modifier: Modifier = Modifier) {
-    val isIncome = transaction.type == TransactionType.CARGA_SALDO || transaction.type == TransactionType.REINTEGRO_CASHBACK
+    val isIncome = transaction.type == TransactionType.CARGA_SALDO || transaction.type == TransactionType.REINTEGRO_CASHBACK || transaction.type == TransactionType.TRANSFERENCIA_RECIBIDA
 
     Card(
         shape = RoundedCornerShape(14.dp),
