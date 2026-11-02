@@ -370,6 +370,27 @@ private fun DashboardContent(payload: JSONObject) {
         }
       }
       item {
+        val diagnostics = payload.optJSONObject("diagnostics") ?: JSONObject()
+        Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(18.dp)) {
+          Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            Text("Diagnóstico de conexión", color = White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            val visible = diagnostics.optInt("usageEventsVisibleLast7Days")
+            val testSeen = diagnostics.optBoolean("diagnosticEventSeen")
+            Text(
+              if (testSeen) "Escritura y lectura de analíticas: verificadas"
+              else "Evento de prueba: todavía no visible en el servidor",
+              color = if (testSeen) Mint else Danger, fontSize = 12.sp, fontWeight = FontWeight.SemiBold
+            )
+            Text("Eventos visibles (7 días): $visible", color = Muted, fontSize = 12.sp)
+            Text("Perfiles de usuario visibles: " + diagnostics.optInt("userProfilesVisible"), color = Muted, fontSize = 12.sp)
+            Text(
+              "Este control ayuda a distinguir un fallo de escritura desde OMNI de un problema de lectura del panel. Actualizá OMNI y luego este resumen.",
+              color = Muted, fontSize = 10.sp
+            )
+          }
+        }
+      }
+      item {
         val balance = payload.optDouble("walletBalanceSample", 0.0)
         val sample = payload.optInt("walletSampleSize")
         Card(colors = CardDefaults.cardColors(containerColor = PanelSoft), shape = RoundedCornerShape(18.dp)) {
