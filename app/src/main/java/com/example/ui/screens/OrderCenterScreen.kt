@@ -253,7 +253,7 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
         } else {
             Text("Elegí productos y enviá tu pedido al comercio. El QR identifica el pedido; no acredita un pago.", color = Color(0xFF9AAAC2), fontSize = 11.sp)
             if (store.inventory.isEmpty()) Text("Este comercio todavía no publicó productos para pedidos.", color = Color(0xFFFFC978), fontSize = 12.sp)
-            else LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(vertical = 10.dp, bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            else LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(top = 10.dp, bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(store.inventory.filter { it.inStock }, key = { it.id }) { product ->
                     OrderProductRow(product, cart[product.id] ?: 0,
                         onAdd = {
