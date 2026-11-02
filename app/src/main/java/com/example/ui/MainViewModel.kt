@@ -981,6 +981,7 @@ class MainViewModel : ViewModel() {
 
     // Funciones de Billetera Virtual (OmniPay)
     fun payWithWallet(storeName: String, amount: Double, cashbackPercent: Double = 5.0): Boolean {
+        if (!amount.isFinite() || amount <= 0.0) return false
         val currentBalance = _wallet.value.balance
         if (currentBalance < amount) return false
 
@@ -1064,6 +1065,7 @@ class MainViewModel : ViewModel() {
     }
 
     fun addFunds(amount: Double) {
+        if (!amount.isFinite() || amount <= 0.0) return
         val newBalance = _wallet.value.balance + amount
         val newTx = WalletTransaction(
             id = UUID.randomUUID().toString(),
