@@ -114,6 +114,7 @@ import com.example.ui.screens.WeatherForecastScreen
 import com.example.ui.screens.WalletScreen
 import com.example.ui.screens.RoutineModeScreen
 import com.example.ui.screens.JobBoardScreen
+import com.example.ui.screens.EventsScreen
 import com.example.ui.theme.AppThemeMode
 import com.example.ui.theme.MyApplicationTheme
 
@@ -291,7 +292,8 @@ fun OmniApp(viewModel: MainViewModel) {
                 currentScreen is Screen.Weather ||
                 currentScreen is Screen.MorningBriefing ||
                 currentScreen is Screen.Routine ||
-                currentScreen is Screen.JobBoard
+                currentScreen is Screen.JobBoard ||
+                currentScreen is Screen.Events
     ) {
         when (currentScreen) {
             is Screen.InteractiveRoute -> viewModel.navigateTo(Screen.StoreDetail)
@@ -305,6 +307,7 @@ fun OmniApp(viewModel: MainViewModel) {
             is Screen.MorningBriefing -> viewModel.navigateTo(Screen.DailyHub)
             is Screen.Routine -> viewModel.navigateTo(Screen.DailyHub)
             is Screen.JobBoard -> viewModel.navigateTo(Screen.DailyHub)
+            is Screen.Events -> viewModel.navigateTo(Screen.DailyHub)
             else -> viewModel.navigateTo(Screen.DailyHub)
         }
     }
@@ -642,6 +645,7 @@ fun OmniApp(viewModel: MainViewModel) {
                     Screen.TripPlanner -> TripPlannerScreen(viewModel = viewModel)
                     Screen.Routine -> RoutineModeScreen(onBack = { viewModel.navigateTo(Screen.DailyHub) })
                     Screen.JobBoard -> JobBoardScreen(onBack = { viewModel.navigateTo(Screen.DailyHub) })
+                    Screen.Events -> EventsScreen(onBack = { viewModel.navigateTo(Screen.DailyHub) })
                 }
             }
         }
