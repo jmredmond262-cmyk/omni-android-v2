@@ -47,11 +47,11 @@ jobs:
           import os
           import xml.sax.saxutils as xml
           
-          with open("app/google-services.json", encoding="utf-8") as f:
+          with open("admin/google-services.json", encoding="utf-8") as f:
               data = json.load(f)
           client = next(
               item for item in data["client"]
-              if item["client_info"]["android_client_info"]["package_name"] == "com.aistudio.omnihub.qtzmvd"
+              if item["client_info"]["android_client_info"]["package_name"] == "com.omni.admin"
           )
           project = data["project_info"]
           values = {
