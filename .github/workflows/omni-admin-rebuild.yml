@@ -10,7 +10,8 @@ permissions:
 
 jobs:
   android:
-    name: Validate and build OMNI Admin
+    if: github.event_name == 'workflow_dispatch'
+    name: Build installable OMNI Admin APK
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -58,6 +59,49 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  android-source-check:
+    name: Compile-check Admin Android source
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Configure Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Configure Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.3.1"
+      - name: Configure Android SDK
+        run: |
+          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
+          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36.1" "build-tools;36.0.0"
+      - name: Create temporary Firebase compile configuration
+        run: |
+          mkdir -p admin
+          cat > admin/google-services.json <<'JSON'
+          {
+            "project_info": {
+              "project_number": "123456789",
+              "project_id": "omni-admin-compile-check",
+              "storage_bucket": "omni-admin-compile-check.firebasestorage.app"
+            },
+            "client": [{
+              "client_info": {
+                "mobilesdk_app_id": "1:123456789:android:1234567890abcdef",
+                "android_client_info": { "package_name": "com.omni.adminpanel" }
+              },
+              "oauth_client": [],
+              "api_key": [{ "current_key": "AIzaSyDUMMYCOMPILECHECKKEY000000000000000" }],
+              "services": {}
+            }],
+            "configuration_version": "1"
+          }
+          JSON
+      - name: Compile Admin APK (not published)
+        run: gradle :admin:assembleDebug
   backend:
     name: Validate secure Admin API
     runs-on: ubuntu-latest
