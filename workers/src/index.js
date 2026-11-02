@@ -169,17 +169,6 @@ async function countDocuments(env, collection) {
   const result = await firestore(env, ":runAggregationQuery", { method: "POST", body: JSON.stringify(query) });
   return Number(result[0]?.result?.aggregateFields?.total?.integerValue || 0);
 }
-async function recentDocuments(env, collection, limit = 8) {
-  const query = {
-    structuredQuery: {
-      from: [{ collectionId: collection }],
-      orderBy: [{ field: { fieldPath: "createdAt" }, direction: "DESCENDING" }],
-      limit: Math.min(Math.max(Number(limit) || 8, 1), 500)
-    }
-  };
-  const rows = await firestore(env, ":runQuery", { method: "POST", body: JSON.stringify({ structuredQuery: query.structuredQuery }) });
-  return (rows || []).filter(row => row.document).map(row => documentData(row.document));
-}
 async function writeDocument(env, collection, id, data, merge = true) {
   const mask = Object.keys(data).map(key => "updateMask.fieldPaths=" + encodeURIComponent(key)).join("&");
   return firestore(env, "/" + encodeURIComponent(collection) + "/" + encodeURIComponent(id) + (merge && mask ? "?" + mask : ""), {
