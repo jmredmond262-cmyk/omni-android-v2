@@ -89,7 +89,6 @@ fun MorningBriefingScreen(
         appendLine("🌅 OMNI BUENOS DÍAS")
         appendLine(todayDateText)
         appendLine("📍 ${city.ifBlank { "Tu ciudad" }}")
-        appendLine("🏪 Redcom · Titular: Juan Redmond")
         appendLine("🌤️ $weatherLine")
         appendLine("💬 $dailyQuote")
         appendLine()
@@ -124,7 +123,7 @@ fun MorningBriefingScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Text(todayDateText, color = Color(0xFFB9D4EB), fontSize = 12.sp)
-                Text("🏪 Redcom · Titular: Juan Redmond", color = Color(0xFFB9D4EB), fontSize = 11.sp)
+                Text("Compartido desde tu perfil personal de OMNI", color = Color(0xFFB9D4EB), fontSize = 11.sp)
             }
         }
 
@@ -144,13 +143,31 @@ fun MorningBriefingScreen(
                     Text("Hoy: ${day.minC.toInt()}° / ${day.maxC.toInt()}° · ${day.precipitationProbability}% prob. de lluvia", color = Color(0xFFB5C7D9), fontSize = 11.sp)
                     Text("🌅 ${day.sunrise.takeLast(5)}  ·  🌇 ${day.sunset.takeLast(5)}", color = Color(0xFFB5C7D9), fontSize = 11.sp)
                 }
-                val forecast = weather?.hourly?.take(24).orEmpty()
-                val maxTemp = forecast.maxOfOrNull { it.apparentTemperatureC } ?: weather?.apparentTemperatureC ?: 20.0
-                val minTemp = forecast.minOfOrNull { it.apparentTemperatureC } ?: weather?.apparentTemperatureC ?: 20.0
-                val rainChance = forecast.maxOfOrNull { it.precipitationProbability } ?: 0
-                val clothing = when { maxTemp <= 10 -> "Abrigo y varias capas."; minTemp <= 13 -> "Llevá una campera o buzo."; maxTemp >= 29 -> "Ropa liviana, fresca y clara."; else -> "Ropa cómoda de media estación." }
-                Text("👕 Para hoy: $clothing", color = Color(0xFF72E4FF), fontSize = 11.sp)
-                if (rainChance >= 40) Text("☔ Conviene llevar paraguas (hasta $rainChance% de probabilidad).", color = Color(0xFFFFC978), fontSize = 11.sp)
+                val nowMillis = System.currentTimeMillis()
+                val hourParser = remember { SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.getDefault()) }
+                val nextHours = weather?.hourly.orEmpty().mapNotNull { hour ->
+                    hourParser.parse(hour.time)?.let { parsed -> parsed.time to hour }
+                }.filter { it.first >= nowMillis - 30 * 60 * 1000L }.sortedBy { it.first }.take(6).map { it.second }
+                val nearHours = nextHours.ifEmpty { weather?.hourly.orEmpty().take(6) }
+                val nextTemps = nearHours.take(3).map { it.apparentTemperatureC }
+                val minNearTemp = nextTemps.minOrNull() ?: weather?.apparentTemperatureC ?: 20.0
+                val maxNearTemp = nextTemps.maxOrNull() ?: weather?.apparentTemperatureC ?: 20.0
+                val rainChance = nearHours.maxOfOrNull { it.precipitationProbability } ?: 0
+                val maxWind = nearHours.maxOfOrNull { it.windSpeedKmh } ?: weather?.windSpeedKmh ?: 0.0
+                val severeCode = nearHours.any { it.weatherCode in listOf(95, 96, 99) }
+                val hailExpected = nearHours.any { it.weatherCode in listOf(96, 99) }
+                val clothing = when {
+                    minNearTemp <= 10 -> "Abrigo importante y varias capas: el aire se mantendrá frío en las próximas horas."
+                    minNearTemp <= 15 -> "Llevá campera o buzo; la sensación térmica puede bajar durante las próximas horas."
+                    minNearTemp <= 19 -> "Ropa de media estación y una capa liviana para la noche."
+                    maxNearTemp >= 29 -> "Ropa liviana y fresca; buscá sombra si seguís al aire libre."
+                    else -> "Ropa cómoda acorde a la temperatura prevista para las próximas horas."
+                }
+                Text("👕 Próximas horas: $clothing", color = Color(0xFF72E4FF), fontSize = 11.sp)
+                Text("Pronóstico utilizado: ${nearHours.size} horas desde ahora.", color = Color(0xFF8FA9C1), fontSize = 10.sp)
+                if (rainChance >= 35) Text("☔ Llevá paraguas o impermeable: probabilidad de lluvia de hasta $rainChance% en las próximas horas.", color = Color(0xFFFFC978), fontSize = 11.sp)
+                if (severeCode) Text("⛈️ Posible tormenta${if (hailExpected) " o granizo" else ""}: evitá exponerte y buscá un lugar cerrado y seguro si se aproxima.", color = Color(0xFFFF9B8F), fontSize = 11.sp)
+                if (maxWind >= 45.0) Text("💨 Atención al viento: se esperan velocidades de hasta ${maxWind.toInt()} km/h. Asegurá objetos sueltos y evitá zonas arboladas.", color = Color(0xFFFFC978), fontSize = 11.sp)
             }
         }
 
