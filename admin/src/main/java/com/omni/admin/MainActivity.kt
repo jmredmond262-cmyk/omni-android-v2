@@ -240,6 +240,7 @@ private fun DashboardContent(payload: JSONObject) {
   val counts = payload.optJSONObject("counts") ?: JSONObject()
   val cards = listOf(
     "Usuarios" to counts.optInt("users"),
+    "Usuarios activos · 7 días" to payload.optInt("activeUsers7d"),
     "Billeteras" to counts.optInt("walletAccounts"),
     "Operaciones" to counts.optInt("walletOperations"),
     "Comercios" to counts.optInt("merchantProfiles"),
@@ -313,6 +314,30 @@ private fun DashboardContent(payload: JSONObject) {
         }
       }
       item {
+        val trend = jsonArrayToList(payload.optJSONArray("usageTrend"))
+        val trendMax = (trend.maxOfOrNull { (it["count"] as? Number)?.toInt() ?: 0 } ?: 0).coerceAtLeast(1)
+        Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(20.dp)) {
+          Column(Modifier.fillMaxWidth().padding(17.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Uso de OMNI · últimos 7 días", color = White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Text("Sesiones y pantallas registradas", color = Muted, fontSize = 11.sp)
+            if (trend.isEmpty()) {
+              Text("Todavía no hay historial suficiente para mostrar la evolución.", color = Muted, fontSize = 12.sp)
+            } else {
+              trend.forEach { point ->
+                val value = (point["count"] as? Number)?.toInt() ?: 0
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                  Text(point["date"]?.toString().orEmpty(), color = Muted, fontSize = 10.sp, modifier = Modifier.width(38.dp))
+                  Box(Modifier.weight(1f).height(9.dp).background(PanelSoft, RoundedCornerShape(8.dp))) {
+                    Box(Modifier.fillMaxWidth((value.toFloat() / trendMax.toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(Mint, RoundedCornerShape(8.dp)))
+                  }
+                  Text(value.toString(), color = White, fontSize = 11.sp, modifier = Modifier.width(24.dp))
+                }
+              }
+            }
+          }
+        }
+      }
+      item {
         val balance = payload.optDouble("walletBalanceSample", 0.0)
         val sample = payload.optInt("walletSampleSize")
         Card(colors = CardDefaults.cardColors(containerColor = PanelSoft), shape = RoundedCornerShape(18.dp)) {
@@ -328,6 +353,12 @@ private fun DashboardContent(payload: JSONObject) {
         item { EmptyState("Todavía no hay perfiles recientes disponibles en la colección de usuarios.") }
       } else {
         items(jsonArrayToList(payload.optJSONArray("recentUsers"))) { RecordCard(it, "users") }
+      }
+      item { Text("Actividad reciente en OMNI", color = White, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+      if (jsonArrayToList(payload.optJSONArray("recentUsageEvents")).isEmpty()) {
+        item { EmptyState("La medición de actividad comienza con las próximas sesiones de la aplicación OMNI.") }
+      } else {
+        items(jsonArrayToList(payload.optJSONArray("recentUsageEvents"))) { RecordCard(it, "usageEvents") }
       }
       item { Text("Últimas operaciones", color = White, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
       if (jsonArrayToList(payload.optJSONArray("recentOperations")).isEmpty()) {
