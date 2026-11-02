@@ -190,6 +190,26 @@ class MainViewModel : ViewModel() {
     private val _wallet = MutableStateFlow(UserWallet())
     val wallet: StateFlow<UserWallet> = _wallet.asStateFlow()
 
+    /** Actualiza la billetera desde el ledger DEMO central de Firebase. */
+    fun applyRemoteDemoWallet(
+        balance: Double,
+        cashbackTotal: Double,
+        transactions: List<WalletTransaction>,
+        alias: String,
+        cvu: String
+    ) {
+        _wallet.value = _wallet.value.copy(
+            balance = balance.coerceAtLeast(0.0),
+            totalCashbackEarned = cashbackTotal.coerceAtLeast(0.0),
+            cards = emptyList(),
+            transactions = transactions
+        )
+        _userProfile.value = _userProfile.value.copy(
+            walletAlias = alias,
+            cvuCbu = cvu
+        )
+    }
+
     // Recompensas, Puntos & Rendimiento del Usuario
     private val _userRewards = MutableStateFlow(UserRewards())
     val userRewards: StateFlow<UserRewards> = _userRewards.asStateFlow()
