@@ -2,6 +2,11 @@ name: Deploy OMNI Admin API to Cloudflare
 
 on:
   workflow_dispatch:
+  push:
+    branches: [omni-admin-rebuild]
+    paths:
+      - 'workers/**'
+      - '.github/workflows/deploy-omni-admin-cloudflare.yml'
 
 permissions:
   contents: read
