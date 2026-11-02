@@ -24,6 +24,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.platform.LocalContext
 import androidx.credentials.CredentialManager
+import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.NoCredentialException
@@ -84,6 +85,22 @@ private fun OmniAdminApp(firebaseConfigured: Boolean, activity: Activity) {
   var email by remember { mutableStateOf("") }
   var password by remember { mutableStateOf("") }
   var refresh by remember { mutableIntStateOf(0) }
+  val credentialManager = remember { CredentialManager.create(activity) }
+  val scope = rememberCoroutineScope()
+
+  fun signOut() {
+    FirebaseAuth.getInstance().signOut()
+    user = null
+    password = ""
+    error = ""
+    // Clear Google's Credential Manager session as well as the Firebase session.
+    // Otherwise a later account selection can enter a stale re-authentication flow.
+    scope.launch {
+      runCatching {
+        credentialManager.clearCredentialState(ClearCredentialStateRequest())
+      }
+    }
+  }
 
   fun verifyAdmin(uid: String) {
     checking = true
@@ -112,12 +129,8 @@ private fun OmniAdminApp(firebaseConfigured: Boolean, activity: Activity) {
       user == null -> LoginScreen(activity, email, { email = it }, password, { password = it }, error,
         { authenticated -> user = authenticated }, { error = it })
       checking -> LoadingScreen("Verificando permisos administrativos…")
-      !authorized -> AccessDenied(error) {
-        FirebaseAuth.getInstance().signOut(); user = null; password = ""; error = ""
-      }
-      else -> AdminHome(user!!.email ?: "Administrador", { refresh++ }) {
-        FirebaseAuth.getInstance().signOut(); user = null; password = ""
-      }
+      !authorized -> AccessDenied(error, ::signOut)
+      else -> AdminHome(user!!.email ?: "Administrador", { refresh++ }, ::signOut)
     }
   }
 }
