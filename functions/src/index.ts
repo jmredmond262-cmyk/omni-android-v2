@@ -1,9 +1,9 @@
-import { initializeApp } from "firebase-admin/app";
+import { getApps, initializeApp } from "firebase-admin/app";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { randomInt, randomUUID } from "node:crypto";
 
-initializeApp();
+if (getApps().length === 0) initializeApp();
 const db = getFirestore();
 const REGION = "us-central1";
 const INITIAL_BALANCE = 50000;
