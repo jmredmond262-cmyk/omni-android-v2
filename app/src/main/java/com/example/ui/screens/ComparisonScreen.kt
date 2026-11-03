@@ -82,12 +82,10 @@ fun ComparisonScreen(
 ) {
     val needs by viewModel.needs.collectAsState()
     val stores by viewModel.stores.collectAsState()
-    val priceSeed by viewModel.priceSimulationSeed.collectAsState()
-
     var activeSort by remember { mutableStateOf(ComparisonSort.BEST_VALUE) }
 
-    val rawComparisons = remember(needs, stores, priceSeed) {
-        SampleData.calculateComparison(stores, needs, priceSeed)
+    val rawComparisons = remember(needs, stores) {
+        SampleData.calculateComparison(stores, needs, 0)
     }
 
     val sortedComparisons = remember(rawComparisons, activeSort) {
@@ -127,21 +125,6 @@ fun ComparisonScreen(
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
-
-                    // Botón para simular variaciones de ofertas y precios
-                    Button(
-                        onClick = { viewModel.randomizeComparisonOffers() },
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = "🎲 Simular Nuevas Ofertas / Descuentos",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp,
-                            color = Color.White
-                        )
-                    }
 
                     Spacer(modifier = Modifier.height(8.dp))
 

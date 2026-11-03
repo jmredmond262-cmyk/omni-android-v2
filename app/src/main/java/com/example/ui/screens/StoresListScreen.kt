@@ -122,7 +122,7 @@ fun StoresListScreen(
             val matchesSchedule = when (scheduleFilter) {
                 StoreScheduleFilter.TODOS -> true
                 StoreScheduleFilter.ABIERTOS_AHORA -> store.isOpenAtCurrentTime()
-                StoreScheduleFilter.FARMACIAS_TURNO -> store.type == StoreType.FARMACIA || store.isOnDuty
+                StoreScheduleFilter.FARMACIAS_TURNO -> store.isOnDuty
                 StoreScheduleFilter.TURNO_24HS -> store.is24Hours || store.isOnDuty
                 StoreScheduleFilter.FERIADOS -> store.openOnHolidays || store.is24Hours || store.isOnDuty
             }

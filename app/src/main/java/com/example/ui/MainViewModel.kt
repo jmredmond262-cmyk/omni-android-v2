@@ -155,10 +155,6 @@ class MainViewModel : ViewModel() {
     private val _currentCity = MutableStateFlow("Detectando ubicación")
     val currentCity: StateFlow<String> = _currentCity.asStateFlow()
 
-    // Semilla de Simulación de Precios y Ofertas
-    private val _priceSimulationSeed = MutableStateFlow(0)
-    val priceSimulationSeed: StateFlow<Int> = _priceSimulationSeed.asStateFlow()
-
     // Resultados de Búsqueda de Lugares Reales (OpenStreetMap Nominatim)
     private val _liveSearchResults = MutableStateFlow<List<RealLocationResult>>(emptyList())
     val liveSearchResults: StateFlow<List<RealLocationResult>> = _liveSearchResults.asStateFlow()
@@ -173,9 +169,9 @@ class MainViewModel : ViewModel() {
     private val _needs = MutableStateFlow<List<NeedItem>>(SampleData.initialNeeds)
     val needs: StateFlow<List<NeedItem>> = _needs.asStateFlow()
 
-    // Comercios (Inicializados con los locales reales de Romang: Redcom, Coop. Agrícola, etc.)
-    private val _allStores = MutableStateFlow<List<Store>>(SampleData.sampleStores)
-    private val _stores = MutableStateFlow<List<Store>>(SampleData.sampleStores)
+    // Comercios: la búsqueda real comienza vacía; los catálogos de prueba se mantienen separados.
+    private val _allStores = MutableStateFlow<List<Store>>(emptyList())
+    private val _stores = MutableStateFlow<List<Store>>(emptyList())
     val stores: StateFlow<List<Store>> = _stores.asStateFlow()
     private var selectedStoreType: StoreType? = null
 
@@ -201,13 +197,6 @@ class MainViewModel : ViewModel() {
     // Filtros de Horarios y Disponibilidad
     private val _scheduleFilter = MutableStateFlow(StoreScheduleFilter.TODOS)
     val scheduleFilter: StateFlow<StoreScheduleFilter> = _scheduleFilter.asStateFlow()
-
-    // Simulación de Horario / Feriado
-    private val _simulatedHour = MutableStateFlow(14)
-    val simulatedHour: StateFlow<Int> = _simulatedHour.asStateFlow()
-
-    private val _isSimulatedHoliday = MutableStateFlow(false)
-    val isSimulatedHoliday: StateFlow<Boolean> = _isSimulatedHoliday.asStateFlow()
 
     // Billetera Virtual y Pagos
     private val _wallet = MutableStateFlow(UserWallet())
@@ -650,10 +639,6 @@ class MainViewModel : ViewModel() {
         _needs.value = SampleData.initialNeeds
     }
 
-    fun randomizeComparisonOffers() {
-        _priceSimulationSeed.value = _priceSimulationSeed.value + 1
-    }
-
     fun loadSampleBasket(option: Int) {
         val sampleItems = when (option) {
             1 -> listOf(
@@ -735,10 +720,9 @@ class MainViewModel : ViewModel() {
         if (selectedLocality.isBlank() || selectedLocality.contains("Detectando", ignoreCase = true) || selectedLocality.equals("Tu zona", ignoreCase = true)) {
             return withinRadius
         }
-        val confirmedLocality = withinRadius.filter { it.address.contains(selectedLocality, ignoreCase = true) }
-        // Algunas fichas de OpenStreetMap/Places no repiten la localidad en la dirección.
-        // Si no hay coincidencias textuales, conservar solo los resultados geográficos dentro del radio.
-        return confirmedLocality.ifEmpty { withinRadius }
+        // No mezclar localidades: si la fuente no confirma la ciudad en la dirección,
+        // el resultado no se presenta como comercio de la localidad seleccionada.
+        return withinRadius.filter { it.address.contains(selectedLocality, ignoreCase = true) }
     }
 
     fun searchOmniDirectory(
@@ -1332,14 +1316,6 @@ class MainViewModel : ViewModel() {
 
     fun setScheduleFilter(filter: StoreScheduleFilter) {
         _scheduleFilter.value = filter
-    }
-
-    fun setSimulatedHour(hour: Int) {
-        _simulatedHour.value = hour.coerceIn(0, 23)
-    }
-
-    fun toggleSimulatedHoliday() {
-        _isSimulatedHoliday.value = !_isSimulatedHoliday.value
     }
 
     fun updateManagedStoreSchedule(
