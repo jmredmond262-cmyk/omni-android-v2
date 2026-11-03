@@ -328,9 +328,53 @@ async function dashboard(env) {
     }
   };
 }
-async function handleAction(env, actor, action, data) {
+
+async function financialOverview(env) {
+  const [walletRows, transactionRows] = await Promise.all([
+    firestore(env, ":runQuery", {
+      method: "POST",
+      body: JSON.stringify({ structuredQuery: { from: [{ collectionId: "walletAccounts" }], limit: 5000 } })
+    }),
+    firestore(env, ":runQuery", {
+      method: "POST",
+      body: JSON.stringify({ structuredQuery: { from: [{ collectionId: "transactions", allDescendants: true }], limit: 5000 } })
+    })
+  ]);
+  const accounts = (walletRows || []).filter(row => row.document).map(row => documentData(row.document));
+  const transactions = (transactionRows || []).filter(row => row.document).map(row => {
+    const item = documentData(row.document);
+    const segments = String(row.document.name || "").split("/documents/")[1]?.split("/") || [];
+    const uid = segments.length >= 4 && segments[0] === "walletAccounts" ? segments[1] : "";
+    const account = accounts.find(entry => entry.id === uid);
+    return { ...item, uid, accountName: account?.displayName || account?.alias || "Cuenta OMNI Pay" };
+  });
+  const typeOf = item => String(item.type || item.kind || "").toUpperCase();
+  const amountOf = item => Number(item.amount) || 0;
+  const sum = (items, predicate, amount = amountOf) => items.filter(predicate).reduce((total, item) => total + amount(item), 0);
+  const initialCapital = accounts.reduce((total, account) =>
+    total + (String(account.environment || "DEMO").toUpperCase() === "DEMO" ? 50000 : 0), 0);
+  const deposits = sum(transactions, item => typeOf(item) === "CARGA_SALDO" && amountOf(item) > 0);
+  const transferOut = sum(transactions, item => typeOf(item) === "TRANSFERENCIA_ENVIADA" && amountOf(item) < 0, item => Math.abs(amountOf(item)));
+  const transferIn = sum(transactions, item => typeOf(item) === "TRANSFERENCIA_RECIBIDA" && amountOf(item) > 0);
+  const qrOut = sum(transactions, item => typeOf(item) === "QR_PAGO" && amountOf(item) < 0, item => Math.abs(amountOf(item)));
+  const qrIn = sum(transactions, item => typeOf(item) === "QR_COBRO" && amountOf(item) > 0);
+  const currentBalance = accounts.reduce((total, account) => total + Math.max(0, Number(account.balance) || 0), 0);
+  transactions.sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+  return {
+    summary: {
+      currentBalance, initialCapital, deposits, totalCredits: initialCapital + deposits,
+      transferVolume: transferOut, transferIn, qrVolume: qrOut, qrCollections: qrIn,
+      outflows: transferOut + qrOut, accountCount: accounts.length,
+      transactionCount: transactions.length
+    },
+    accounts: accounts.sort((a, b) => (Number(b.balance) || 0) - (Number(a.balance) || 0)),
+    transactions: transactions.slice(0, 500),
+    operations: []
+  };
+}
+\nasync function handleAction(env, actor, action, data) {
   switch (action) {
-    case "dashboard": return dashboard(env);
+    case "dashboard": return dashboard(env);\n    case "finance": return financialOverview(env);
     case "list": {
       const collection = String(data.collection || "");
       const allowed = new Set(["users", "walletAccounts", "walletOperations", "merchantProfiles", "storeOrders", "omniEvents", "appFeedback", "usageEvents", "moduleRegistry", "adminAuditLogs", "betaInvitations"]);
