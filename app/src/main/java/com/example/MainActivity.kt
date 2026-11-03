@@ -55,6 +55,7 @@ import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.WbSunny
 import com.example.ui.screens.OmniAiScreen
+import com.example.ui.screens.OmniExperienceScreen
 import com.example.ui.screens.MorningBriefingScreen
 import com.example.ui.screens.OmniSplashScreen
 import com.example.ui.theme.CyberGlowAmber
@@ -303,6 +304,7 @@ fun OmniApp(viewModel: MainViewModel) {
                 currentScreen is Screen.Wallet ||
                 currentScreen is Screen.Contacts ||
                 currentScreen is Screen.OmniAi ||
+                currentScreen is Screen.OmniExperience ||
                 currentScreen is Screen.UserProfile ||
                 currentScreen is Screen.Weather ||
                 currentScreen is Screen.MorningBriefing ||
@@ -320,6 +322,7 @@ fun OmniApp(viewModel: MainViewModel) {
             is Screen.Wallet -> viewModel.navigateTo(Screen.DailyHub)
             is Screen.Contacts -> viewModel.navigateTo(Screen.DailyHub)
             is Screen.OmniAi -> viewModel.navigateTo(Screen.DailyHub)
+            is Screen.OmniExperience -> viewModel.navigateTo(Screen.DailyHub)
             is Screen.Weather -> viewModel.navigateTo(Screen.DailyHub)
             is Screen.MorningBriefing -> viewModel.navigateTo(Screen.DailyHub)
             is Screen.Routine -> viewModel.navigateTo(Screen.DailyHub)
@@ -642,6 +645,7 @@ fun OmniApp(viewModel: MainViewModel) {
             Crossfade(targetState = currentScreen, label = "screen_crossfade") { screen ->
                 when (screen) {
                     Screen.DailyHub -> DailyHubScreen(viewModel = viewModel)
+                    Screen.OmniExperience -> OmniExperienceScreen(viewModel = viewModel, onBack = { viewModel.navigateTo(Screen.DailyHub) })
                     Screen.Weather -> WeatherForecastScreen(viewModel = viewModel)
                     Screen.OmniAi -> OmniAiScreen(viewModel = viewModel)
                     Screen.MorningBriefing -> MorningBriefingScreen(
