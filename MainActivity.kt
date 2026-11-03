@@ -345,7 +345,7 @@ fun OmniApp(viewModel: MainViewModel) {
                             Surface(
                                 color = MaterialTheme.colorScheme.primaryContainer,
                                 shape = RoundedCornerShape(13.dp),
-                                modifier = Modifier.size(39.dp)
+                                modifier = Modifier.size(39.dp).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.75f), RoundedCornerShape(13.dp))
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Text(
@@ -472,7 +472,7 @@ fun OmniApp(viewModel: MainViewModel) {
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                        containerColor = MaterialTheme.colorScheme.background
                     )
                 )
             }
