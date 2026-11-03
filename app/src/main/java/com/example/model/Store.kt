@@ -14,7 +14,8 @@ enum class StoreType(val label: String) {
 data class ComboDeal(
     val title: String,
     val description: String,
-    val discountBadge: String
+    val discountBadge: String,
+    val audience: String = "TODOS"
 )
 
 data class StoreProduct(
