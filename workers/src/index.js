@@ -376,7 +376,10 @@ async function financialOverview(env) {
 async function handleAction(env, actor, action, data) {
   switch (action) {
     case "dashboard": return dashboard(env);
-    case "finance": return financialOverview(env);
+    case "finance": {
+      if (actor.role !== "owner") throw new ApiError(403, "permission-denied", "Solo el propietario puede consultar el panel financiero de OMNI Pay.");
+      return financialOverview(env);
+    }
     case "list": {
       const collection = String(data.collection || "");
       const allowed = new Set(["users", "walletAccounts", "walletOperations", "merchantProfiles", "storeOrders", "omniEvents", "appFeedback", "usageEvents", "moduleRegistry", "adminAuditLogs", "betaInvitations"]);
