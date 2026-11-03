@@ -127,6 +127,13 @@ class RoutineBootReceiver : BroadcastReceiver() {
 class RoutineReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val id = intent.getStringExtra("routine_id") ?: return
+        val prefs = context.getSharedPreferences("omni_alert_preferences", Context.MODE_PRIVATE)
+        if (intent.action == "com.example.omni.ROUTINE_DISMISSED") {
+            prefs.edit().putBoolean("dismissed_$id", true).apply()
+            return
+        }
+        val isSecondAlert = intent.action == "com.example.omni.ROUTINE_SECOND_ALERT"
+        if (isSecondAlert && (!prefs.getBoolean("double_alert_enabled", true) || prefs.getBoolean("dismissed_$id", false))) return
         val routine = RoutineStore.load(context).firstOrNull { it.id == id && it.enabled } ?: return
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (intent.action == "com.example.omni.ROUTINE_DONE") {
@@ -165,6 +172,13 @@ class RoutineReminderReceiver : BroadcastReceiver() {
             context, id.hashCode() + 20, doneIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+        if (!isSecondAlert) prefs.edit().putBoolean("dismissed_$id", false).apply()
+        val dismissIntent = Intent(context, RoutineReminderReceiver::class.java)
+            .setAction("com.example.omni.ROUTINE_DISMISSED").putExtra("routine_id", id)
+        val dismissPending = PendingIntent.getBroadcast(
+            context, id.hashCode() + 30, dismissIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
         val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(routine.title)
@@ -172,11 +186,28 @@ class RoutineReminderReceiver : BroadcastReceiver() {
             .setStyle(NotificationCompat.BigTextStyle().bigText(routine.message.ifBlank { "Es momento de completar tu rutina." }))
             .addAction(android.R.drawable.ic_lock_idle_alarm, "Posponer 10 min", snoozePending)
             .addAction(android.R.drawable.checkbox_on_background, "Hecho", donePending)
+            .setDeleteIntent(dismissPending)
             .setAutoCancel(true)
+            .setOnlyAlertOnce(false)
             .setPriority(if (routine.mode == "SILENT" || routine.mode == "VOICE") NotificationCompat.PRIORITY_LOW else NotificationCompat.PRIORITY_HIGH)
             .build()
         manager.notify(id.hashCode(), notification)
-        if (routine.mode == "VOICE") {
+        if (!isSecondAlert && routine.mode == "SOUND" && prefs.getBoolean("double_alert_enabled", true)) {
+            val delaySeconds = prefs.getInt("double_alert_delay_seconds", 12).coerceIn(10, 15)
+            val secondIntent = Intent(context, RoutineReminderReceiver::class.java)
+                .setAction("com.example.omni.ROUTINE_SECOND_ALERT").putExtra("routine_id", id)
+            val secondPending = PendingIntent.getBroadcast(
+                context, id.hashCode() + 40, secondIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            alarmManager.setAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                System.currentTimeMillis() + delaySeconds * 1000L,
+                secondPending
+            )
+        }
+        if (routine.mode == "VOICE" && !isSecondAlert) {
             val pendingResult = goAsync()
             lateinit var speech: TextToSpeech
             speech = TextToSpeech(context.applicationContext) { status ->
@@ -239,6 +270,9 @@ fun RoutineModeScreen(onBack: () -> Unit) {
     var minute by remember { mutableStateOf("00") }
     var days by remember { mutableStateOf(setOf(2,3,4,5,6)) }
     var mode by remember { mutableStateOf("SOUND") }
+    val alertPreferences = remember { context.getSharedPreferences("omni_alert_preferences", 0) }
+    var doubleAlertEnabled by remember { mutableStateOf(alertPreferences.getBoolean("double_alert_enabled", true)) }
+    var doubleAlertDelay by remember { mutableStateOf(alertPreferences.getInt("double_alert_delay_seconds", 12).toFloat()) }
 
     fun persist(next: List<OmniRoutine>) {
         val previousCount = routines.size
@@ -277,6 +311,29 @@ fun RoutineModeScreen(onBack: () -> Unit) {
         Spacer(Modifier.height(14.dp))
         Button(onClick = { openEditor() }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF087EAB))) {
             Icon(Icons.Default.Add, null); Spacer(Modifier.width(6.dp)); Text("Crear rutina")
+        }
+        Spacer(Modifier.height(10.dp))
+        Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF101B30)), shape = RoundedCornerShape(14.dp)) {
+            Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Segundo aviso", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text("Repite una vez el sonido si no descartaste la notificación.", color = Color(0xFF9AAAC2), fontSize = 10.sp)
+                    }
+                    Switch(checked = doubleAlertEnabled, onCheckedChange = {
+                        doubleAlertEnabled = it
+                        alertPreferences.edit().putBoolean("double_alert_enabled", it).apply()
+                    })
+                }
+                if (doubleAlertEnabled) {
+                    Text("Repetir a los ${doubleAlertDelay.toInt()} segundos", color = Color(0xFF57DDF5), fontSize = 10.sp)
+                    Slider(value = doubleAlertDelay, onValueChange = {
+                        doubleAlertDelay = it
+                        alertPreferences.edit().putInt("double_alert_delay_seconds", it.toInt()).apply()
+                    }, valueRange = 10f..15f, steps = 4)
+                }
+                Text("Se aplica a recordatorios con sonido. Los avisos silenciosos y por voz no se duplican.", color = Color(0xFF9AAAC2), fontSize = 9.sp)
+            }
         }
         Spacer(Modifier.height(12.dp))
         if (routines.isEmpty()) {
