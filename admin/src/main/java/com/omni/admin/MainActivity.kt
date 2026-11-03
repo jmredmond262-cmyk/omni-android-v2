@@ -603,7 +603,7 @@ private fun FinanceContent(payload: JSONObject) {
     item { Text("Capital y circulación", color = White, fontSize = 17.sp, fontWeight = FontWeight.Bold) }
     item {
       Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-        FinanceMetric("Crédito inicial", money("initialCapital"), Icons.Default.Savings, Modifier.weight(1f))
+        FinanceMetric("Capital inicial asignado", money("initialCapital"), Icons.Default.Savings, Modifier.weight(1f))
         FinanceMetric("Recargas", money("deposits"), Icons.Default.AddCard, Modifier.weight(1f))
       }
     }
@@ -611,6 +611,12 @@ private fun FinanceContent(payload: JSONObject) {
       Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
         FinanceMetric("Transferencias", money("transferVolume"), Icons.Default.SwapHoriz, Modifier.weight(1f))
         FinanceMetric("Pagos QR", money("qrVolume"), Icons.Default.QrCode2, Modifier.weight(1f))
+      }
+    }
+    item {
+      Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+        FinanceMetric("Transferencias recibidas", money("transferIn"), Icons.Default.CallReceived, Modifier.weight(1f))
+        FinanceMetric("Cobros QR", money("qrCollections"), Icons.Default.QrCode2, Modifier.weight(1f))
       }
     }
     item {
