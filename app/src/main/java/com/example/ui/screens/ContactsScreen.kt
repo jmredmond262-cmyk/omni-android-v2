@@ -74,13 +74,13 @@ import androidx.compose.ui.unit.sp
 import com.example.model.ContactCategory
 import com.example.model.NeighborhoodContact
 import com.example.ui.MainViewModel
-import com.example.ui.theme.AmberDeal
-import com.example.ui.theme.AmberDealContainer
-import com.example.ui.theme.EmeraldContainer
-import com.example.ui.theme.EmeraldDark
-import com.example.ui.theme.EmeraldPrimary
-import com.example.ui.theme.RosePromo
-import com.example.ui.theme.SlateNavy
+import com.example.ui.theme.CyberDarkBg
+import com.example.ui.theme.CyberDarkSurface
+import com.example.ui.theme.CyberDarkSurfaceVariant
+import com.example.ui.theme.CyberBorder
+import com.example.ui.theme.CyberGlowCyan
+import com.example.ui.theme.CyberGlowAmber
+import com.example.ui.theme.CyberGlowGreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,14 +107,16 @@ fun ContactsScreen(
             )?.use { cursor ->
                 val nameIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
                 val numberIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
-                while (cursor.moveToNext()) {
-                    val name = cursor.getString(nameIndex).orEmpty()
-                    val number = cursor.getString(numberIndex).orEmpty()
-                    if (name.isNotBlank() && number.isNotBlank()) result.add(name to number)
+                if (nameIndex >= 0 && numberIndex >= 0) {
+                    while (cursor.moveToNext()) {
+                        val name = cursor.getString(nameIndex).orEmpty().trim()
+                        val number = cursor.getString(numberIndex).orEmpty().trim()
+                        if (name.isNotBlank() && number.isNotBlank()) result.add(name to number)
+                    }
                 }
             }
         }
-        phoneContacts = result.distinctBy { it.second }
+        phoneContacts = result.distinctBy { it.second.filter(Char::isDigit) }.sortedBy { it.first.lowercase() }
     }
     val contactsPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -131,12 +133,11 @@ fun ContactsScreen(
     var newAddress by remember { mutableStateOf("") }
     var categoryExpanded by remember { mutableStateOf(false) }
 
-    val filteredContacts = remember(contacts, selectedCategory) {
-        if (selectedCategory == null) {
-            contacts.sortedByDescending { it.isFavorite }
-        } else {
-            contacts.filter { it.category == selectedCategory }
-        }
+    val filteredContacts = remember(contacts, selectedCategory, searchQuery) {
+        contacts.filter { contact ->
+            (selectedCategory == null || contact.category == selectedCategory) &&
+                (searchQuery.isBlank() || contact.name.contains(searchQuery, true) || contact.phoneNumber.contains(searchQuery, true))
+        }.sortedByDescending { it.isFavorite }
     }
 
     LazyColumn(
@@ -150,20 +151,20 @@ fun ContactsScreen(
         item {
             Card(
                 shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = SlateNavy),
+                colors = CardDefaults.cardColors(containerColor = CyberDarkSurface),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
                     Text(
                         text = "Mi Agenda y Directorio OMNI",
-                        color = Color.White,
+                        color = Color(0xFFF4F8FF),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Tus contactos personales y los servicios de tu zona, organizados en un solo lugar.",
-                        color = Color.White.copy(alpha = 0.8f),
+                        color = Color(0xFFF4F8FF).copy(alpha = 0.8f),
                         fontSize = 12.sp,
                         lineHeight = 17.sp
                     )
@@ -173,7 +174,7 @@ fun ContactsScreen(
 
         item {
             Row(
-                modifier = Modifier.fillMaxWidth().background(Color(0xFF101B2D), RoundedCornerShape(14.dp)).padding(4.dp),
+                modifier = Modifier.fillMaxWidth().background(CyberDarkSurface, RoundedCornerShape(14.dp)).padding(4.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 listOf("Mi agenda", "Directorio OMNI").forEachIndexed { index, label ->
@@ -190,8 +191,8 @@ fun ContactsScreen(
                     ) {
                         Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             Text(if (index == 0) "👤" else "🏪", fontSize = 19.sp)
-                            Text(label, color = if (selectedTab == index) Color.White else Color(0xFFB8C7DA), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                            Text(if (index == 0) "Contactos del teléfono" else "Servicios y comercios", color = if (selectedTab == index) Color.White.copy(alpha = 0.85f) else Color(0xFF8FA1B7), fontSize = 9.sp)
+                            Text(label, color = if (selectedTab == index) Color(0xFFF4F8FF) else Color(0xFFB8C9DE), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Text(if (index == 0) "Contactos del teléfono" else "Servicios y comercios", color = if (selectedTab == index) Color(0xFFF4F8FF).copy(alpha = 0.85f) else Color(0xFF8FA1B7), fontSize = 9.sp)
                         }
                     }
                 }
@@ -211,8 +212,8 @@ fun ContactsScreen(
                         onClick = { selectedCategory = null },
                         label = { Text("Todos (${contacts.size})") },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = EmeraldPrimary,
-                            selectedLabelColor = Color.White
+                            selectedContainerColor = CyberGlowCyan,
+                            selectedLabelColor = Color(0xFFF4F8FF)
                         )
                     )
                 }
@@ -222,8 +223,8 @@ fun ContactsScreen(
                         onClick = { selectedCategory = if (selectedCategory == cat) null else cat },
                         label = { Text(cat.label) },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = EmeraldPrimary,
-                            selectedLabelColor = Color.White
+                            selectedContainerColor = CyberGlowCyan,
+                            selectedLabelColor = Color(0xFFF4F8FF)
                         )
                     )
                 }
@@ -235,16 +236,36 @@ fun ContactsScreen(
             Button(
                 onClick = { showAddDialog = true },
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = EmeraldContainer),
+                colors = ButtonDefaults.buttonColors(containerColor = CyberDarkSurfaceVariant),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = null, tint = EmeraldDark, modifier = Modifier.size(18.dp))
+                Icon(imageVector = Icons.Default.Add, contentDescription = null, tint = CyberGlowCyan, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(text = "Agendar nuevo remis o servicio", color = EmeraldDark, fontWeight = FontWeight.Bold)
+                Text(text = "Agendar nuevo remis o servicio", color = CyberGlowCyan, fontWeight = FontWeight.Bold)
             }
         }
 
+        // Búsqueda integrada del directorio de servicios
+        item {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                label = { Text("Buscar servicio, rubro o teléfono") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = CyberGlowCyan,
+                    unfocusedBorderColor = CyberBorder,
+                    focusedLabelColor = CyberGlowCyan,
+                    cursorColor = CyberGlowCyan
+                )
+            )
+        }
         // Lista de Contactos
+        if (filteredContacts.isEmpty()) item {
+            Text("No hay servicios que coincidan con la búsqueda.", color = Color(0xFF9EADC3), modifier = Modifier.padding(12.dp))
+        }
         items(filteredContacts, key = { it.id }) { contact ->
             ContactCard(
                 contact = contact,
@@ -272,10 +293,10 @@ fun ContactsScreen(
             }
             if (!hasContactsPermission) {
                 item {
-                    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF101B2D)), modifier = Modifier.fillMaxWidth()) {
+                    Card(colors = CardDefaults.cardColors(containerColor = CyberDarkSurface), modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("Tus contactos, a tu alcance", color = Color.White, fontWeight = FontWeight.Bold)
-                            Text("OMNI necesita permiso para mostrar los nombres y teléfonos guardados en tu celular. La agenda se consulta localmente y no se sube a nuestros servidores.", color = Color(0xFFB8C7DA), fontSize = 12.sp)
+                            Text("Tus contactos, a tu alcance", color = Color(0xFFF4F8FF), fontWeight = FontWeight.Bold)
+                            Text("OMNI necesita permiso para mostrar los nombres y teléfonos guardados en tu celular. La agenda se consulta localmente y no se sube a nuestros servidores.", color = Color(0xFFB8C9DE), fontSize = 12.sp)
                             Button(onClick = { contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS) }) { Text("Permitir acceso a contactos") }
                         }
                     }
@@ -285,14 +306,14 @@ fun ContactsScreen(
                     it.first.contains(searchQuery, true) || it.second.contains(searchQuery, true)
                 }
                 if (visiblePhoneContacts.isEmpty()) {
-                    item { Text(if (phoneContacts.isEmpty()) "No se encontraron contactos con teléfono." else "No hay coincidencias.", color = Color(0xFFB8C7DA), modifier = Modifier.padding(12.dp)) }
+                    item { Text(if (phoneContacts.isEmpty()) "No se encontraron contactos con teléfono." else "No hay coincidencias.", color = Color(0xFFB8C9DE), modifier = Modifier.padding(12.dp)) }
                 }
                 items(visiblePhoneContacts, key = { it.second }) { entry ->
-                    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF101B2D)), modifier = Modifier.fillMaxWidth()) {
+                    Card(colors = CardDefaults.cardColors(containerColor = CyberDarkSurface), modifier = Modifier.fillMaxWidth()) {
                         Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
-                                Text(entry.first, color = Color.White, fontWeight = FontWeight.Bold)
-                                Text(entry.second, color = Color(0xFFB8C7DA), fontSize = 12.sp)
+                                Text(entry.first, color = Color(0xFFF4F8FF), fontWeight = FontWeight.Bold)
+                                Text(entry.second, color = Color(0xFFB8C9DE), fontSize = 12.sp)
                             }
                             IconButton(onClick = {
                                 val share = Intent(Intent.ACTION_SEND).apply {
@@ -384,7 +405,7 @@ fun ContactsScreen(
                             showAddDialog = false
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
+                    colors = ButtonDefaults.buttonColors(containerColor = CyberGlowCyan, contentColor = CyberDarkBg)
                 ) {
                     Text("Guardar Contacto")
                 }
@@ -407,7 +428,7 @@ fun ContactCard(
 ) {
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF4F8FF)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = modifier.fillMaxWidth()
     ) {
@@ -423,10 +444,10 @@ fun ContactCard(
                     .size(44.dp)
                     .background(
                         when (contact.category) {
-                            ContactCategory.REMIS, ContactCategory.TAXI -> AmberDeal.copy(alpha = 0.15f)
-                            ContactCategory.FARMACIA_TURNO -> EmeraldContainer
-                            ContactCategory.EMERGENCIA -> RosePromo.copy(alpha = 0.15f)
-                            else -> SlateNavy.copy(alpha = 0.08f)
+                            ContactCategory.REMIS, ContactCategory.TAXI -> CyberGlowAmber.copy(alpha = 0.14f)
+                            ContactCategory.FARMACIA_TURNO -> CyberGlowCyan.copy(alpha = 0.12f)
+                            ContactCategory.EMERGENCIA -> CyberGlowAmber.copy(alpha = 0.14f)
+                            else -> CyberDarkSurfaceVariant
                         },
                         CircleShape
                     ),
@@ -459,7 +480,7 @@ fun ContactCard(
                         text = contact.name,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
-                        color = SlateNavy,
+                        color = Color(0xFFEAF4FF),
                         modifier = Modifier.weight(1f)
                     )
                     IconButton(
@@ -469,7 +490,7 @@ fun ContactCard(
                         Icon(
                             imageVector = if (contact.isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
                             contentDescription = "Favorito",
-                            tint = if (contact.isFavorite) AmberDeal else Color.LightGray,
+                            tint = if (contact.isFavorite) AmberDeal else Color(0xFF64748B),
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -478,7 +499,7 @@ fun ContactCard(
                 Text(
                     text = contact.statusText,
                     fontSize = 11.sp,
-                    color = EmeraldDark,
+                    color = CyberGlowCyan,
                     fontWeight = FontWeight.SemiBold
                 )
 
@@ -486,7 +507,7 @@ fun ContactCard(
                     Text(
                         text = contact.address,
                         fontSize = 11.sp,
-                        color = Color.Gray
+                        color = Color(0xFF9EADC3)
                     )
                 }
 
@@ -495,7 +516,7 @@ fun ContactCard(
                         text = "⏱️ Demora aprox: ~${contact.averageWaitMinutes} min",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = AmberDeal
+                        color = CyberGlowAmber
                     )
                 }
             }
@@ -505,14 +526,14 @@ fun ContactCard(
             Button(
                 onClick = onCall,
                 shape = CircleShape,
-                colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
+                colors = ButtonDefaults.buttonColors(containerColor = CyberGlowCyan, contentColor = CyberDarkBg),
                 contentPadding = PaddingValues(0.dp),
                 modifier = Modifier.size(42.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Call,
                     contentDescription = "Llamar",
-                    tint = Color.White,
+                    tint = Color(0xFFF4F8FF),
                     modifier = Modifier.size(20.dp)
                 )
             }
