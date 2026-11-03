@@ -114,7 +114,7 @@ private fun OmniAdminRoot() {
         val token = current.getIdToken(true).await().token ?: throw IllegalStateException("No se pudo renovar la sesión.")
         val tab = tabs.first { it.id == selected }
         val data = JSONObject().put("collection", tab.collection).put("limit", 100)
-        if (selected == "activity") data.put("offset", nextOffset) else if (nextPageToken.isNotBlank()) data.put("pageToken", nextPageToken)
+        if (nextPageToken.isNotBlank()) data.put("pageToken", nextPageToken)
         val page = AdminApi.call(token, "list", data)
         val merged = JSONArray()
         val previous = payload.optJSONArray("items") ?: JSONArray()
@@ -476,7 +476,7 @@ private fun RecordsContent(selected: String, array: JSONArray, hasMore: Boolean,
   LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), contentPadding = PaddingValues(vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
     item {
       Text(tabs.first { it.id == selected }.label, color = White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-      Text(records.size.toString() + (if (records.size == 1) " registro cargado" else " registros cargados") + if (selected == "activity") " · orden cronológico" else " · historial paginado", color = Muted, fontSize = 12.sp)
+      Text(records.size.toString() + (if (records.size == 1) " registro cargado" else " registros cargados") + " · historial paginado por cursor", color = Muted, fontSize = 12.sp)
     }
     if (records.isEmpty()) item { EmptyState("Todavía no hay registros para mostrar.") }
     items(records) { RecordCard(it, selected) }
