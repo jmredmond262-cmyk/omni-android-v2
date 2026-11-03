@@ -71,6 +71,7 @@ import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -132,6 +133,27 @@ fun UserProfileScreen(
     var editEmergencyPhone by remember(profile.emergencyContactPhone) { mutableStateOf(profile.emergencyContactPhone) }
     var editBloodType by remember(profile.bloodType) { mutableStateOf(profile.bloodType) }
     var editMedicalNotes by remember(profile.medicalNotes) { mutableStateOf(profile.medicalNotes) }
+
+    // La personalización social se conserva localmente por cuenta, sin subir datos privados a Firebase.
+    LaunchedEffect(profile.id) {
+        val uid = profile.id
+        if (uid.isNotBlank()) {
+            val prefs = context.getSharedPreferences("omni_profile_social_$uid", android.content.Context.MODE_PRIVATE)
+            if (prefs.getBoolean("customized", false)) {
+                viewModel.updateSocialProfile(
+                    fullName = prefs.getString("fullName", profile.fullName).orEmpty(),
+                    username = prefs.getString("username", profile.username).orEmpty(),
+                    bio = prefs.getString("bio", profile.bio).orEmpty(),
+                    statusMood = prefs.getString("statusMood", profile.statusMood).orEmpty(),
+                    instagram = prefs.getString("instagram", profile.instagramHandle).orEmpty(),
+                    whatsapp = prefs.getString("whatsapp", profile.whatsappNumber).orEmpty(),
+                    twitter = profile.twitterHandle,
+                    language = prefs.getString("language", profile.preferredLanguage).orEmpty(),
+                    privacy = prefs.getString("privacy", profile.privacyLevel).orEmpty()
+                )
+            }
+        }
+    }
 
     LazyColumn(
         modifier = modifier
@@ -511,7 +533,21 @@ fun UserProfileScreen(
                                         language = profile.preferredLanguage,
                                         privacy = profile.privacyLevel
                                     )
-                                    Toast.makeText(context, "Perfil social actualizado exitosamente", Toast.LENGTH_SHORT).show()
+                                    profile.id.takeIf { it.isNotBlank() }?.let { uid ->
+                                        context.getSharedPreferences("omni_profile_social_$uid", android.content.Context.MODE_PRIVATE)
+                                            .edit()
+                                            .putBoolean("customized", true)
+                                            .putString("fullName", editName)
+                                            .putString("username", editUsername)
+                                            .putString("bio", editBio)
+                                            .putString("statusMood", editMood)
+                                            .putString("instagram", editInstagram)
+                                            .putString("whatsapp", editWhatsapp)
+                                            .putString("language", profile.preferredLanguage)
+                                            .putString("privacy", profile.privacyLevel)
+                                            .apply()
+                                    }
+                                    Toast.makeText(context, "Perfil social guardado en este dispositivo", Toast.LENGTH_SHORT).show()
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp),
