@@ -1,11 +1,11 @@
-name: OMNI Android Build 1.3
+name: OMNI Android Build 1.4
 # Includes user profile sync and product analytics from the admin rebuild branch.
 
 on:
   push:
-    branches: [ "main", "omni-resto-mejoras", "omni-admin-app", "omni-admin-rebuild", "omni-v1.3-release-candidate", "omni-v1.3-integral" ]
+    branches: [ "main", "omni-resto-mejoras", "omni-admin-app", "omni-admin-rebuild", "omni-v1.3-release-candidate", "omni-v1.3-integral", "omni-v1.4-integral" ]
   pull_request:
-    branches: [ "main", "omni-resto-mejoras", "omni-v1.3-release-candidate", "omni-v1.3-integral" ]
+    branches: [ "main", "omni-resto-mejoras", "omni-v1.3-release-candidate", "omni-v1.3-integral", "omni-v1.4-integral" ]
   workflow_dispatch:
 
 permissions:
