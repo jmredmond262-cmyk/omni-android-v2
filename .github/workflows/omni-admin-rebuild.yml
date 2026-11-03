@@ -55,16 +55,30 @@ jobs:
         run: |
           test -n "$OMNI_DEBUG_KEYSTORE_BASE64" || { echo "::error::Falta OMNI_DEBUG_KEYSTORE_BASE64. Se necesita la misma firma persistente para actualizar OMNI Admin sin desinstalar."; exit 1; }
           printf '%s' "$OMNI_DEBUG_KEYSTORE_BASE64" | base64 --decode > debug.keystore
-          keytool -list -v -keystore debug.keystore -storepass android -alias androiddebugkey | grep -E 'SHA1:|SHA256:'
+          EXPECTED_SHA256="486513DCA524F8C09134DB97A7D5650A2F2461E4306DB181B7C2DFE2D40E495B"
+          ACTUAL_SHA256="$(keytool -list -v -keystore debug.keystore -storepass android -alias androiddebugkey | awk '/SHA256:/{print $2; exit}' | tr -d ':')"
+          test "$ACTUAL_SHA256" = "$EXPECTED_SHA256" || { echo "::error::La clave de firma de OMNI Admin cambió. Se cancela la publicación para proteger las actualizaciones."; exit 1; }
+          echo "Firma persistente validada: $ACTUAL_SHA256"
       - name: Build standalone Admin APK
+        env:
+          OMNI_ADMIN_VERSION_CODE: ${{ github.run_number }}
         run: gradle :admin:assembleDebug
+      - name: Verify package, version and APK signing identity
+        run: |
+          APK="admin/build/outputs/apk/debug/admin-debug.apk"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -E "^package: name='com.omni.adminpanel' versionCode='"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$APK" > /tmp/admin-apk-certs.txt
+          APK_SHA256="$(awk -F': ' '/certificate SHA-256 digest:/{print $2; exit}' /tmp/admin-apk-certs.txt | tr -d ':' | tr '[:lower:]' '[:upper:]')"
+          EXPECTED_SHA256="486513DCA524F8C09134DB97A7D5650A2F2461E4306DB181B7C2DFE2D40E495B"
+          test "$APK_SHA256" = "$EXPECTED_SHA256" || { echo "::error::La APK no conserva la firma autorizada. No se publicará."; cat /tmp/admin-apk-certs.txt; exit 1; }
+          echo "APK verificada: paquete, versión y firma correctos."
       - name: Upload OMNI Admin APK
         uses: actions/upload-artifact@v4
         with:
           name: omni-admin-rebuild-debug-apk
           path: admin/build/outputs/apk/debug/admin-debug.apk
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 90
 
   android-source-check:
     name: Compile-check Admin Android source
