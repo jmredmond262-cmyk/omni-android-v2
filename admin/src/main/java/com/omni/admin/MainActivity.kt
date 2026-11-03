@@ -362,8 +362,10 @@ private fun DashboardContent(payload: JSONObject) {
   val testSeen = diagnostics.optBoolean("diagnosticEventSeen")
   BoxWithConstraints(Modifier.fillMaxSize().background(Navy)) {
     val columns = if (maxWidth >= 900.dp) 4 else if (maxWidth >= 560.dp) 4 else 2
+    val tabletLayout = maxWidth >= 560.dp
+    val wideLayout = maxWidth >= 700.dp
     LazyColumn(
-      Modifier.fillMaxSize().padding(horizontal = if (maxWidth >= 700.dp) 22.dp else 14.dp),
+      Modifier.fillMaxSize().padding(horizontal = if (wideLayout) 22.dp else 14.dp),
       contentPadding = PaddingValues(top = 16.dp, bottom = 28.dp),
       verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
@@ -382,10 +384,10 @@ private fun DashboardContent(payload: JSONObject) {
           Spacer(Modifier.width(14.dp))
           Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("OMNI · CONTROL CENTER", color = Mint, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.7.sp)
-            Text("Bienvenido, Administrador", color = White, fontSize = if (maxWidth >= 560.dp) 23.sp else 19.sp, fontWeight = FontWeight.ExtraBold)
+            Text("Bienvenido, Administrador", color = White, fontSize = if (tabletLayout) 23.sp else 19.sp, fontWeight = FontWeight.ExtraBold)
             Text("Panel ejecutivo del ecosistema OMNI", color = Muted, fontSize = 12.sp)
           }
-          if (maxWidth >= 560.dp) {
+          if (tabletLayout) {
             Column(horizontalAlignment = Alignment.End) {
               Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Box(Modifier.size(8.dp).background(if (testSeen) Color(0xFF39F59A) else Color(0xFFFFB84D), RoundedCornerShape(50)))
@@ -418,7 +420,7 @@ private fun DashboardContent(payload: JSONObject) {
                   Spacer(Modifier.weight(1f))
                   Box(Modifier.width(22.dp).height(3.dp).background(accent, RoundedCornerShape(3.dp)))
                 }
-                Text(metric.second, color = White, fontSize = if (maxWidth >= 560.dp) 27.sp else 24.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                Text(metric.second, color = White, fontSize = if (tabletLayout) 27.sp else 24.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
                 Text(metric.first, color = Muted, fontSize = 10.sp, maxLines = 2, lineHeight = 13.sp)
               }
             }
@@ -429,7 +431,7 @@ private fun DashboardContent(payload: JSONObject) {
       item {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
           Card(
-            Modifier.weight(if (maxWidth >= 700.dp) 1.7f else 1f),
+            Modifier.weight(if (wideLayout) 1.7f else 1f),
             colors = CardDefaults.cardColors(containerColor = Panel),
             shape = RoundedCornerShape(20.dp)
           ) {
@@ -468,7 +470,7 @@ private fun DashboardContent(payload: JSONObject) {
               }
             }
           }
-          if (maxWidth >= 700.dp) {
+          if (wideLayout) {
             Card(
               Modifier.weight(1f),
               colors = CardDefaults.cardColors(containerColor = Panel),
