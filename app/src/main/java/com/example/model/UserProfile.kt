@@ -58,20 +58,15 @@ data class UserProfile(
     val dailySpendingLimit: Double = 0.0,
     val autoCashbackEnabled: Boolean = false,
     val savedCards: List<SavedCard> = emptyList(),
-        SavedCard("card_2", "Mastercard Black", "9102", "Banco Santander", "11/29", false)
-    ),
 
     // --- MAPAS, NAVEGACIÓN & UBICACIONES ---
     val currentGpsAddress: String = "",
     val currentLatitude: Double = 0.0,
     val currentLongitude: Double = 0.0,
-    val searchRadiusMeters: Int = 2000,
+    val searchRadiusMeters: Int = 5000,
     val preferredTransitMode: String = "", // A pie, Auto 🚗, Bici 🚲, Transporte público 🚌
     val mapStyle: String = "", // Satélite HD, Vectorial, Modo Noche
     val addresses: List<UserAddress> = emptyList(),
-        UserAddress("addr_2", "Casa", "Calle Brigadier López 520, Romang", false, "home"),
-        UserAddress("addr_3", "Club / Balneario", "Camping Comunal y Balneario Romang", false, "favorite")
-    ),
 
     // --- SALUD, SEGURIDAD & EMERGENCIAS ---
     val emergencyContactName: String = "",
