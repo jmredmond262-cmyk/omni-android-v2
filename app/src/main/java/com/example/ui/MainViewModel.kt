@@ -143,6 +143,7 @@ class MainViewModel : ViewModel() {
     // Estado del Clima en Tiempo Real
     private val _liveWeatherData = MutableStateFlow<RealWeatherData?>(null)
     val liveWeatherData: StateFlow<RealWeatherData?> = _liveWeatherData.asStateFlow()
+    @Volatile private var weatherRequestSequence: Long = 0L
 
     private val _isLoadingLiveLocation = MutableStateFlow(false)
     val isLoadingLiveLocation: StateFlow<Boolean> = _isLoadingLiveLocation.asStateFlow()
@@ -839,14 +840,21 @@ class MainViewModel : ViewModel() {
     }
 
     fun fetchLiveWeatherAndAlerts(lat: Double, lon: Double, label: String) {
+        val requestId = ++weatherRequestSequence
         viewModelScope.launch {
             val weatherResult = RealWeatherApi.fetchCurrentWeather(lat, lon, label)
             weatherResult.onSuccess { weather ->
+                // Evita que una respuesta lenta de una ubicación anterior reemplace la localidad más reciente.
+                if (requestId != weatherRequestSequence) return@onSuccess
                 _liveWeatherData.value = weather
                 val liveAlerts = RealWeatherApi.fetchLiveAlerts(weather, lat, lon)
-                _weatherAlerts.value = liveAlerts.filter { !dismissedAlertIds.value.contains(it.id) }
+                if (requestId == weatherRequestSequence) {
+                    _weatherAlerts.value = liveAlerts.filter { !dismissedAlertIds.value.contains(it.id) }
+                }
             }.onFailure { error ->
-                android.util.Log.e("MainViewModel", "No se pudo actualizar el clima", error)
+                if (requestId == weatherRequestSequence) {
+                    android.util.Log.e("MainViewModel", "No se pudo actualizar el clima", error)
+                }
             }
         }
     }
