@@ -96,7 +96,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.StoreType
-import java.time.LocalDate
 import com.example.ui.MainViewModel
 import com.example.ui.Screen
 import com.example.ui.StoreScheduleFilter
@@ -127,7 +126,7 @@ fun DailyHubScreen(
     val context = LocalContext.current
     val tasks by viewModel.tasks.collectAsState()
     LaunchedEffect(tasks) {
-        val today = LocalDate.now().toString()
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
         context.getSharedPreferences("omni_daily_summary", 0).edit()
             .putString("summary_date", today)
             .putInt("summary_total", tasks.size)
