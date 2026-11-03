@@ -309,6 +309,8 @@ class MainViewModel : ViewModel() {
     val merchantProfileMessage: StateFlow<String?> = _merchantProfileMessage.asStateFlow()
     private var merchantProfileReady = false
     private var merchantProfileLoading = false
+    private val _merchantProfileLoadingState = MutableStateFlow(false)
+    val merchantProfileLoadingState: StateFlow<Boolean> = _merchantProfileLoadingState.asStateFlow()
 
     fun activateMerchantProfile() {
         val uid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
@@ -318,8 +320,10 @@ class MainViewModel : ViewModel() {
         }
         if (merchantProfileReady || merchantProfileLoading) return
         merchantProfileLoading = true
+        _merchantProfileLoadingState.value = true
         MerchantProfileRepository.loadOrClaim(_managedStore.value, uid) { result ->
             merchantProfileLoading = false
+            _merchantProfileLoadingState.value = false
             result.onSuccess { (store, news) ->
                 _managedStore.value = store
                 _storeNews.value = news
@@ -1244,6 +1248,7 @@ class MainViewModel : ViewModel() {
         val updated = current.copy(isOpen = !current.isOpen)
         _managedStore.value = updated
         updateManagedStoreInCollections(updated)
+        persistManagedStore()
     }
 
     fun addProductToManagedStore(
