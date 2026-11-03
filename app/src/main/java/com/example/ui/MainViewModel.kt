@@ -183,7 +183,7 @@ class MainViewModel : ViewModel() {
 
     private fun updateManagedStoreInCollections(updated: Store) {
         _allStores.value = _allStores.value.map { if (it.id == updated.id) updated else it }
-        updateManagedStoreInCollections(updated)
+        _stores.value = _stores.value.map { if (it.id == updated.id) updated else it }
     }
 
     private val _selectedStore = MutableStateFlow<Store?>(SampleData.sampleStores.first())
