@@ -75,7 +75,7 @@ jobs:
       - name: Upload OMNI Admin APK
         uses: actions/upload-artifact@v4
         with:
-          name: omni-admin-rebuild-debug-apk
+          name: omni-admin-v1.4-debug-apk
           path: admin/build/outputs/apk/debug/admin-debug.apk
           if-no-files-found: error
           retention-days: 90
