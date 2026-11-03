@@ -32,7 +32,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -71,9 +70,6 @@ fun MorningBriefingScreen(
             summaryPrefs.getInt("summary_completed", 0) to summaryPrefs.getInt("summary_total", 0)
         } else null
     }
-    val todayCompleted = tasks.count { it.isCompleted }
-    val todayTotal = tasks.size
-    val tasks by viewModel.tasks.collectAsState()
     val profile by viewModel.userProfile.collectAsState()
     val activeDeals = briefing.activeDealsCount
     val preferences = remember { context.getSharedPreferences("omni_morning_briefing", android.content.Context.MODE_PRIVATE) }
