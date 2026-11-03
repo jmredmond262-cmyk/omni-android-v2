@@ -59,6 +59,7 @@ import com.example.ui.screens.OmniExperienceScreen
 import com.example.ui.screens.MorningBriefingScreen
 import com.example.ui.screens.MyPurchasesScreen
 import com.example.ui.screens.DemoMarketplaceScreen
+import com.example.ui.screens.OffersBenefitsScreen
 import com.example.ui.screens.OmniSplashScreen
 import com.example.ui.theme.CyberGlowAmber
 import com.example.ui.theme.CyberGlowCyan
@@ -314,6 +315,7 @@ fun OmniApp(viewModel: MainViewModel) {
                 currentScreen is Screen.JobBoard ||
                 currentScreen is Screen.Events ||
                 currentScreen is Screen.MyPurchases ||
+                currentScreen is Screen.OffersBenefits ||
                 currentScreen is Screen.OrderCenter ||
                 currentScreen is Screen.MerchantOrders
     ) {
@@ -332,6 +334,7 @@ fun OmniApp(viewModel: MainViewModel) {
             is Screen.JobBoard -> viewModel.navigateTo(Screen.DailyHub)
             is Screen.Events -> viewModel.navigateTo(Screen.DailyHub)
             is Screen.MyPurchases -> viewModel.navigateTo(Screen.DailyHub)
+            is Screen.OffersBenefits -> viewModel.navigateTo(Screen.DailyHub)
             is Screen.OrderCenter -> viewModel.navigateTo(Screen.StoreDetail)
             is Screen.MerchantOrders -> viewModel.navigateTo(Screen.MerchantHub)
             else -> viewModel.navigateTo(Screen.DailyHub)
@@ -663,6 +666,7 @@ fun OmniApp(viewModel: MainViewModel) {
                     Screen.SmartList -> SmartListScreen(viewModel = viewModel)
                     Screen.MyPurchases -> MyPurchasesScreen(viewModel = viewModel, onBack = { viewModel.navigateTo(Screen.DailyHub) })
                     Screen.DemoMarketplace -> DemoMarketplaceScreen(onBack = { viewModel.navigateTo(Screen.MyPurchases) })
+                    Screen.OffersBenefits -> OffersBenefitsScreen(onBack = { viewModel.navigateTo(Screen.DailyHub) })
                     Screen.StoresList -> StoresListScreen(viewModel = viewModel)
                     Screen.Comparison -> ComparisonScreen(viewModel = viewModel)
                     Screen.StoreDetail -> StoreDetailScreen(viewModel = viewModel)

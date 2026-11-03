@@ -217,7 +217,7 @@ fun DailyHubScreen(
             icon = Icons.Default.LocalOffer,
             accentColor = Color(0xFFFFC857),
             onClick = {
-                viewModel.navigateTo(Screen.OmniExperience)
+                viewModel.navigateTo(Screen.OffersBenefits)
             }
         ),
         HomeCategoryItem(

@@ -64,6 +64,7 @@ sealed class Screen(val title: String) {
     object SmartList : Screen("Mi Lista")
     object MyPurchases : Screen("Mis compras")
     object DemoMarketplace : Screen("Mercado DEMO")
+    object OffersBenefits : Screen("Ofertas y beneficios")
     object StoresList : Screen("Comercios")
     object Comparison : Screen("Comparador")
     object StoreDetail : Screen("Detalle del Local")
