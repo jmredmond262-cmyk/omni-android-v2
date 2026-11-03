@@ -64,6 +64,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -108,6 +109,10 @@ fun MerchantHubScreen(
     val context = LocalContext.current
     val store by viewModel.managedStore.collectAsState()
     val newsList by viewModel.storeNews.collectAsState()
+    val merchantProfileMessage by viewModel.merchantProfileMessage.collectAsState()
+    val merchantProfileLoading by viewModel.merchantProfileLoadingState.collectAsState()
+
+    LaunchedEffect(viewModel) { viewModel.activateMerchantProfile() }
 
     var showAddProductDialog by remember { mutableStateOf(false) }
     var showAddComboDialog by remember { mutableStateOf(false) }
@@ -232,6 +237,22 @@ fun MerchantHubScreen(
         contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 100.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        if (merchantProfileLoading || merchantProfileMessage != null) {
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF101B30)),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = if (merchantProfileLoading) "Sincronizando tu comercio con Firebase…" else merchantProfileMessage.orEmpty(),
+                        color = if (merchantProfileLoading) Color(0xFF57DDF5) else Color(0xFFFFB4A8),
+                        fontSize = 11.sp,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+            }
+        }
         // Cabecera del Comercio Administrado
         item {
             Card(
