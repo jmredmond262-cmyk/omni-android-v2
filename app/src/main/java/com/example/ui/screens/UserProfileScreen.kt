@@ -416,9 +416,8 @@ fun UserProfileScreen(
 
         // 3. Pestañas de Sub-Paneles
         item {
-            ScrollableTabRow(
+            TabRow(
                 selectedTabIndex = selectedTab,
-                edgePadding = 6.dp,
                 containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.primary,
                 indicator = { tabPositions ->
