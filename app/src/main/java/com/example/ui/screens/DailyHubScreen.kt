@@ -72,6 +72,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -90,10 +91,12 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.StoreType
+import java.time.LocalDate
 import com.example.ui.MainViewModel
 import com.example.ui.Screen
 import com.example.ui.StoreScheduleFilter
@@ -121,6 +124,16 @@ fun DailyHubScreen(
     viewModel: MainViewModel,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val tasks by viewModel.tasks.collectAsState()
+    LaunchedEffect(tasks) {
+        val today = LocalDate.now().toString()
+        context.getSharedPreferences("omni_daily_summary", 0).edit()
+            .putString("summary_date", today)
+            .putInt("summary_total", tasks.size)
+            .putInt("summary_completed", tasks.count { it.isCompleted })
+            .apply()
+    }
     val currentCity by viewModel.currentCity.collectAsState()
     val displayLocality = currentCity.ifBlank { "Malabrigo" }
     val stores by viewModel.stores.collectAsState()
