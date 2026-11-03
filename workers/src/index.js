@@ -372,7 +372,8 @@ async function financialOverview(env) {
     operations: []
   };
 }
-\nasync function handleAction(env, actor, action, data) {
+
+async function handleAction(env, actor, action, data) {
   switch (action) {
     case "dashboard": return dashboard(env);\n    case "finance": return financialOverview(env);
     case "list": {
