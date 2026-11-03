@@ -192,10 +192,11 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
                         "paymentMethod" to "PAGO_AL_RETIRAR",
                         "fulfillmentType" to fulfillmentType, "deliveryAddress" to deliveryAddress.trim(),
                         "qrNonce" to nonce,
+                        "operationId" to ref.id,
                         "createdAt" to FieldValue.serverTimestamp(),
                         "updatedAt" to FieldValue.serverTimestamp()
                     )).addOnSuccessListener {
-                        UsageAnalyticsRepository.trackAction(uid, "STORE_ORDER_CREATED", "orders")
+                        UsageAnalyticsRepository.trackEvent(uid, "orders", "STORE_ORDER_CREATED", mapOf("operationId" to ref.id, "stage" to "FIRESTORE_WRITE_CONFIRMED", "success" to true))
                         sending = false
                         createdOrder = OmniStoreOrder(
                             ref.id, store.id, store.name, merchantUid, uid,
@@ -231,7 +232,7 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
                                 feedback = "QR inválido, vencido, ya cerrado o no corresponde a este comercio."
                             } else {
                                 scannedOrderId = order.id
-                                UsageAnalyticsRepository.trackCurrentAction("orders", "ORDER_QR_VERIFIED", mapOf("success" to true))
+                                UsageAnalyticsRepository.trackEvent(uid, "orders", "ORDER_QR_VERIFIED", mapOf("operationId" to order.id, "stage" to "QR_VALIDATION", "success" to true))
                                 feedback = "Pedido verificado: ${order.id.take(8)} · ${order.status}"
                             }
                         }.addOnFailureListener { feedback = "No se pudo verificar el pedido en Firestore." }
@@ -243,7 +244,7 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
         db.collection("storeOrders").document(order.id).update(
             mapOf("status" to next, "updatedAt" to FieldValue.serverTimestamp())
         ).addOnSuccessListener {
-            UsageAnalyticsRepository.trackAction(uid, "ORDER_STATUS_$next", "orders")
+            UsageAnalyticsRepository.trackEvent(uid, "orders", "ORDER_STATUS_$next", mapOf("operationId" to order.id, "stage" to "STATUS_UPDATE_CONFIRMED", "success" to true))
         }.addOnFailureListener { feedback = it.localizedMessage ?: "No se pudo actualizar el estado." }
     }
 
