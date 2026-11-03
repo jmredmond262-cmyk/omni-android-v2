@@ -52,6 +52,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenu
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
@@ -208,6 +209,8 @@ fun MerchantHubScreen(
     var comboTitle by remember { mutableStateOf("") }
     var comboDesc by remember { mutableStateOf("") }
     var comboBadge by remember { mutableStateOf("-20%") }
+    var comboAudience by remember { mutableStateOf("TODOS") }
+    var comboAudienceExpanded by remember { mutableStateOf(false) }
 
     // Campos formulario noticia
     var newsTitle by remember { mutableStateOf("") }
@@ -1197,15 +1200,51 @@ fun MerchantHubScreen(
                         placeholder = { Text("Ej: -20% o 2x1") },
                         modifier = Modifier.fillMaxWidth()
                     )
+                    ExposedDropdownMenuBox(
+                        expanded = comboAudienceExpanded,
+                        onExpandedChange = { comboAudienceExpanded = !comboAudienceExpanded }
+                    ) {
+                        OutlinedTextField(
+                            value = when (comboAudience) {
+                                "ESTUDIANTES" -> "Estudiantes · OMNI Joven"
+                                "TURISTAS" -> "Turistas · OMNI Turista"
+                                "USUARIOS" -> "Usuarios OMNI"
+                                else -> "Todos los usuarios"
+                            },
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Público del beneficio") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = comboAudienceExpanded) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = comboAudienceExpanded,
+                            onDismissRequest = { comboAudienceExpanded = false }
+                        ) {
+                            listOf("TODOS", "ESTUDIANTES", "TURISTAS", "USUARIOS").forEach { audience ->
+                                DropdownMenuItem(
+                                    text = { Text(when (audience) {
+                                        "ESTUDIANTES" -> "Estudiantes · OMNI Joven"
+                                        "TURISTAS" -> "Turistas · OMNI Turista"
+                                        "USUARIOS" -> "Usuarios OMNI"
+                                        else -> "Todos los usuarios"
+                                    }) },
+                                    onClick = { comboAudience = audience; comboAudienceExpanded = false }
+                                )
+                            }
+                        }
+                    }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
                         if (comboTitle.isNotBlank() && comboDesc.isNotBlank()) {
-                            viewModel.addComboToManagedStore(comboTitle, comboDesc, comboBadge)
+                            viewModel.addComboToManagedStore(comboTitle, comboDesc, comboBadge, comboAudience)
                             comboTitle = ""
                             comboDesc = ""
+                            comboBadge = "-20%"
+                            comboAudience = "TODOS"
                             showAddComboDialog = false
                         }
                     },
