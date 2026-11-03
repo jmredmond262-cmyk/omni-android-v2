@@ -25,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -35,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextOverflow
 import com.example.ui.MainViewModel
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
@@ -59,7 +61,6 @@ fun WeatherForecastScreen(viewModel: MainViewModel) {
             Column(modifier = Modifier.weight(1f)) {
                 Text("CLIMA EN VIVO", color = cyan, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
                 Text(city.ifBlank { weather?.locationName ?: "Tu ubicación" }, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                Text("Redcom · Titular: Juan Redmond", color = Color(0xFFB8C8D9), fontSize = 10.sp)
             }
             Button(onClick = { viewModel.refreshWeatherNow() }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF12334A))) {
                 Text("Actualizar", color = cyan, fontSize = 11.sp)
@@ -75,25 +76,31 @@ fun WeatherForecastScreen(viewModel: MainViewModel) {
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(13.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.Top
                     ) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(alert.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            Text("${alert.severity.label} · ${alert.validUntil}", color = Color(0xFFFFC078), fontSize = 10.sp)
-                            Text(alert.description, color = Color(0xFFB8C8D9), fontSize = 11.sp)
-                            Text(alert.instructions, color = Color(0xFFB8C8D9), fontSize = 10.sp)
+                            Text(alert.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text("${alert.severity.label} · ${alert.validUntil}", color = Color(0xFFFFC078), fontSize = 9.sp, maxLines = 1)
+                            Text(alert.description, color = Color(0xFFB8C8D9), fontSize = 10.sp, lineHeight = 14.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                            Text(alert.instructions, color = Color(0xFFB8C8D9), fontSize = 9.sp, lineHeight = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         }
-                        IconButton(onClick = {
-                            val message = "⚠️ ${alert.title}\n\n${alert.description}\n\nIndicaciones: ${alert.instructions}\nVálido hasta: ${alert.validUntil}\n\nCompartido desde OMNI"
-                            val intent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_SUBJECT, alert.title)
-                                putExtra(Intent.EXTRA_TEXT, message)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            IconButton(
+                                onClick = {
+                                    val message = "⚠️ ${alert.title}\n\n${alert.description}\n\nIndicaciones: ${alert.instructions}\nVálido hasta: ${alert.validUntil}\n\nCompartido desde OMNI"
+                                    val intent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_SUBJECT, alert.title)
+                                        putExtra(Intent.EXTRA_TEXT, message)
+                                    }
+                                    context.startActivity(Intent.createChooser(intent, "Compartir alerta OMNI"))
+                                },
+                                modifier = Modifier.size(36.dp)
+                            ) { Icon(Icons.Default.Share, contentDescription = "Compartir alerta", tint = cyan, modifier = Modifier.size(17.dp)) }
+                            IconButton(onClick = { viewModel.dismissAlert(alert.id) }, modifier = Modifier.size(36.dp)) {
+                                Icon(Icons.Default.Close, contentDescription = "Descartar alerta", tint = Color(0xFF91A5BB), modifier = Modifier.size(17.dp))
                             }
-                            context.startActivity(Intent.createChooser(intent, "Compartir alerta OMNI"))
-                        }) {
-                            Icon(Icons.Default.Share, contentDescription = "Compartir alerta", tint = cyan)
                         }
                     }
                 }
