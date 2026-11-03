@@ -9,6 +9,7 @@ import kotlinx.coroutines.withTimeout
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.SampleData
+import com.example.data.analytics.UsageAnalyticsRepository
 import com.example.data.ArgentinaAttractions
 import com.example.data.api.RealLocationHelper
 import com.example.data.api.RealLocationResult
@@ -278,6 +279,7 @@ class MainViewModel : ViewModel() {
             phone = phone.trim(),
             avatarUrl = photoUrl.trim()
         )
+        UsageAnalyticsRepository.trackScreen(uid, _currentScreen.value.title)
     }
 
     // Modo Negocio / Comerciante (Mi Comercio Administrado: Redcom Romang)
@@ -485,6 +487,7 @@ class MainViewModel : ViewModel() {
     }
 
     fun searchTrip(origin: String, destination: String) {
+        trackUsageAction("TRIP_SEARCH", "travel")
         _tripOrigin.value = origin
         _tripDestination.value = destination
         viewModelScope.launch {
@@ -684,6 +687,7 @@ class MainViewModel : ViewModel() {
         latitude: Double = _userProfile.value.currentLatitude,
         longitude: Double = _userProfile.value.currentLongitude
     ) {
+        trackUsageAction("LOCAL_DIRECTORY_SEARCH", "discovery")
         directorySearchRequestId += 1
         val requestId = directorySearchRequestId
         _isSearchingOmniDirectory.value = true
@@ -933,8 +937,22 @@ class MainViewModel : ViewModel() {
         _selectedWaypointLandmark.value = name
     }
 
-    fun navigateTo(screen: Screen) {
+    private fun trackUsageAction(action: String, module: String) {
+        _userProfile.value.id.takeIf { it.isNotBlank() }?.let { uid ->
+            UsageAnalyticsRepository.trackAction(uid, action, module)
+        }
+    }
+
+    private fun setTrackedScreen(screen: Screen) {
+        if (_currentScreen.value == screen) return
+        _userProfile.value.id.takeIf { it.isNotBlank() }?.let { uid ->
+            UsageAnalyticsRepository.trackScreen(uid, screen.title)
+        }
         _currentScreen.value = screen
+    }
+
+    fun navigateTo(screen: Screen) {
+        setTrackedScreen(screen)
     }
 
     fun openStoreById(storeId: String) {
@@ -942,7 +960,7 @@ class MainViewModel : ViewModel() {
             ?: _managedStore.value.takeIf { it.id == storeId }
             ?: return
         _selectedStore.value = target
-        _currentScreen.value = Screen.StoreDetail
+        setTrackedScreen(Screen.StoreDetail)
     }
 
     fun selectStoreAndOpenDetail(store: Store) {
@@ -952,21 +970,23 @@ class MainViewModel : ViewModel() {
 
     fun selectStoreAndOpenRoute(store: Store) {
         _selectedStore.value = store
-        _currentScreen.value = Screen.InteractiveRoute
+        setTrackedScreen(Screen.InteractiveRoute)
     }
 
     fun selectStoreAndPlanTripFrom(store: Store) {
-        _currentScreen.value = Screen.TripPlanner
+        setTrackedScreen(Screen.TripPlanner)
         searchTrip(store.name, _tripDestination.value)
     }
 
     fun toggleTask(taskId: String) {
+        trackUsageAction("TASK_TOGGLE", "daily")
         _tasks.value = _tasks.value.map {
             if (it.id == taskId) it.copy(isCompleted = !it.isCompleted) else it
         }
     }
 
     fun addTask(title: String, category: TaskCategory, timeTag: String) {
+        trackUsageAction("TASK_CREATE", "daily")
         val newTask = DailyTask(
             id = UUID.randomUUID().toString(),
             title = title,
@@ -978,12 +998,14 @@ class MainViewModel : ViewModel() {
     }
 
     fun toggleNeed(needId: String) {
+        trackUsageAction("LIST_ITEM_TOGGLE", "smart_list")
         _needs.value = _needs.value.map {
             if (it.id == needId) it.copy(isChecked = !it.isChecked) else it
         }
     }
 
     fun addNeed(name: String, category: ProductCategory, quantity: Int, unit: String) {
+        trackUsageAction("LIST_ITEM_ADD", "smart_list")
         val newNeed = NeedItem(
             id = UUID.randomUUID().toString(),
             name = name,
@@ -996,6 +1018,7 @@ class MainViewModel : ViewModel() {
     }
 
     fun deleteNeed(needId: String) {
+        trackUsageAction("LIST_ITEM_DELETE", "smart_list")
         _needs.value = _needs.value.filter { it.id != needId }
     }
 
@@ -1064,6 +1087,7 @@ class MainViewModel : ViewModel() {
             qrVerificationCode = "OMNI-VALID-" + (10000..99999).random()
         )
         _receipts.value = listOf(newReceipt) + _receipts.value
+        trackUsageAction("DEMO_WALLET_PURCHASE", "wallet")
 
         return true
     }
@@ -1135,6 +1159,7 @@ class MainViewModel : ViewModel() {
 
     // Funciones de Panel de Comercio (Merchant Hub)
     fun toggleStoreOpenStatus() {
+        trackUsageAction("STORE_STATUS_TOGGLE", "merchant")
         val current = _managedStore.value
         val updated = current.copy(isOpen = !current.isOpen)
         _managedStore.value = updated
@@ -1150,6 +1175,7 @@ class MainViewModel : ViewModel() {
         barcode: String? = null,
         description: String = ""
     ) {
+        trackUsageAction("PRODUCT_CREATE", "merchant")
         val current = _managedStore.value
         val newProd = StoreProduct(
             id = "prod_${UUID.randomUUID().toString().take(6)}",
@@ -1191,6 +1217,7 @@ class MainViewModel : ViewModel() {
     }
 
     fun publishStoreNews(title: String, content: String, badge: String) {
+        trackUsageAction("STORE_NEWS_PUBLISH", "merchant")
         val current = _managedStore.value
         val newNews = StoreNews(
             id = UUID.randomUUID().toString(),
@@ -1269,6 +1296,7 @@ class MainViewModel : ViewModel() {
     fun sendAiPrompt(prompt: String) {
         val cleanPrompt = prompt.trim()
         if (cleanPrompt.isBlank() || _isAiThinking.value) return
+        trackUsageAction("AI_PROMPT_SENT", "omni_ai")
         _aiMessages.value = _aiMessages.value + OmniAiMessage(sender = AiSender.USER, text = cleanPrompt, timestamp = "Ahora")
         _isAiThinking.value = true
         val responseId = UUID.randomUUID().toString()
@@ -1389,10 +1417,12 @@ class MainViewModel : ViewModel() {
     }
 
     fun selectStore(store: Store) {
+        trackUsageAction("STORE_SELECT", "discovery")
         _selectedStore.value = store
     }
 
     fun filterStoresByType(type: StoreType) {
+        trackUsageAction("STORE_TYPE_FILTER", "discovery")
         _stores.value = _stores.value.filter { it.type == type }
     }
 }
