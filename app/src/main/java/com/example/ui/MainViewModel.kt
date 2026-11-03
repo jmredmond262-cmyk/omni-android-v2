@@ -171,8 +171,20 @@ class MainViewModel : ViewModel() {
     val needs: StateFlow<List<NeedItem>> = _needs.asStateFlow()
 
     // Comercios (Inicializados con los locales reales de Romang: Redcom, Coop. Agrícola, etc.)
+    private val _allStores = MutableStateFlow<List<Store>>(SampleData.sampleStores)
     private val _stores = MutableStateFlow<List<Store>>(SampleData.sampleStores)
     val stores: StateFlow<List<Store>> = _stores.asStateFlow()
+    private var selectedStoreType: StoreType? = null
+
+    private fun publishStoreResults(items: List<Store>) {
+        _allStores.value = items
+        _stores.value = selectedStoreType?.let { type -> items.filter { it.type == type } } ?: items
+    }
+
+    private fun updateManagedStoreInCollections(updated: Store) {
+        _allStores.value = _allStores.value.map { if (it.id == updated.id) updated else it }
+        updateManagedStoreInCollections(updated)
+    }
 
     private val _selectedStore = MutableStateFlow<Store?>(SampleData.sampleStores.first())
     val selectedStore: StateFlow<Store?> = _selectedStore.asStateFlow()
@@ -708,7 +720,7 @@ class MainViewModel : ViewModel() {
                 if (requestId != directorySearchRequestId) return@launch
                 val googleLocalStores = onlySelectedLocality(googleStores)
                 if (googleLocalStores.isNotEmpty()) {
-                    _stores.value = googleLocalStores.sortedBy { it.distanceMeters }
+                    publishStoreResults(googleLocalStores.sortedBy { it.distanceMeters })
                     _omniDirectoryMessage.value = "📍 ${googleLocalStores.size} comercios de ${_currentCity.value} verificados con Google Places API (New)."
                 } else {
                     // Respaldo secundario si aún no hay clave o para servicios ampliados
@@ -719,11 +731,11 @@ class MainViewModel : ViewModel() {
                         val mappedStores = found.map { it.toOmniStore() }
                         val localVerified = RealPlacesApi.fetchNearbyRealStores(latitude, longitude, radiusMeters, _currentCity.value, context)
                         val merged = onlySelectedLocality(localVerified + mappedStores).distinctBy { it.id.lowercase() }.sortedBy { it.distanceMeters }
-                        _stores.value = merged
+                        publishStoreResults(merged)
                         _omniDirectoryMessage.value = if (merged.isEmpty()) "No encontramos comercios publicados en ${_currentCity.value}. Podés elegir otra localidad para ampliar la búsqueda." else "${merged.size} comercios y servicios de ${_currentCity.value}."
                     } else {
                         val fallback = onlySelectedLocality(RealPlacesApi.fetchNearbyRealStores(latitude, longitude, radiusMeters, _currentCity.value, context))
-                        _stores.value = fallback
+                        publishStoreResults(fallback)
                         _omniDirectoryMessage.value = if (fallback.isEmpty()) "No encontramos comercios publicados en ${_currentCity.value}. Podés elegir otra localidad para ampliar la búsqueda." else "${fallback.size} comercios de ${_currentCity.value}."
                     }
                 }
@@ -780,7 +792,7 @@ class MainViewModel : ViewModel() {
             // Cargar comercios reales con Google Places API (New) y base local verificada
             val localStores = RealPlacesApi.fetchNearbyRealStores(lat, lon, _searchRadiusMeters.value, city, context)
             // Nunca conservar resultados de otra localidad ni dejar visibles comercios fuera de la zona elegida.
-            _stores.value = onlySelectedLocality(localStores)
+            publishStoreResults(onlySelectedLocality(localStores))
 
             // Actualizar viaje con origen real
             searchTrip(address, _tripDestination.value)
@@ -1190,7 +1202,7 @@ class MainViewModel : ViewModel() {
         val current = _managedStore.value
         val updated = current.copy(isOpen = !current.isOpen)
         _managedStore.value = updated
-        _stores.value = _stores.value.map { if (it.id == updated.id) updated else it }
+        updateManagedStoreInCollections(updated)
     }
 
     fun addProductToManagedStore(
@@ -1217,7 +1229,7 @@ class MainViewModel : ViewModel() {
         )
         val updated = current.copy(inventory = listOf(newProd) + current.inventory)
         _managedStore.value = updated
-        _stores.value = _stores.value.map { if (it.id == updated.id) updated else it }
+        updateManagedStoreInCollections(updated)
         // Premiar al comerciante por sumar artículos con fotos y datos
         _merchantBenefits.value = _merchantBenefits.value.copy(
             merchantPoints = _merchantBenefits.value.merchantPoints + 25
@@ -1230,7 +1242,7 @@ class MainViewModel : ViewModel() {
         val newCombo = ComboDeal(title, description, discountBadge)
         val updated = current.copy(comboDeals = listOf(newCombo) + current.comboDeals)
         _managedStore.value = updated
-        _stores.value = _stores.value.map { if (it.id == updated.id) updated else it }
+        updateManagedStoreInCollections(updated)
     }
 
     fun updateDiscountThreshold(threshold: Double, percent: Int) {
@@ -1242,7 +1254,7 @@ class MainViewModel : ViewModel() {
             specialOfferText = "$percent% de reintegro en canasta total superando los $${String.format("%,.0f", threshold)}"
         )
         _managedStore.value = updated
-        _stores.value = _stores.value.map { if (it.id == updated.id) updated else it }
+        updateManagedStoreInCollections(updated)
     }
 
     fun publishStoreNews(title: String, content: String, badge: String) {
@@ -1301,7 +1313,7 @@ class MainViewModel : ViewModel() {
             hoursText = hoursDisplay
         )
         _managedStore.value = updated
-        _stores.value = _stores.value.map { if (it.id == updated.id) updated else it }
+        updateManagedStoreInCollections(updated)
     }
 
     // ==========================================
@@ -1453,6 +1465,12 @@ class MainViewModel : ViewModel() {
 
     fun filterStoresByType(type: StoreType) {
         trackUsageAction("STORE_TYPE_FILTER", "discovery")
-        _stores.value = _stores.value.filter { it.type == type }
+        selectedStoreType = type
+        _stores.value = _allStores.value.filter { it.type == type }
+    }
+
+    fun clearStoreTypeFilter() {
+        selectedStoreType = null
+        _stores.value = _allStores.value
     }
 }
