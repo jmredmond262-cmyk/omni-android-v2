@@ -183,6 +183,12 @@ fun DemoMarketplaceScreen(onBack: () -> Unit) {
             Text("Precios de demostración en pesos argentinos · " + storeName, color = DemoMuted, fontSize = 10.sp)
         }
         item {
+            OutlinedButton(onClick = { scanDemoQr() }, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.QrCode2, null, modifier = Modifier.size(17.dp))
+                Text(" Escanear QR de producto o pedido")
+            }
+        }
+        item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Catálogo de prueba", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.weight(1f))
                 Text(demoCatalog.size.toString() + " productos", color = DemoCyan, fontSize = 10.sp)
