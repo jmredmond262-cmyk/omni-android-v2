@@ -10,6 +10,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.SampleData
 import com.example.data.analytics.UsageAnalyticsRepository
+import com.example.data.merchant.MerchantProfileRepository
+import com.google.firebase.auth.FirebaseAuth
 import com.example.data.ArgentinaAttractions
 import com.example.data.api.RealLocationHelper
 import com.example.data.api.RealLocationResult
@@ -303,6 +305,45 @@ class MainViewModel : ViewModel() {
     // Muro de Noticias Barriales
     private val _storeNews = MutableStateFlow<List<StoreNews>>(SampleData.sampleNews)
     val storeNews: StateFlow<List<StoreNews>> = _storeNews.asStateFlow()
+    private val _merchantProfileMessage = MutableStateFlow<String?>(null)
+    val merchantProfileMessage: StateFlow<String?> = _merchantProfileMessage.asStateFlow()
+    private var merchantProfileReady = false
+    private var merchantProfileLoading = false
+
+    fun activateMerchantProfile() {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+        if (uid.isBlank()) {
+            _merchantProfileMessage.value = "Iniciá sesión para administrar tu comercio."
+            return
+        }
+        if (merchantProfileReady || merchantProfileLoading) return
+        merchantProfileLoading = true
+        MerchantProfileRepository.loadOrClaim(_managedStore.value, uid) { result ->
+            merchantProfileLoading = false
+            result.onSuccess { (store, news) ->
+                _managedStore.value = store
+                _storeNews.value = news
+                updateManagedStoreInCollections(store)
+                merchantProfileReady = true
+                _merchantProfileMessage.value = null
+            }.onFailure { error ->
+                _merchantProfileMessage.value = error.localizedMessage ?: "No se pudo cargar el perfil comercial."
+                android.util.Log.e("MainViewModel", "Merchant profile load failed", error)
+            }
+        }
+    }
+
+    private fun persistManagedStore() {
+        if (!merchantProfileReady) return
+        val uid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+        if (uid.isBlank()) return
+        MerchantProfileRepository.save(_managedStore.value, _storeNews.value, uid) { result ->
+            result.onFailure { error ->
+                _merchantProfileMessage.value = error.localizedMessage ?: "No se pudo guardar el comercio en Firebase."
+                android.util.Log.e("MainViewModel", "Merchant profile save failed", error)
+            }
+        }
+    }
 
     // Buscador de Viajes y Recorridos (Por defecto Romang hacia Reconquista o destino regional)
     private val _tripOrigin = MutableStateFlow("Simón de Iriondo y San Martín, Romang")
@@ -1230,6 +1271,7 @@ class MainViewModel : ViewModel() {
         val updated = current.copy(inventory = listOf(newProd) + current.inventory)
         _managedStore.value = updated
         updateManagedStoreInCollections(updated)
+        persistManagedStore()
         // Premiar al comerciante por sumar artículos con fotos y datos
         _merchantBenefits.value = _merchantBenefits.value.copy(
             merchantPoints = _merchantBenefits.value.merchantPoints + 25
@@ -1243,6 +1285,7 @@ class MainViewModel : ViewModel() {
         val updated = current.copy(comboDeals = listOf(newCombo) + current.comboDeals)
         _managedStore.value = updated
         updateManagedStoreInCollections(updated)
+        persistManagedStore()
     }
 
     fun updateDiscountThreshold(threshold: Double, percent: Int) {
@@ -1255,6 +1298,7 @@ class MainViewModel : ViewModel() {
         )
         _managedStore.value = updated
         updateManagedStoreInCollections(updated)
+        persistManagedStore()
     }
 
     fun publishStoreNews(title: String, content: String, badge: String) {
@@ -1270,6 +1314,7 @@ class MainViewModel : ViewModel() {
             badge = badge.ifBlank { "Novedad Flash 🔥" }
         )
         _storeNews.value = listOf(newNews) + _storeNews.value
+        persistManagedStore()
     }
 
     fun setScheduleFilter(filter: StoreScheduleFilter) {
@@ -1314,6 +1359,7 @@ class MainViewModel : ViewModel() {
         )
         _managedStore.value = updated
         updateManagedStoreInCollections(updated)
+        persistManagedStore()
     }
 
     // ==========================================
