@@ -1046,6 +1046,12 @@ class MainViewModel : ViewModel() {
         setTrackedScreen(Screen.StoreDetail)
     }
 
+    /** Selecciona un comercio desde el centro de pedidos sin abandonar esa pantalla. */
+    fun selectStoreForOrders(store: Store) {
+        _selectedStore.value = store
+        trackUsageAction("ORDER_STORE_SELECTED", "orders", mapOf("storeId" to store.id))
+    }
+
     fun selectStoreAndOpenRoute(store: Store) {
         _selectedStore.value = store
         trackUsageAction("STORE_ROUTE_OPENED", "maps_locations", mapOf("source" to "store_detail"))
