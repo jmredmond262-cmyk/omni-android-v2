@@ -269,7 +269,7 @@ fun OmniApp(viewModel: MainViewModel) {
             weather.isDay -> "☀"
             else -> "🌙"
         }
-    } ?: "⛅"
+    } ?: "—"
 
     var showLocationDialog by remember { mutableStateOf(false) }
     var customCityInput by remember(displayLocality) { mutableStateOf(displayLocality) }
