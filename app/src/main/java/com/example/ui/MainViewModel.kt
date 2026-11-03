@@ -175,9 +175,17 @@ class MainViewModel : ViewModel() {
     val stores: StateFlow<List<Store>> = _stores.asStateFlow()
     private var selectedStoreType: StoreType? = null
 
+    private var storeCatalogRequestId = 0L
+
     private fun publishStoreResults(items: List<Store>) {
+        val requestId = ++storeCatalogRequestId
         _allStores.value = items
         _stores.value = selectedStoreType?.let { type -> items.filter { it.type == type } } ?: items
+        MerchantProfileRepository.loadPublicCatalogs(items) { enriched ->
+            if (requestId != storeCatalogRequestId) return@loadPublicCatalogs
+            _allStores.value = enriched
+            _stores.value = selectedStoreType?.let { type -> enriched.filter { it.type == type } } ?: enriched
+        }
     }
 
     private fun updateManagedStoreInCollections(updated: Store) {

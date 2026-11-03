@@ -104,6 +104,37 @@ object MerchantProfileRepository {
             .addOnFailureListener { callback(Result.failure(it)) }
     }
 
+
+    /**
+     * Enriches real directory results with the merchant's latest public catalog.
+     * It never claims a profile and falls back to the directory data if Firestore is unavailable.
+     */
+    fun loadPublicCatalogs(stores: List<Store>, callback: (List<Store>) -> Unit) {
+        if (stores.isEmpty()) {
+            callback(emptyList())
+            return
+        }
+        db.collection("merchantProfiles").get()
+            .addOnSuccessListener { snapshot ->
+                val profiles = snapshot.documents
+                val enriched = stores.map { base ->
+                    val profile = profiles.firstOrNull { it.id == base.id }
+                        ?: profiles.firstOrNull { document ->
+                            val nameMatches = document.getString("storeName").orEmpty()
+                                .equals(base.name, ignoreCase = true)
+                            val profileAddress = document.getString("address").orEmpty()
+                            val addressMatches = profileAddress.isNotBlank() &&
+                                (base.address.contains(profileAddress, ignoreCase = true) ||
+                                    profileAddress.contains(base.address, ignoreCase = true))
+                            nameMatches && addressMatches
+                        }
+                    if (profile != null) decode(profile, base).first else base
+                }
+                callback(enriched)
+            }
+            .addOnFailureListener { callback(stores) }
+    }
+
     private fun decode(snapshot: DocumentSnapshot, base: Store): Pair<Store, List<StoreNews>> {
         val combos = (snapshot.get("comboDeals") as? List<*>)?.mapNotNull { raw ->
             val map = raw as? Map<*, *> ?: return@mapNotNull null
