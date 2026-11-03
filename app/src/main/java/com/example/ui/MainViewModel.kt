@@ -1236,10 +1236,10 @@ class MainViewModel : ViewModel() {
         )
     }
 
-    fun addComboToManagedStore(title: String, description: String, discountBadge: String) {
+    fun addComboToManagedStore(title: String, description: String, discountBadge: String, audience: String = "TODOS") {
         trackUsageAction("COMBO_CREATE", "merchant")
         val current = _managedStore.value
-        val newCombo = ComboDeal(title, description, discountBadge)
+        val newCombo = ComboDeal(title, description, discountBadge, audience)
         val updated = current.copy(comboDeals = listOf(newCombo) + current.comboDeals)
         _managedStore.value = updated
         updateManagedStoreInCollections(updated)
