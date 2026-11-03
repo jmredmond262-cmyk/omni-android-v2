@@ -69,6 +69,13 @@ private val tabs = listOf(
   AdminTab("feedback", "Comentarios", "appFeedback"), AdminTab("activity", "Actividad", "usageEvents"), AdminTab("modules", "Módulos", "moduleRegistry"),
   AdminTab("audit", "Auditoría", "adminAuditLogs")
 )
+private data class AdminNavGroup(val id: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val tabIds: List<String>)
+private val navGroups = listOf(
+  AdminNavGroup("overview", "Inicio", Icons.Default.Dashboard, listOf("dashboard")),
+  AdminNavGroup("people", "Personas", Icons.Default.PeopleAlt, listOf("users", "feedback")),
+  AdminNavGroup("commerce", "Comercio", Icons.Default.Storefront, listOf("stores", "orders", "wallets", "operations")),
+  AdminNavGroup("system", "Sistema", Icons.Default.Settings, listOf("activity", "modules", "audit"))
+)
 
 @Composable
 private fun OmniAdminRoot() {
@@ -238,28 +245,92 @@ private fun AdminHome(
   onSaveConfig: (JSONObject) -> Unit, onSaveModule: (String, String, String, Boolean) -> Unit,
   onInvite: (String) -> Unit
 ) {
-  Scaffold(containerColor = Navy, topBar = {
-    Column(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color(0xFF101F35), Color(0xFF091321), Color(0xFF101F35)))).border(width = 1.dp, color = Color(0xFF12364D)).padding(horizontal = 16.dp, vertical = 13.dp)) {
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-          Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Box(Modifier.size(8.dp).background(Mint, RoundedCornerShape(50))) ; Text("OMNI ADMIN", color = Mint, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp) }
-          Text(email, color = White, fontSize = 12.sp, maxLines = 1)
+  val activeGroup = navGroups.firstOrNull { selected in it.tabIds } ?: navGroups.first()
+  val activeTab = tabs.firstOrNull { it.id == selected }
+  Scaffold(
+    containerColor = Navy,
+    topBar = {
+      Column(
+        Modifier.fillMaxWidth()
+          .background(Brush.verticalGradient(listOf(Color(0xFF10243A), Color(0xFF091321))))
+          .border(width = 1.dp, color = Color(0xFF12364D))
+          .padding(horizontal = 16.dp, vertical = 12.dp)
+      ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Box(
+            Modifier.size(38.dp).clip(RoundedCornerShape(13.dp))
+              .background(Brush.linearGradient(listOf(Mint, Color(0xFF1268D8)))),
+            contentAlignment = Alignment.Center
+          ) { Text("O", color = Navy, fontSize = 25.sp, fontWeight = FontWeight.Black) }
+          Spacer(Modifier.width(10.dp))
+          Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text("OMNI ADMIN", color = White, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
+            Text(activeTab?.label ?: "Centro de control", color = Mint, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+          }
+          IconButton(onClick = onRefresh) { Icon(Icons.Default.Refresh, "Actualizar datos", tint = Mint) }
+          IconButton(onClick = onSignOut) { Icon(Icons.Default.Logout, "Cerrar sesión", tint = Muted) }
         }
-        IconButton(onClick = onRefresh) { Icon(Icons.Default.Refresh, "Actualizar", tint = White) }
-        IconButton(onClick = onSignOut) { Icon(Icons.Default.Logout, "Cerrar sesión", tint = White) }
+        Spacer(Modifier.height(9.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Box(Modifier.size(7.dp).background(Mint, RoundedCornerShape(50)))
+          Spacer(Modifier.width(7.dp))
+          Text(email, color = Muted, fontSize = 11.sp, maxLines = 1)
+          Spacer(Modifier.weight(1f))
+          Text("PANEL PRIVADO", color = Mint, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        }
+        val groupTabs = tabs.filter { it.id in activeGroup.tabIds }
+        if (groupTabs.size > 1) {
+          Spacer(Modifier.height(12.dp))
+          Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            groupTabs.forEach { tab ->
+              FilterChip(
+                selected = selected == tab.id,
+                onClick = { onSelect(tab.id) },
+                label = { Text(tab.label, maxLines = 1, fontSize = 11.sp) },
+                colors = FilterChipDefaults.filterChipColors(
+                  selectedContainerColor = Mint,
+                  selectedLabelColor = Navy,
+                  labelColor = Muted,
+                  containerColor = PanelSoft
+                ),
+                border = FilterChipDefaults.filterChipBorder(
+                  enabled = true, selected = selected == tab.id,
+                  borderColor = Color(0xFF21445D), selectedBorderColor = Mint
+                )
+              )
+            }
+          }
+        }
       }
-      Spacer(Modifier.height(10.dp))
-      Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        tabs.forEach { tab ->
-          FilterChip(selected == tab.id, { onSelect(tab.id) }, label = { Text(tab.label, maxLines = 1) },
-            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Mint, selectedLabelColor = Navy, labelColor = Muted))
+    },
+    bottomBar = {
+      NavigationBar(containerColor = Color(0xFF0A1423), contentColor = Mint, tonalElevation = 0.dp) {
+        navGroups.forEach { group ->
+          NavigationBarItem(
+            selected = activeGroup.id == group.id,
+            onClick = { onSelect(group.tabIds.first()) },
+            icon = { Icon(group.icon, contentDescription = group.label) },
+            label = { Text(group.label, fontSize = 10.sp, maxLines = 1) },
+            colors = NavigationBarItemDefaults.colors(
+              selectedIconColor = Mint,
+              selectedTextColor = Mint,
+              indicatorColor = Color(0xFF12384C),
+              unselectedIconColor = Muted,
+              unselectedTextColor = Muted
+            )
+          )
         }
       }
     }
-  }) { padding ->
+  ) { padding ->
     Column(Modifier.fillMaxSize().padding(padding)) {
       if (loading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Mint, trackColor = Panel)
-      if (error.isNotBlank()) Text(error, Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), color = if (error.contains("correctamente") || error.contains("registrada") || error.contains("actualizado")) Mint else Danger, fontSize = 13.sp)
+      if (error.isNotBlank()) Text(
+        error,
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        color = if (error.contains("correctamente") || error.contains("registrada") || error.contains("actualizado")) Mint else Danger,
+        fontSize = 13.sp
+      )
       when (selected) {
         "dashboard" -> DashboardContent(payload)
         else -> RecordsContent(selected, payload.optJSONArray("items") ?: JSONArray(), hasMore, onLoadMore)
