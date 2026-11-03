@@ -64,6 +64,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -127,6 +131,25 @@ fun ContactsScreen(
     }
     LaunchedEffect(hasContactsPermission, selectedTab) {
         if (selectedTab == 0 && hasContactsPermission) loadPhoneContacts()
+    }
+
+    // Actualiza el permiso y la agenda al volver desde Ajustes de Android.
+    // Esto evita mostrar una lista desactualizada si el usuario concede o revoca el permiso fuera de OMNI.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, selectedTab) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val granted = ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.READ_CONTACTS
+                ) == PackageManager.PERMISSION_GRANTED
+                hasContactsPermission = granted
+                if (selectedTab == 0 && granted) loadPhoneContacts()
+                if (!granted) phoneContacts = emptyList()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     var selectedCategory by remember { mutableStateOf<ContactCategory?>(null) }
