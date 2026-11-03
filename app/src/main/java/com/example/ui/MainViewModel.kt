@@ -819,6 +819,7 @@ class MainViewModel : ViewModel() {
     }
 
     fun refreshWeatherNow() {
+        trackUsageAction("WEATHER_REFRESH", "weather")
         val profile = _userProfile.value
         fetchLiveWeatherAndAlerts(
             profile.currentLatitude,
@@ -841,6 +842,7 @@ class MainViewModel : ViewModel() {
     }
 
     fun searchRealDestinations(query: String) {
+        if (query.isNotBlank()) trackUsageAction("DESTINATION_SEARCH", "travel")
         viewModelScope.launch {
             _isSearchingPlaces.value = true
             val results = RealPlacesApi.searchRealLocation(query)
@@ -1032,6 +1034,7 @@ class MainViewModel : ViewModel() {
     }
 
     fun setCategoryFilter(category: ProductCategory?) {
+        if (_selectedCategoryFilter.value != category) trackUsageAction("PRODUCT_CATEGORY_FILTER", "smart_list")
         _selectedCategoryFilter.value = category
     }
 
@@ -1122,12 +1125,14 @@ class MainViewModel : ViewModel() {
     }
 
     fun toggleContactFavorite(contactId: String) {
+        trackUsageAction("CONTACT_FAVORITE_TOGGLE", "contacts")
         _contacts.value = _contacts.value.map {
             if (it.id == contactId) it.copy(isFavorite = !it.isFavorite) else it
         }
     }
 
     fun addCustomContact(name: String, category: ContactCategory, phone: String, address: String) {
+        trackUsageAction("CONTACT_CREATE", "contacts")
         val newContact = NeighborhoodContact(
             id = UUID.randomUUID().toString(),
             name = name,
@@ -1198,6 +1203,7 @@ class MainViewModel : ViewModel() {
     }
 
     fun addComboToManagedStore(title: String, description: String, discountBadge: String) {
+        trackUsageAction("COMBO_CREATE", "merchant")
         val current = _managedStore.value
         val newCombo = ComboDeal(title, description, discountBadge)
         val updated = current.copy(comboDeals = listOf(newCombo) + current.comboDeals)
