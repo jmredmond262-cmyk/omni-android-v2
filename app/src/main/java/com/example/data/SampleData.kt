@@ -157,7 +157,7 @@ object SampleData {
             is24Hours = false,
             isOnDuty = false,
             openOnHolidays = false,
-            scheduleNotes = "Atendido por Santiago Rossi • Tu local de tecnología en Romang"
+            scheduleNotes = "Atención comercial Redcom • Tu local de tecnología en Romang"
         ),
         Store(
             id = "coop_agricola_romang",
