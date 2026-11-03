@@ -163,7 +163,7 @@ object RealWeatherApi {
         longitude: Double
     ): List<WeatherAlert> = withContext(Dispatchers.IO) {
         val alerts = mutableListOf<WeatherAlert>()
-        val alertDate = java.time.LocalDate.now().toString()
+        val alertDate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
 
         // 1. Alerta de Calor Extremo
         if (weather.temperatureC >= 34.0) {
