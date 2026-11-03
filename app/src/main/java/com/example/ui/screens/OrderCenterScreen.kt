@@ -269,6 +269,19 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
         }.addOnFailureListener { feedback = it.localizedMessage ?: "No se pudo actualizar el estado." }
     }
 
+    fun cancelCustomerOrder(order: OmniStoreOrder) {
+        if (order.customerUid != uid || order.status != "RECIBIDO") {
+            feedback = "Solo podés cancelar un pedido propio que todavía no fue aceptado."
+            return
+        }
+        db.collection("storeOrders").document(order.id).update(
+            mapOf("status" to "CANCELADO", "updatedAt" to FieldValue.serverTimestamp(), "cancelledBy" to uid)
+        ).addOnSuccessListener {
+            UsageAnalyticsRepository.trackEvent(uid, "orders", "ORDER_CANCELLED_BY_CUSTOMER", mapOf("operationId" to order.id, "stage" to "CUSTOMER_CANCELLATION_CONFIRMED", "success" to true))
+            feedback = "El pedido fue cancelado."
+        }.addOnFailureListener { feedback = it.localizedMessage ?: "No se pudo cancelar el pedido." }
+    }
+
     Column(Modifier.fillMaxSize().background(Color(0xFF070A14)).padding(16.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White) }
@@ -287,6 +300,7 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
             else if (!merchantReady) Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFF57DDF5)) }
         } else {
             Text("Elegí un comercio, seleccioná sus productos y enviá tu pedido. El QR identifica el pedido; no acredita un pago.", color = Color(0xFF9AAAC2), fontSize = 11.sp)
+            Text("CATÁLOGO DE PRUEBA · Los precios y la disponibilidad deben confirmarse con el comercio. OMNI Pay no procesa dinero real en este flujo.", color = Color(0xFFFFC978), fontSize = 10.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 5.dp))
             LazyRow(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(7.dp)
@@ -390,7 +404,7 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
                 Text("MIS PEDIDOS", color = Color(0xFF57DDF5), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(top = 6.dp, bottom = 80.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(ownOrders, key = { it.id }) { order ->
-                        OrderStatusCard(order, merchantMode = false, onAdvance = {})
+                        OrderStatusCard(order, merchantMode = false, onAdvance = { next -> if (next == "CANCELADO") cancelCustomerOrder(order) })
                     }
                 }
             }
@@ -523,6 +537,11 @@ private fun OrderStatusCard(order: OmniStoreOrder, merchantMode: Boolean, onAdva
                     val phoneNumber = order.customerPhone.filter { it.isDigit() }
                     runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$phoneNumber"))) }
                 }) { Text("Contactar cliente por WhatsApp", color = Color(0xFF57DDF5), fontSize = 10.sp) }
+            }
+            if (!merchantMode && order.status == "RECIBIDO") {
+                OutlinedButton(onClick = { onAdvance("CANCELADO") }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Cancelar pedido", fontSize = 10.sp)
+                }
             }
             if (merchantMode && next.isNotBlank()) {
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
