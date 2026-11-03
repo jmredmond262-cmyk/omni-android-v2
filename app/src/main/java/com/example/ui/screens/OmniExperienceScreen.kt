@@ -55,9 +55,12 @@ fun OmniExperienceScreen(viewModel: MainViewModel, onBack: () -> Unit) {
     val rewards by viewModel.userRewards.collectAsState()
     val city by viewModel.currentCity.collectAsState()
     var section by remember { mutableStateOf("Todos") }
-    val sections = listOf("Todos", "Jóvenes", "Turistas", "Flash", "Puntos")
+    val sections = listOf("Todos", "Jóvenes", "Turistas", "Usuarios", "Flash", "Puntos")
     val discountStores = stores.filter { it.minSpendDiscountPercent > 0 && it.minSpendDiscountThreshold > 0.0 }
     val flashStores = stores.filter { it.comboDeals.isNotEmpty() }
+    val studentDeals = stores.flatMap { store -> store.comboDeals.filter { it.audience == "ESTUDIANTES" }.map { store to it } }
+    val touristDeals = stores.flatMap { store -> store.comboDeals.filter { it.audience == "TURISTAS" }.map { store to it } }
+    val userDeals = stores.flatMap { store -> store.comboDeals.filter { it.audience == "TODOS" || it.audience == "USUARIOS" }.map { store to it } }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(ExperienceBackground),
@@ -107,6 +110,14 @@ fun OmniExperienceScreen(viewModel: MainViewModel, onBack: () -> Unit) {
             item {
                 Text("Los descuentos mostrados no son exclusivos para estudiantes salvo que el comercio lo indique. Consultá condiciones y acreditación antes de comprar.", color = Color(0xFF8FA2BA), fontSize = 9.sp, lineHeight = 13.sp)
             }
+            item { ExperienceSectionHeader("🎓", "PROMOCIONES PARA ESTUDIANTES", "Beneficios publicados específicamente para OMNI Joven") }
+            if (studentDeals.isEmpty()) {
+                item { ExperienceEmptyState("Todavía no hay combos exclusivos para estudiantes publicados por comercios.") }
+            } else {
+                items(studentDeals, key = { "student-" + it.first.id + "-" + it.second.title }) { offer ->
+                    AudienceDealCard(store = offer.first, deal = offer.second)
+                }
+            }
         }
         if (section == "Todos" || section == "Turistas") {
             item { ExperienceSectionHeader("🧳", "OMNI TURISTA", "Atractivos cercanos a tu ubicación") }
@@ -129,6 +140,29 @@ fun OmniExperienceScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                             ) { Text("Planificar visita", fontSize = 10.sp) }
                         }
                     }
+                }
+            }
+            item { ExperienceSectionHeader("🧳", "BENEFICIOS PARA TURISTAS", "Promociones identificadas para visitantes") }
+            if (touristDeals.isEmpty()) {
+                item { ExperienceEmptyState("No hay promociones para turistas publicadas en esta zona por ahora.") }
+            } else {
+                items(touristDeals, key = { "tour-deal-" + it.first.id + "-" + it.second.title }) { offer ->
+                    AudienceDealCard(store = offer.first, deal = offer.second)
+                }
+            }
+        }
+        if (section == "Todos" || section == "Usuarios") {
+            item { ExperienceSectionHeader("⭐", "BENEFICIOS PARA USUARIOS", "Promociones generales de comercios adheridos") }
+            if (userDeals.isEmpty()) {
+                item { ExperienceEmptyState("Todavía no hay promociones generales publicadas.") }
+            } else {
+                items(userDeals, key = { "user-deal-" + it.first.id + "-" + it.second.title }) { offer ->
+                    AudienceDealCard(store = offer.first, deal = offer.second)
+                }
+            }
+            if (discountStores.isNotEmpty()) {
+                items(discountStores, key = { "user-discount-" + it.id }) { store ->
+                    DiscountOfferCard(store = store, onOpen = { viewModel.selectStoreAndOpenDetail(store) })
                 }
             }
         }
@@ -199,6 +233,23 @@ private fun ExperienceSectionHeader(emoji: String, title: String, subtitle: Stri
 private fun ExperienceEmptyState(message: String) {
     Card(colors = CardDefaults.cardColors(containerColor = ExperienceCard), shape = RoundedCornerShape(12.dp)) {
         Text(message, color = Color(0xFFB8C8D9), fontSize = 11.sp, modifier = Modifier.padding(13.dp))
+    }
+}
+
+@Composable
+private fun AudienceDealCard(store: Store, deal: com.example.model.ComboDeal) {
+    Card(colors = CardDefaults.cardColors(containerColor = ExperienceCard), shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(deal.title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Surface(color = Color(0xFF302044), shape = RoundedCornerShape(7.dp)) {
+                    Text(deal.discountBadge, color = ExperiencePurple, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp))
+                }
+            }
+            Text(store.name, color = ExperienceCyan, fontSize = 10.sp)
+            Text(deal.description, color = Color(0xFFB8C8D9), fontSize = 11.sp)
+            Text("Consultá vigencia y condiciones con el comercio.", color = Color(0xFF8FA2BA), fontSize = 9.sp)
+        }
     }
 }
 
