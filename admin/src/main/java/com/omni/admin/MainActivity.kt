@@ -64,7 +64,7 @@ class MainActivity : ComponentActivity() {
 private data class AdminTab(val id: String, val label: String, val collection: String? = null)
 private val tabs = listOf(
   AdminTab("dashboard", "Resumen"), AdminTab("users", "Usuarios", "users"),
-  AdminTab("wallets", "Billeteras", "walletAccounts"), AdminTab("operations", "Operaciones", "walletOperations"),
+  AdminTab("wallets", "Billeteras", "walletAccounts"), AdminTab("operations", "Operaciones", "walletOperations"), AdminTab("finance", "Finanzas"),
   AdminTab("stores", "Comercios", "merchantProfiles"), AdminTab("orders", "Pedidos", "storeOrders"), AdminTab("events", "Eventos", "omniEvents"),
   AdminTab("feedback", "Comentarios", "appFeedback"), AdminTab("activity", "Actividad", "usageEvents"), AdminTab("modules", "Módulos", "moduleRegistry"),
   AdminTab("audit", "Auditoría", "adminAuditLogs"), AdminTab("invitations", "Invitaciones", "betaInvitations"), AdminTab("settings", "Configuración")
@@ -73,7 +73,7 @@ private data class AdminNavGroup(val id: String, val label: String, val icon: an
 private val navGroups = listOf(
   AdminNavGroup("overview", "Inicio", Icons.Default.Dashboard, listOf("dashboard")),
   AdminNavGroup("people", "Personas", Icons.Default.PeopleAlt, listOf("users", "feedback")),
-  AdminNavGroup("commerce", "Comercio", Icons.Default.Storefront, listOf("stores", "orders", "wallets", "operations")),
+  AdminNavGroup("commerce", "Comercio", Icons.Default.Storefront, listOf("stores", "orders", "wallets", "operations", "finance")),
   AdminNavGroup("system", "Sistema", Icons.Default.Settings, listOf("activity", "events", "modules", "audit", "invitations", "settings"))
 )
 
@@ -101,6 +101,7 @@ private fun OmniAdminRoot() {
         nextPageToken = ""; nextOffset = 0; hasMore = false
         payload = when (selected) {
           "dashboard" -> AdminApi.call(token, "dashboard")
+          "finance" -> AdminApi.call(token, "finance")
           "settings" -> AdminApi.call(token, "getConfig")
           else -> AdminApi.call(token, "list", JSONObject().put("collection", tab.collection).put("limit", 100))
         }
@@ -333,6 +334,7 @@ private fun AdminHome(
       )
       when (selected) {
         "dashboard" -> DashboardContent(payload, onSelect)
+        "finance" -> FinanceContent(payload)
         "modules" -> ModuleContent(payload.optJSONArray("items") ?: JSONArray(), onSaveModule)
         "settings" -> ConfigContent(payload.optJSONObject("config") ?: JSONObject(), onSaveConfig)
         "invitations" -> InvitationContent(payload.optJSONArray("items") ?: JSONArray(), onInvite)
@@ -352,6 +354,7 @@ private fun DashboardContent(payload: JSONObject, onSelect: (String) -> Unit) {
     Triple("Comercios", counts.optInt("merchantProfiles").toString(), Icons.Default.Storefront),
     Triple("Pedidos", counts.optInt("storeOrders").toString(), Icons.Default.ShoppingCart),
     Triple("Billeteras DEMO", counts.optInt("walletAccounts").toString(), Icons.Default.AccountBalanceWallet),
+    Triple("Capital virtual", "OM$ " + String.format("%.0f", payload.optDouble("walletBalanceSample")), Icons.Default.AccountBalance),
     Triple("Activos · 7 días", payload.optInt("activeUsers7d").toString(), Icons.Default.Person),
     Triple("Sesiones · 7 días", analytics.optInt("sessions7d").toString(), Icons.Default.QueryStats),
     Triple("Operaciones", counts.optInt("walletOperations").toString(), Icons.Default.SwapHoriz),
@@ -411,6 +414,7 @@ private fun DashboardContent(payload: JSONObject, onSelect: (String) -> Unit) {
               "Comercios" -> "stores"
               "Pedidos" -> "orders"
               "Billeteras DEMO" -> "wallets"
+              "Capital virtual" -> "finance"
               "Sesiones · 7 días" -> "activity"
               "Operaciones" -> "operations"
               "Eventos" -> "events"
@@ -570,6 +574,79 @@ private fun DashboardContent(payload: JSONObject, onSelect: (String) -> Unit) {
     }
   }
 }
+
+@Composable
+private fun FinanceContent(payload: JSONObject) {
+  val summary = payload.optJSONObject("summary") ?: JSONObject()
+  val accounts = jsonArrayToList(payload.optJSONArray("accounts"))
+  val transactions = jsonArrayToList(payload.optJSONArray("transactions"))
+  val operations = jsonArrayToList(payload.optJSONArray("operations"))
+  fun money(key: String): String = "OM$ " + String.format("%.2f", summary.optDouble(key))
+  LazyColumn(
+    Modifier.fillMaxSize().background(Navy).padding(horizontal = 15.dp),
+    contentPadding = PaddingValues(vertical = 18.dp),
+    verticalArrangement = Arrangement.spacedBy(12.dp)
+  ) {
+    item {
+      Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))
+          .background(Brush.linearGradient(listOf(Color(0xFF123A5D), Color(0xFF101B35), Color(0xFF0A1426))))
+          .border(1.dp, Color(0xFF1679A6), RoundedCornerShape(22.dp)).padding(18.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+      ) {
+        Text("OMNI PAY · CONTROL FINANCIERO DEMO", color = Mint, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp)
+        Text(money("currentBalance"), color = White, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
+        Text("Capital virtual actualmente distribuido entre las billeteras", color = Muted, fontSize = 12.sp)
+        Text("${summary.optInt("accountCount")} cuentas · ${summary.optInt("transactionCount")} movimientos individuales", color = Mint, fontSize = 11.sp)
+      }
+    }
+    item { Text("Capital y circulación", color = White, fontSize = 17.sp, fontWeight = FontWeight.Bold) }
+    item {
+      Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+        FinanceMetric("Crédito inicial", money("initialCapital"), Icons.Default.Savings, Modifier.weight(1f))
+        FinanceMetric("Recargas", money("deposits"), Icons.Default.AddCard, Modifier.weight(1f))
+      }
+    }
+    item {
+      Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+        FinanceMetric("Transferencias", money("transferVolume"), Icons.Default.SwapHoriz, Modifier.weight(1f))
+        FinanceMetric("Pagos QR", money("qrVolume"), Icons.Default.QrCode2, Modifier.weight(1f))
+      }
+    }
+    item {
+      Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth().border(1.dp, Color(0xFF1A5068), RoundedCornerShape(16.dp))) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+          Text("Lectura correcta del capital", color = Mint, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+          Text("Créditos totales: ${money("totalCredits")}", color = White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+          Text("Salidas registradas: ${money("outflows")}", color = White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+          Text("Las transferencias internas y los pagos QR representan circulación del saldo, no capital nuevo. No se suman a las recargas.", color = Muted, fontSize = 11.sp, lineHeight = 15.sp)
+          Text("Datos de prueba. No representan dinero real ni fondos bancarios.", color = Color(0xFFFFC66D), fontSize = 10.sp)
+        }
+      }
+    }
+    item { Text("Cuentas y saldos", color = White, fontSize = 17.sp, fontWeight = FontWeight.Bold) }
+    if (accounts.isEmpty()) item { EmptyState("Todavía no hay billeteras registradas.") }
+    else items(accounts, key = { it["id"]?.toString() ?: it.hashCode().toString() }) { RecordCard(it, "walletAccounts") }
+    item { Text("Historial de movimientos", color = White, fontSize = 17.sp, fontWeight = FontWeight.Bold) }
+    if (transactions.isEmpty()) item { EmptyState("Todavía no hay movimientos individuales registrados.") }
+    else items(transactions, key = { it["id"]?.toString() ?: it.hashCode().toString() }) { RecordCard(it, "walletTransactions") }
+    item { Text("Operaciones globales", color = White, fontSize = 17.sp, fontWeight = FontWeight.Bold) }
+    if (operations.isEmpty()) item { EmptyState("Todavía no hay operaciones globales.") }
+    else items(operations.take(100), key = { it["id"]?.toString() ?: it.hashCode().toString() }) { RecordCard(it, "walletOperations") }
+  }
+}
+
+@Composable
+private fun FinanceMetric(label: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier) {
+  Card(modifier, colors = CardDefaults.cardColors(containerColor = Color(0xFF0B1830)), shape = RoundedCornerShape(15.dp)) {
+    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+      Icon(icon, null, tint = Mint, modifier = Modifier.size(20.dp))
+      Text(value, color = White, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+      Text(label, color = Muted, fontSize = 10.sp, maxLines = 2)
+    }
+  }
+}
+
 @Composable
 private fun RecordsContent(selected: String, array: JSONArray, hasMore: Boolean, onLoadMore: () -> Unit) {
   val records = jsonArrayToList(array)
@@ -623,7 +700,7 @@ private val fieldLabels = mapOf(
   "displayName" to "Nombre", "fullName" to "Nombre", "name" to "Nombre",
   "email" to "Correo", "phoneNumber" to "Teléfono", "phone" to "Teléfono",
   "alias" to "Alias", "balance" to "Saldo", "cashbackTotal" to "Cashback acumulado",
-  "amount" to "Importe", "kind" to "Tipo", "type" to "Tipo", "status" to "Estado",
+  "amount" to "Importe", "peerName" to "Contraparte", "title" to "Concepto", "senderUid" to "Cuenta de origen", "recipientUid" to "Cuenta de destino", "kind" to "Tipo", "type" to "Tipo", "status" to "Estado",
   "storeName" to "Comercio", "orderNumber" to "Pedido", "total" to "Total",
   "paymentStatus" to "Estado del pago", "paymentMethod" to "Medio de pago",
   "fulfillmentType" to "Entrega", "action" to "Acción", "target" to "Destino",
@@ -641,7 +718,8 @@ private fun friendlyEnum(value: String): String = when (value.uppercase()) {
   "APP_BACKGROUND" -> "Aplicación en segundo plano"
   "SCREEN_VIEW" -> "Visita de pantalla"
   "SCREEN_EXIT" -> "Salida de pantalla"
-  "DEPOSIT" -> "Carga de saldo DEMO"
+  "DEPOSIT" -> "Recarga virtual DEMO"
+  "CARGA_SALDO" -> "Crédito de saldo DEMO"
   "TRANSFER" -> "Transferencia"
   "QR_PAYMENT" -> "Pago con QR"
   "COMPRA_LOCAL" -> "Compra en comercio"
@@ -675,15 +753,17 @@ private fun RecordCard(item: Map<String, Any?>, type: String) {
     "merchantProfiles" -> firstPresentValue(item, "storeName", "name").ifBlank { "Comercio OMNI" }
     "storeOrders" -> "Pedido " + firstPresentValue(item, "orderNumber", "status").ifBlank { "OMNI" }
     "appFeedback" -> "Comentario de usuario"
-    "usageEvents" -> friendlyEnum(firstPresentValue(item, "event", "eventName").ifBlank { "Actividad OMNI" })
+    "usageEvents" -> friendlyEnum(firstPresentValue(item, "event", "eventName").ifBlank { "Evento de uso" })
+    "walletTransactions" -> friendlyEnum(firstPresentValue(item, "type", "kind", "title").ifBlank { "Movimiento de billetera" })
     "omniEvents" -> firstPresentValue(item, "title", "name", "event", "eventName").ifBlank { "Evento OMNI" }
     "adminAuditLogs" -> friendlyEnum(firstPresentValue(item, "action").ifBlank { "Actividad administrativa" })
-    else -> firstPresentValue(item, "title", "name", "action").ifBlank { "Registro OMNI" }
+    else -> firstPresentValue(item, "title", "name", "action").ifBlank { "Actividad sin categoría" }
   }
   val preferred = when (type) {
     "users" -> listOf("email", "phoneNumber", "phone", "createdAt", "lastSeenAt")
     "walletAccounts" -> listOf("balance", "cashbackTotal", "createdAt")
     "walletOperations" -> listOf("amount", "status", "createdAt")
+    "walletTransactions" -> listOf("amount", "status", "peerName", "createdAt")
     "merchantProfiles" -> listOf("description", "category", "address", "status", "createdAt")
     "storeOrders" -> listOf("total", "paymentStatus", "fulfillmentType", "createdAt")
     "appFeedback" -> listOf("message", "createdAt")
