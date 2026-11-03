@@ -375,7 +375,8 @@ async function financialOverview(env) {
 
 async function handleAction(env, actor, action, data) {
   switch (action) {
-    case "dashboard": return dashboard(env);\n    case "finance": return financialOverview(env);
+    case "dashboard": return dashboard(env);
+    case "finance": return financialOverview(env);
     case "list": {
       const collection = String(data.collection || "");
       const allowed = new Set(["users", "walletAccounts", "walletOperations", "merchantProfiles", "storeOrders", "omniEvents", "appFeedback", "usageEvents", "moduleRegistry", "adminAuditLogs", "betaInvitations"]);
