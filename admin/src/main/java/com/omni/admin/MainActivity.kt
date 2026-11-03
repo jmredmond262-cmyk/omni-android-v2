@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,7 +20,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -198,13 +201,13 @@ private fun AdminLogin(onLogin: (String, String) -> Unit, onReset: (String) -> U
   var email by remember { mutableStateOf("") }
   var password by remember { mutableStateOf("") }
   var resetMode by remember { mutableStateOf(false) }
-  Box(Modifier.fillMaxSize().background(Navy).padding(24.dp), contentAlignment = Alignment.Center) {
+  Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF071426), Navy, Color(0xFF030711)))).padding(24.dp), contentAlignment = Alignment.Center) {
     Column(Modifier.fillMaxWidth().widthIn(max = 440.dp)) {
-      Text("OMNI", color = White, fontSize = 18.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp)
-      Text("ADMIN", color = Mint, fontSize = 42.sp, fontWeight = FontWeight.Black)
-      Text("Centro de control y administración", color = Muted, fontSize = 15.sp)
+      Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) { Box(Modifier.size(46.dp).clip(RoundedCornerShape(15.dp)).background(Brush.linearGradient(listOf(Color(0xFF00E5FF), Color(0xFF1268D8)))), contentAlignment = Alignment.Center) { Text("O", color = Navy, fontSize = 30.sp, fontWeight = FontWeight.Black) }; Column { Text("OMNI", color = White, fontSize = 18.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp); Text("ADMIN CONTROL", color = Mint, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp) } }
+      Text("Tu ecosistema, bajo control", color = White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+      Text("Centro de control y administración", color = Muted, fontSize = 13.sp)
       Spacer(Modifier.height(30.dp))
-      Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(24.dp)) {
+      Card(modifier = Modifier.border(1.dp, Color(0xFF164B68), RoundedCornerShape(24.dp)), colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(24.dp), elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)) {
         Column(Modifier.fillMaxWidth().padding(22.dp)) {
           Text(if (resetMode) "Recuperar acceso" else "Acceso administrativo", color = White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
           Spacer(Modifier.height(18.dp))
@@ -236,11 +239,11 @@ private fun AdminHome(
   onInvite: (String) -> Unit
 ) {
   Scaffold(containerColor = Navy, topBar = {
-    Column(Modifier.fillMaxWidth().background(Panel).padding(horizontal = 16.dp, vertical = 12.dp)) {
+    Column(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color(0xFF101F35), Color(0xFF091321), Color(0xFF101F35)))).border(width = 1.dp, color = Color(0xFF12364D)).padding(horizontal = 16.dp, vertical = 13.dp)) {
       Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-          Text("OMNI ADMIN", color = Mint, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-          Text(email, color = White, fontSize = 13.sp, maxLines = 1)
+          Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Box(Modifier.size(8.dp).background(Mint, RoundedCornerShape(50))) ; Text("OMNI ADMIN", color = Mint, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp) }
+          Text(email, color = White, fontSize = 12.sp, maxLines = 1)
         }
         IconButton(onClick = onRefresh) { Icon(Icons.Default.Refresh, "Actualizar", tint = White) }
         IconButton(onClick = onSignOut) { Icon(Icons.Default.Logout, "Cerrar sesión", tint = White) }
@@ -319,9 +322,9 @@ private fun DashboardContent(payload: JSONObject) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
           pair.forEach { entry ->
             Card(
-              Modifier.weight(1f),
+              Modifier.weight(1f).border(1.dp, Color(0xFF17415A), RoundedCornerShape(18.dp)),
               colors = CardDefaults.cardColors(containerColor = Panel),
-              shape = RoundedCornerShape(18.dp)
+              shape = RoundedCornerShape(18.dp), elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
             ) {
               Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                 Text(entry.first, color = Muted, fontSize = 12.sp)
@@ -332,7 +335,7 @@ private fun DashboardContent(payload: JSONObject) {
         }
       }
       item {
-        Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(20.dp)) {
+        Card(Modifier.border(1.dp, Color(0xFF17415A), RoundedCornerShape(20.dp)), colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(20.dp)) {
           Column(Modifier.fillMaxWidth().padding(17.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Actividad de la plataforma", color = White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
             Text("Volumen acumulado por tipo de registro", color = Muted, fontSize = 11.sp)
@@ -565,7 +568,7 @@ private fun RecordCard(item: Map<String, Any?>, type: String) {
   }
   val protectedKeys = setOf("password", "token", "accessToken", "refreshToken", "secret", "apiKey", "qrNonce", "rawData", "authorization")
   val details = item.entries.filter { (key, value) -> key !in protectedKeys && value != null && displayValue(value).isNotBlank() }.sortedBy { it.key }
-  Card(Modifier.fillMaxWidth().clickable { expanded = !expanded }, colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp)) {
+  Card(Modifier.fillMaxWidth().border(1.dp, Color(0xFF163B54), RoundedCornerShape(16.dp)).clickable { expanded = !expanded }, colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)) {
     Column(Modifier.fillMaxWidth().padding(15.dp)) {
       Row(verticalAlignment = Alignment.CenterVertically) {
         Text(title.take(100), modifier = Modifier.weight(1f), color = White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 2)
