@@ -137,12 +137,22 @@ class RoutineReminderReceiver : BroadcastReceiver() {
         val routine = RoutineStore.load(context).firstOrNull { it.id == id && it.enabled } ?: return
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (intent.action == "com.example.omni.ROUTINE_DONE") {
+            prefs.edit().putBoolean("dismissed_$id", true).apply()
+            val second = PendingIntent.getBroadcast(context, id.hashCode() + 40,
+                Intent(context, RoutineReminderReceiver::class.java).setAction("com.example.omni.ROUTINE_SECOND_ALERT").putExtra("routine_id", id),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).cancel(second)
             manager.cancel(id.hashCode())
             val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
             context.getSharedPreferences("omni_routines", 0).edit().putString("done_$id", today).apply()
             return
         }
         if (intent.action == "com.example.omni.ROUTINE_SNOOZE") {
+            prefs.edit().putBoolean("dismissed_$id", true).apply()
+            val second = PendingIntent.getBroadcast(context, id.hashCode() + 40,
+                Intent(context, RoutineReminderReceiver::class.java).setAction("com.example.omni.ROUTINE_SECOND_ALERT").putExtra("routine_id", id),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).cancel(second)
             val snoozeIntent = Intent(context, RoutineReminderReceiver::class.java).putExtra("routine_id", id)
             val snoozePending = PendingIntent.getBroadcast(
                 context, id.hashCode() + 1, snoozeIntent,
