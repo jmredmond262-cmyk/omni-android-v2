@@ -343,207 +343,217 @@ private fun AdminHome(
 private fun DashboardContent(payload: JSONObject) {
   val counts = payload.optJSONObject("counts") ?: JSONObject()
   val analytics = payload.optJSONObject("analytics") ?: JSONObject()
-  val cards = listOf(
-    "Usuarios registrados" to counts.optInt("users").toString(),
-    "Usuarios activos · 7 días" to payload.optInt("activeUsers7d").toString(),
-    "Sesiones · 7 días" to analytics.optInt("sessions7d").toString(),
-    "Comercios" to counts.optInt("merchantProfiles").toString(),
-    "Pedidos" to counts.optInt("storeOrders").toString(),
-    "Billeteras DEMO" to counts.optInt("walletAccounts").toString(),
-    "Operaciones" to counts.optInt("walletOperations").toString(),
-    "Eventos comunitarios" to counts.optInt("omniEvents").toString()
+  val diagnostics = payload.optJSONObject("diagnostics") ?: JSONObject()
+  val metrics = listOf(
+    Triple("Usuarios", counts.optInt("users").toString(), Icons.Default.PeopleAlt),
+    Triple("Comercios", counts.optInt("merchantProfiles").toString(), Icons.Default.Storefront),
+    Triple("Pedidos", counts.optInt("storeOrders").toString(), Icons.Default.ShoppingCart),
+    Triple("Billeteras DEMO", counts.optInt("walletAccounts").toString(), Icons.Default.AccountBalanceWallet),
+    Triple("Activos · 7 días", payload.optInt("activeUsers7d").toString(), Icons.Default.Person),
+    Triple("Sesiones · 7 días", analytics.optInt("sessions7d").toString(), Icons.Default.QueryStats),
+    Triple("Operaciones", counts.optInt("walletOperations").toString(), Icons.Default.SwapHoriz),
+    Triple("Eventos", counts.optInt("omniEvents").toString(), Icons.Default.Event)
   )
-  val activity = listOf(
-    "Operaciones" to counts.optInt("walletOperations"),
-    "Pedidos" to counts.optInt("storeOrders"),
-    "Eventos comunitarios" to counts.optInt("omniEvents"),
-    "Actividad de usuarios" to counts.optInt("usageEvents"),
-    "Comentarios" to counts.optInt("appFeedback")
-  )
-  val activityMax = (activity.maxOfOrNull { it.second } ?: 0).coerceAtLeast(1)
-  BoxWithConstraints(Modifier.fillMaxSize()) {
-    val columns = if (maxWidth >= 600.dp) 2 else 1
+  val trend = jsonArrayToList(payload.optJSONArray("usageTrend"))
+  val recentUsers = jsonArrayToList(payload.optJSONArray("recentUsers"))
+  val recentActivity = jsonArrayToList(payload.optJSONArray("recentUsageEvents"))
+  val recentOperations = jsonArrayToList(payload.optJSONArray("recentOperations"))
+  val eventCount = diagnostics.optInt("usageEventsVisibleLast7Days")
+  val testSeen = diagnostics.optBoolean("diagnosticEventSeen")
+  BoxWithConstraints(Modifier.fillMaxSize().background(Navy)) {
+    val columns = if (maxWidth >= 900.dp) 4 else if (maxWidth >= 560.dp) 4 else 2
     LazyColumn(
-      Modifier.fillMaxSize().padding(horizontal = 16.dp),
-      contentPadding = PaddingValues(top = 18.dp, bottom = 28.dp),
-      verticalArrangement = Arrangement.spacedBy(13.dp)
+      Modifier.fillMaxSize().padding(horizontal = if (maxWidth >= 700.dp) 22.dp else 14.dp),
+      contentPadding = PaddingValues(top = 16.dp, bottom = 28.dp),
+      verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
       item {
-        Card(
-          Modifier.fillMaxWidth().border(1.dp, Color(0xFF12617B), RoundedCornerShape(22.dp)),
-          colors = CardDefaults.cardColors(containerColor = Panel),
-          shape = RoundedCornerShape(22.dp)
+        Row(
+          Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))
+            .background(Brush.linearGradient(listOf(Color(0xFF123A5D), Color(0xFF101B35), Color(0xFF0A1426))))
+            .border(1.dp, Color(0xFF1679A6), RoundedCornerShape(22.dp)).padding(18.dp),
+          verticalAlignment = Alignment.CenterVertically
         ) {
-          Box(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF102B45), Color(0xFF0B1729), Color(0xFF091321)))).padding(19.dp)) {
-            Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-              Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(Modifier.size(9.dp).background(Mint, RoundedCornerShape(50)))
-                Text("OMNI · CONTROL CENTER", color = Mint, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
+          Box(
+            Modifier.size(58.dp).clip(RoundedCornerShape(50))
+              .background(Brush.radialGradient(listOf(Color(0xFF27DFFF), Color(0xFF07538E)))),
+            contentAlignment = Alignment.Center
+          ) { Icon(Icons.Default.AdminPanelSettings, null, tint = White, modifier = Modifier.size(31.dp)) }
+          Spacer(Modifier.width(14.dp))
+          Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("OMNI · CONTROL CENTER", color = Mint, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.7.sp)
+            Text("Bienvenido, Administrador", color = White, fontSize = if (maxWidth >= 560.dp) 23.sp else 19.sp, fontWeight = FontWeight.ExtraBold)
+            Text("Panel ejecutivo del ecosistema OMNI", color = Muted, fontSize = 12.sp)
+          }
+          if (maxWidth >= 560.dp) {
+            Column(horizontalAlignment = Alignment.End) {
+              Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(Modifier.size(8.dp).background(if (testSeen) Color(0xFF39F59A) else Color(0xFFFFB84D), RoundedCornerShape(50)))
+                Text(if (testSeen) "Conectividad verificada" else "Datos en observación", color = if (testSeen) Color(0xFF39F59A) else Color(0xFFFFB84D), fontSize = 10.sp, fontWeight = FontWeight.Bold)
               }
-              Text("Centro de control", color = White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
-              Text("Una visión ejecutiva de usuarios, comercios, actividad y operaciones del ecosistema.", color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
-              Spacer(Modifier.height(2.dp))
-              Surface(color = Color(0xFF103B50), shape = RoundedCornerShape(30.dp)) {
-                Text("DATOS DEL SERVIDOR · SIN CIFRAS DECORATIVAS", Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = Mint, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-              }
+              Text("OMNI ADMIN", color = Muted, fontSize = 9.sp, letterSpacing = 1.sp)
             }
           }
         }
-        Spacer(Modifier.height(2.dp))
       }
-      items(cards.chunked(columns)) { pair ->
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-          pair.forEach { entry ->
+      items(metrics.chunked(columns)) { rowMetrics ->
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+          rowMetrics.forEachIndexed { index, metric ->
+            val accents = listOf(Color(0xFF16CFFF), Color(0xFF32E7A0), Color(0xFFBD70FF), Color(0xFFFFB52E))
+            val accent = accents[(metrics.indexOf(metric) % accents.size)]
             Card(
-              Modifier.weight(1f).border(1.dp, Color(0xFF17415A), RoundedCornerShape(18.dp)),
-              colors = CardDefaults.cardColors(containerColor = Panel),
-              shape = RoundedCornerShape(18.dp), elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+              Modifier.weight(1f).heightIn(min = 118.dp)
+                .border(1.dp, accent.copy(alpha = 0.72f), RoundedCornerShape(18.dp)),
+              colors = CardDefaults.cardColors(containerColor = Color(0xFF0B1830)),
+              shape = RoundedCornerShape(18.dp),
+              elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
             ) {
-              Column(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF10243A), Panel))).padding(15.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                Box(Modifier.width(30.dp).height(3.dp).background(Mint, RoundedCornerShape(4.dp)))
-                Text(entry.first, color = Muted, fontSize = 11.sp, minLines = 2, lineHeight = 14.sp)
-                Text(entry.second.toString(), color = Mint, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-              }
-            }
-          }
-        }
-      }
-      item {
-        Card(Modifier.border(1.dp, Color(0xFF17415A), RoundedCornerShape(20.dp)), colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(20.dp)) {
-          Column(Modifier.fillMaxWidth().padding(17.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Actividad de la plataforma", color = White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-            Text("Volumen acumulado por tipo de registro", color = Muted, fontSize = 11.sp)
-            activity.forEach { (label, value) ->
-              Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+              Column(
+                Modifier.fillMaxSize().background(Brush.linearGradient(listOf(accent.copy(alpha = 0.16f), Color(0xFF0B1830), Color(0xFF091426))))
+                  .padding(13.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
+              ) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                  Text(label, Modifier.weight(1f), color = White, fontSize = 12.sp)
-                  Text(value.toString(), color = Mint, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                  Icon(metric.third, null, tint = accent, modifier = Modifier.size(23.dp))
+                  Spacer(Modifier.weight(1f))
+                  Box(Modifier.width(22.dp).height(3.dp).background(accent, RoundedCornerShape(3.dp)))
                 }
-                Box(Modifier.fillMaxWidth().height(8.dp).background(PanelSoft, RoundedCornerShape(8.dp))) {
-                  Box(
-                    Modifier.fillMaxWidth((value.toFloat() / activityMax.toFloat()).coerceIn(0f, 1f))
-                      .fillMaxHeight().background(Mint, RoundedCornerShape(8.dp))
-                  )
-                }
+                Text(metric.second, color = White, fontSize = if (maxWidth >= 560.dp) 27.sp else 24.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                Text(metric.first, color = Muted, fontSize = 10.sp, maxLines = 2, lineHeight = 13.sp)
               }
             }
-            Text("El gráfico refleja registros existentes; no inventa actividad histórica que OMNI todavía no haya guardado.", color = Muted, fontSize = 10.sp)
           }
+          repeat((columns - rowMetrics.size).coerceAtLeast(0)) { Spacer(Modifier.weight(1f)) }
         }
       }
       item {
-        val trend = jsonArrayToList(payload.optJSONArray("usageTrend"))
-        val trendMax = (trend.maxOfOrNull { (it["count"] as? Number)?.toInt() ?: 0 } ?: 0).coerceAtLeast(1)
-        Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(20.dp)) {
-          Column(Modifier.fillMaxWidth().padding(17.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Uso de OMNI · últimos 7 días", color = White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-            Text("Sesiones y pantallas registradas", color = Muted, fontSize = 11.sp)
-            if (trend.isEmpty()) {
-              Text("Todavía no hay historial suficiente para mostrar la evolución.", color = Muted, fontSize = 12.sp)
-            } else {
-              trend.forEach { point ->
-                val value = (point["count"] as? Number)?.toInt() ?: 0
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                  Text(point["date"]?.toString().orEmpty(), color = Muted, fontSize = 10.sp, modifier = Modifier.width(38.dp))
-                  Box(Modifier.weight(1f).height(9.dp).background(PanelSoft, RoundedCornerShape(8.dp))) {
-                    Box(Modifier.fillMaxWidth((value.toFloat() / trendMax.toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(Mint, RoundedCornerShape(8.dp)))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+          Card(
+            Modifier.weight(if (maxWidth >= 700.dp) 1.7f else 1f),
+            colors = CardDefaults.cardColors(containerColor = Panel),
+            shape = RoundedCornerShape(20.dp)
+          ) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.ShowChart, null, tint = Mint)
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f)) {
+                  Text("Evolución de OMNI", color = White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                  Text("Actividad registrada · últimos 7 días", color = Muted, fontSize = 10.sp)
+                }
+                Text("7 DÍAS", color = Mint, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+              }
+              if (trend.isEmpty()) {
+                Box(Modifier.fillMaxWidth().height(142.dp), contentAlignment = Alignment.Center) {
+                  Text("La evolución aparecerá cuando haya actividad registrada.", color = Muted, fontSize = 12.sp)
+                }
+              } else {
+                val maxValue = (trend.maxOfOrNull { (it["count"] as? Number)?.toFloat() ?: 0f } ?: 0f).coerceAtLeast(1f)
+                Row(Modifier.fillMaxWidth().height(142.dp), horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.Bottom) {
+                  trend.takeLast(7).forEach { point ->
+                    val value = (point["count"] as? Number)?.toFloat() ?: 0f
+                    Column(Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Bottom) {
+                      Text(value.toInt().toString(), color = White, fontSize = 9.sp)
+                      Spacer(Modifier.height(4.dp))
+                      Box(
+                        Modifier.fillMaxWidth().fillMaxHeight((value / maxValue).coerceIn(0.06f, 1f))
+                          .clip(RoundedCornerShape(topStart = 5.dp, topEnd = 5.dp))
+                          .background(Brush.verticalGradient(listOf(Mint, Color(0xFF0876B5))))
+                      )
+                      Spacer(Modifier.height(5.dp))
+                      Text(point["date"]?.toString()?.takeLast(5) ?: "—", color = Muted, fontSize = 8.sp, maxLines = 1)
+                    }
                   }
-                  Text(value.toString(), color = White, fontSize = 11.sp, modifier = Modifier.width(24.dp))
                 }
               }
             }
           }
+          if (maxWidth >= 700.dp) {
+            Card(
+              Modifier.weight(1f),
+              colors = CardDefaults.cardColors(containerColor = Panel),
+              shape = RoundedCornerShape(20.dp)
+            ) {
+              Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                  Icon(Icons.Default.MonitorHeart, null, tint = Mint)
+                  Spacer(Modifier.width(7.dp))
+                  Text("Estado del sistema", color = White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                }
+                Box(Modifier.size(62.dp).border(2.dp, if (testSeen) Color(0xFF36F39A) else Color(0xFFFFB84D), RoundedCornerShape(50)), contentAlignment = Alignment.Center) {
+                  Icon(if (testSeen) Icons.Default.Check else Icons.Default.Info, null, tint = if (testSeen) Color(0xFF36F39A) else Color(0xFFFFB84D), modifier = Modifier.size(32.dp))
+                }
+                Text(if (testSeen) "Conexión verificada" else "En observación", color = if (testSeen) Color(0xFF36F39A) else Color(0xFFFFB84D), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text("Eventos visibles (7 días): $eventCount", color = Muted, fontSize = 10.sp)
+                Text("Perfiles visibles: " + diagnostics.optInt("userProfilesVisible"), color = Muted, fontSize = 10.sp)
+              }
+            }
+          }
+        }
+      }
+      if (maxWidth < 700.dp) {
+        item {
+          Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(18.dp)) {
+            Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+              Icon(Icons.Default.MonitorHeart, null, tint = if (testSeen) Color(0xFF36F39A) else Color(0xFFFFB84D), modifier = Modifier.size(26.dp))
+              Spacer(Modifier.width(10.dp))
+              Column(Modifier.weight(1f)) {
+                Text("Estado del sistema", color = White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text(if (testSeen) "Conectividad verificada" else "Evento de diagnóstico aún no visible", color = Muted, fontSize = 10.sp)
+              }
+              Text("$eventCount", color = Mint, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            }
+          }
         }
       }
       item {
-        val topScreens = jsonArrayToList(analytics.optJSONArray("topScreens"))
-        val moduleUsage = jsonArrayToList(analytics.optJSONArray("moduleUsage"))
-        Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(20.dp)) {
-          Column(Modifier.fillMaxWidth().padding(17.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-            Text("Comportamiento de usuarios", color = White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-            Text("Permanencia media por pantalla: " + analytics.optInt("averageScreenSeconds") + " s", color = Muted, fontSize = 11.sp)
-            Text("Pantallas más visitadas", color = White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            if (topScreens.isEmpty()) Text("Se mostrará cuando haya navegación registrada.", color = Muted, fontSize = 12.sp)
-            topScreens.forEach { row ->
-              Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(row["name"]?.toString().orEmpty(), color = White, fontSize = 12.sp)
-                Text(row["count"]?.toString().orEmpty(), color = Mint, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-              }
-            }
-            Text("Módulos con más interacciones", color = White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            if (moduleUsage.isEmpty()) Text("Las acciones aparecerán a medida que se utilicen las funciones.", color = Muted, fontSize = 12.sp)
-            moduleUsage.forEach { row ->
-              Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(row["name"]?.toString().orEmpty(), color = White, fontSize = 12.sp)
-                Text(row["count"]?.toString().orEmpty(), color = Mint, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-              }
-            }
-            val eventBreakdown = jsonArrayToList(analytics.optJSONArray("eventBreakdown"))
-            Text("Acciones más frecuentes", color = White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            if (eventBreakdown.isEmpty()) Text("Las acciones aparecerán cuando se utilicen los módulos.", color = Muted, fontSize = 12.sp)
-            eventBreakdown.take(8).forEach { row ->
-              Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(friendlyEnum(row["name"]?.toString().orEmpty()), color = White, fontSize = 11.sp, modifier = Modifier.weight(1f))
-                Text(row["count"]?.toString().orEmpty(), color = Mint, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Icon(Icons.Default.History, null, tint = Mint)
+          Spacer(Modifier.width(8.dp))
+          Text("Actividad reciente", color = White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+          Spacer(Modifier.weight(1f))
+          Text("REGISTROS REALES", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        }
+      }
+      item {
+        val combined = (recentActivity + recentOperations).take(5)
+        if (combined.isEmpty()) {
+          EmptyState("Todavía no hay actividad reciente disponible.")
+        } else {
+          Card(Modifier.fillMaxWidth().border(1.dp, Color(0xFF174B69), RoundedCornerShape(18.dp)), colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(18.dp)) {
+            Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+              combined.forEachIndexed { index, record ->
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                  Box(Modifier.size(34.dp).clip(RoundedCornerShape(11.dp)).background(if (index % 2 == 0) Color(0xFF103B58) else Color(0xFF17314A)), contentAlignment = Alignment.Center) {
+                    Icon(if (index % 2 == 0) Icons.Default.Bolt else Icons.Default.ReceiptLong, null, tint = if (index % 2 == 0) Mint else Color(0xFFB77CFF), modifier = Modifier.size(19.dp))
+                  }
+                  Column(Modifier.weight(1f)) {
+                    Text(firstPresentValue(record, "event", "eventName", "kind", "type", "action").ifBlank { "Actividad registrada" }.let { friendlyEnum(it) }, color = White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    Text(firstPresentValue(record, "userLabel", "storeName", "email", "module").ifBlank { "Ecosistema OMNI" }, color = Muted, fontSize = 10.sp, maxLines = 1)
+                  }
+                  Text(firstPresentValue(record, "createdAt", "timestamp").take(16), color = Muted, fontSize = 9.sp, maxLines = 1)
+                }
+                if (index < combined.lastIndex) HorizontalDivider(color = Color(0xFF1A2E49))
               }
             }
           }
         }
       }
       item {
-        val diagnostics = payload.optJSONObject("diagnostics") ?: JSONObject()
-        Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(18.dp)) {
-          Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-            Text("Diagnóstico de conexión", color = White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            val visible = diagnostics.optInt("usageEventsVisibleLast7Days")
-            val testSeen = diagnostics.optBoolean("diagnosticEventSeen")
-            Text(
-              if (testSeen) "Escritura y lectura de analíticas: verificadas"
-              else "Evento de prueba: todavía no visible en el servidor",
-              color = if (testSeen) Mint else Danger, fontSize = 12.sp, fontWeight = FontWeight.SemiBold
-            )
-            Text("Eventos visibles (7 días): $visible", color = Muted, fontSize = 12.sp)
-            Text("Perfiles de usuario visibles: " + diagnostics.optInt("userProfilesVisible"), color = Muted, fontSize = 12.sp)
-            Text(
-              "Este control ayuda a distinguir un fallo de escritura desde OMNI de un problema de lectura del panel. Actualizá OMNI y luego este resumen.",
-              color = Muted, fontSize = 10.sp
-            )
-          }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Icon(Icons.Default.PeopleAlt, null, tint = Mint)
+          Spacer(Modifier.width(8.dp))
+          Text("Usuarios recientes", color = White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
         }
       }
+      if (recentUsers.isEmpty()) item { EmptyState("Todavía no hay perfiles recientes disponibles.") }
+      else items(recentUsers.take(3)) { RecordCard(it, "users") }
       item {
-        val balance = payload.optDouble("walletBalanceSample", 0.0)
-        val sample = payload.optInt("walletSampleSize")
-        Card(colors = CardDefaults.cardColors(containerColor = PanelSoft), shape = RoundedCornerShape(18.dp)) {
-          Column(Modifier.fillMaxWidth().padding(17.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text("Saldo DEMO observado", color = Muted, fontSize = 12.sp)
-            Text("OM$ " + "%,.2f".format(java.util.Locale("es", "AR"), balance), color = White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-            Text("Muestra de hasta 1.000 billeteras ($sample). No representa fondos reales.", color = Muted, fontSize = 11.sp)
-          }
-        }
-      }
-      item { Text("Usuarios recientes", color = White, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
-      if (jsonArrayToList(payload.optJSONArray("recentUsers")).isEmpty()) {
-        item { EmptyState("Todavía no hay perfiles recientes disponibles en la colección de usuarios.") }
-      } else {
-        items(jsonArrayToList(payload.optJSONArray("recentUsers"))) { RecordCard(it, "users") }
-      }
-      item { Text("Actividad reciente en OMNI", color = White, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
-      if (jsonArrayToList(payload.optJSONArray("recentUsageEvents")).isEmpty()) {
-        item { EmptyState("La medición de actividad comienza con las próximas sesiones de la aplicación OMNI.") }
-      } else {
-        items(jsonArrayToList(payload.optJSONArray("recentUsageEvents"))) { RecordCard(it, "usageEvents") }
-      }
-      item { Text("Últimas operaciones", color = White, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
-      if (jsonArrayToList(payload.optJSONArray("recentOperations")).isEmpty()) {
-        item { EmptyState("Todavía no hay operaciones para mostrar.") }
-      } else {
-        items(jsonArrayToList(payload.optJSONArray("recentOperations"))) { RecordCard(it, "walletOperations") }
+        Text("OMNI ADMIN  ·  CONTROL CENTRALIZADO", Modifier.fillMaxWidth().padding(top = 8.dp), color = Color(0xFF4F7998), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
       }
     }
   }
 }
-
 @Composable
 private fun RecordsContent(selected: String, array: JSONArray, hasMore: Boolean, onLoadMore: () -> Unit) {
   val records = jsonArrayToList(array)
