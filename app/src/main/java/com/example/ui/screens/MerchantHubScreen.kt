@@ -76,7 +76,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
 import android.content.Intent
-import android.graphics.Bitmap
 import android.net.Uri
 import java.io.File
 import java.io.FileOutputStream
@@ -136,6 +135,7 @@ fun MerchantHubScreen(
     var prodPrice by remember { mutableStateOf("") }
     var prodOriginalPrice by remember { mutableStateOf("") }
     var prodPhotoUri by remember { mutableStateOf<String?>(null) }
+    var pendingCameraPhoto by remember { mutableStateOf<Uri?>(null) }
     var prodBarcode by remember { mutableStateOf("") }
     var categoryExpanded by remember { mutableStateOf(false) }
 
@@ -180,20 +180,27 @@ fun MerchantHubScreen(
         }
     }
 
-    // Captura real desde la cámara del dispositivo y copia la imagen al almacenamiento privado de OMNI.
-    val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicturePreview()
-    ) { bitmap ->
-        if (bitmap != null) {
-            runCatching {
-                val photoDir = File(context.filesDir, "product_photos").apply { mkdirs() }
-                val photoFile = File(photoDir, "product_${System.currentTimeMillis()}.jpg")
-                FileOutputStream(photoFile).use { output ->
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 92, output)
-                }
-                prodPhotoUri = Uri.fromFile(photoFile).toString()
-                analyzeProductPhoto(prodPhotoUri!!)
-            }
+    // Captura de resolución completa usando FileProvider; evita la miniatura limitada de TakePicturePreview.
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { saved ->
+        val capturedUri = pendingCameraPhoto
+        if (saved && capturedUri != null) {
+            prodPhotoUri = capturedUri.toString()
+            analyzeProductPhoto(prodPhotoUri!!)
+        } else if (capturedUri != null) {
+            runCatching { File(requireNotNull(capturedUri.path)).delete() }
+        }
+        pendingCameraPhoto = null
+    }
+
+    fun launchProductCamera() {
+        runCatching {
+            val photoDir = File(context.filesDir, "product_photos").apply { mkdirs() }
+            val photoFile = File(photoDir, "product_" + System.currentTimeMillis() + ".jpg")
+            val outputUri = FileProvider.getUriForFile(context, context.packageName + ".fileprovider", photoFile)
+            pendingCameraPhoto = outputUri
+            cameraLauncher.launch(outputUri)
+        }.onFailure { error ->
+            aiAnalysisMessage = error.localizedMessage ?: "No se pudo abrir la cámara."
         }
     }
 
@@ -736,7 +743,7 @@ fun MerchantHubScreen(
                     Button(
                         onClick = {
                             showAddProductDialog = true
-                            cameraLauncher.launch(null)
+                            launchProductCamera()
                         },
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = AmberDeal),
@@ -995,7 +1002,7 @@ fun MerchantHubScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Button(
-                                onClick = { cameraLauncher.launch(null) },
+                                onClick = { launchProductCamera() },
                                 shape = RoundedCornerShape(10.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
                                 modifier = Modifier.weight(1f)
