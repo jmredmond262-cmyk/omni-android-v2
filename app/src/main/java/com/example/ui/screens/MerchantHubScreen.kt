@@ -88,6 +88,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.ProductCategory
 import com.example.data.ai.ProductVisionAnalyzer
+import com.example.data.analytics.UsageAnalyticsRepository
 import com.example.ui.MainViewModel
 import com.example.ui.Screen
 import com.example.ui.theme.AmberDeal
@@ -659,6 +660,7 @@ fun MerchantHubScreen(
                                         putExtra(Intent.EXTRA_SUBJECT, news.title)
                                         putExtra(Intent.EXTRA_TEXT, message)
                                     }
+                                    UsageAnalyticsRepository.trackCurrentAction("commerce_whatsapp", "MERCHANT_NEWS_SHARED", mapOf("method" to "share_sheet"))
                                     context.startActivity(Intent.createChooser(intent, "Compartir desde OMNI"))
                                 },
                                 modifier = Modifier.align(Alignment.End).testTag("share_manual_news_${news.id}"),
@@ -856,6 +858,7 @@ fun MerchantHubScreen(
                                     type = "text/plain"
                                 }
                             }
+                            UsageAnalyticsRepository.trackCurrentAction("commerce_whatsapp", "MERCHANT_PRODUCT_SHARED", mapOf("method" to "share_sheet"))
                             context.startActivity(Intent.createChooser(send, "Compartir producto"))
                         }
                     ) {
@@ -922,6 +925,7 @@ fun MerchantHubScreen(
                                 putExtra(Intent.EXTRA_SUBJECT, combo.title)
                                 putExtra(Intent.EXTRA_TEXT, message)
                             }
+                            UsageAnalyticsRepository.trackCurrentAction("commerce_whatsapp", "MERCHANT_PROMOTION_SHARED", mapOf("method" to "share_sheet"))
                             context.startActivity(Intent.createChooser(send, "Compartir promoción"))
                         }
                     ) {
