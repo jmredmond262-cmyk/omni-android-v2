@@ -109,6 +109,7 @@ fun UserProfileScreen(
 ) {
     val context = LocalContext.current
     val profile by viewModel.userProfile.collectAsState()
+    val profilePrefs = remember(profile.id) { context.getSharedPreferences("omni_profile_social_${profile.id}", android.content.Context.MODE_PRIVATE) }
     val userRewards by viewModel.userRewards.collectAsState()
     val activeTheme by viewModel.themeMode.collectAsState()
     val isLoadingGps by viewModel.isLoadingLiveLocation.collectAsState()
@@ -152,6 +153,30 @@ fun UserProfileScreen(
                     language = prefs.getString("language", profile.preferredLanguage).orEmpty(),
                     privacy = prefs.getString("privacy", profile.privacyLevel).orEmpty()
                 )
+                if (prefs.contains("walletAlias")) {
+                    viewModel.updateWalletAliasAndCvu(
+                        prefs.getString("walletAlias", "").orEmpty(),
+                        prefs.getString("cvuCbu", "").orEmpty(),
+                        prefs.getString("nationalId", "").orEmpty()
+                    )
+                }
+                if (prefs.contains("emergencyContactName")) {
+                    viewModel.updateEmergencyHealth(
+                        prefs.getString("emergencyContactName", "").orEmpty(),
+                        prefs.getString("emergencyContactPhone", "").orEmpty(),
+                        prefs.getString("bloodType", "").orEmpty(),
+                        prefs.getString("medicalNotes", "").orEmpty()
+                    )
+                }
+                if (prefs.contains("morningDigestEnabled")) {
+                    viewModel.updateMorningAlarm(
+                        prefs.getString("morningDigestTime", "08:00").orEmpty(),
+                        prefs.getBoolean("morningDigestEnabled", false),
+                        prefs.getBoolean("silentWakeupActive", false)
+                    )
+                }
+                if (prefs.contains("searchRadiusMeters")) viewModel.updateSearchRadius(prefs.getInt("searchRadiusMeters", 5000))
+                if (prefs.contains("preferredTransitMode")) viewModel.updatePreferredTransitMode(prefs.getString("preferredTransitMode", "").orEmpty())
             }
         }
     }
@@ -378,34 +403,22 @@ fun UserProfileScreen(
             }
         }
 
-        // 3. Pestañas de Sub-Paneles
+        // Pestañas horizontales: el texto conserva su ancho y no se comprime.
         item {
-            TabRow(
-                selectedTabIndex = selectedTab,
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.primary,
-                indicator = { tabPositions ->
-                    TabRowDefaults.SecondaryIndicator(
-                        Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                        color = MaterialTheme.colorScheme.primary,
-                        height = 3.dp
-                    )
-                }
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                tabTitles.forEachIndexed { index, title ->
-                    Tab(
+                items(tabTitles) { title ->
+                    val index = tabTitles.indexOf(title)
+                    FilterChip(
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
-                        text = {
-                            Text(
-                                text = title,
-                                fontSize = 11.sp,
-                                lineHeight = 14.sp,
-                                maxLines = 2,
-                                textAlign = TextAlign.Center,
-                                fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
-                            )
-                        }
+                        label = { Text(title, fontSize = 11.sp, maxLines = 1) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = Color.Black
+                        )
                     )
                 }
             }
@@ -625,7 +638,10 @@ fun UserProfileScreen(
                             Button(
                                 onClick = {
                                     viewModel.updateWalletAliasAndCvu(editAlias, editCvu, editDni)
-                                    Toast.makeText(context, "Datos de billetera guardados", Toast.LENGTH_SHORT).show()
+                                    profilePrefs.edit().putBoolean("customized", true)
+                                        .putString("walletAlias", editAlias).putString("cvuCbu", editCvu)
+                                        .putString("nationalId", editDni).apply()
+                                    Toast.makeText(context, "Datos de billetera guardados en este dispositivo", Toast.LENGTH_SHORT).show()
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp),
@@ -688,7 +704,7 @@ fun UserProfileScreen(
                             Text("Radio de Cobertura y Búsqueda: ${if (profile.searchRadiusMeters < 1000) "${profile.searchRadiusMeters} m" else "${String.format("%.1f", profile.searchRadiusMeters / 1000.0)} km"}", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
                             Slider(
                                 value = profile.searchRadiusMeters.toFloat(),
-                                onValueChange = { viewModel.updateSearchRadius(it.toInt()) },
+                                onValueChange = { value -> viewModel.updateSearchRadius(value.toInt()); profilePrefs.edit().putBoolean("customized", true).putInt("searchRadiusMeters", value.toInt()).apply() },
                                 valueRange = 500f..10000f,
                                 steps = 9,
                                 colors = SliderDefaults.colors(
@@ -707,6 +723,7 @@ fun UserProfileScreen(
                                         selected = profile.preferredTransitMode == mode,
                                         onClick = {
                                             viewModel.updatePreferredTransitMode(mode)
+                                            profilePrefs.edit().putBoolean("customized", true).putString("preferredTransitMode", mode).apply()
                                         },
                                         label = { Text(mode, fontSize = 12.sp) },
                                         colors = FilterChipDefaults.filterChipColors(
@@ -797,7 +814,7 @@ fun UserProfileScreen(
                                     }
                                     Switch(
                                         checked = profile.morningDigestEnabled,
-                                        onCheckedChange = { viewModel.toggleMorningDigest(it) },
+                                        onCheckedChange = { enabled -> viewModel.toggleMorningDigest(enabled); profilePrefs.edit().putBoolean("customized", true).putBoolean("morningDigestEnabled", enabled).apply() },
                                         colors = SwitchDefaults.colors(
                                             checkedThumbColor = Color.Black,
                                             checkedTrackColor = MaterialTheme.colorScheme.primary
@@ -816,7 +833,12 @@ fun UserProfileScreen(
                                         editBloodType,
                                         editMedicalNotes
                                     )
-                                    Toast.makeText(context, "Datos de emergencia actualizados", Toast.LENGTH_SHORT).show()
+                                    profilePrefs.edit().putBoolean("customized", true)
+                                        .putString("emergencyContactName", editEmergencyContact)
+                                        .putString("emergencyContactPhone", editEmergencyPhone)
+                                        .putString("bloodType", editBloodType)
+                                        .putString("medicalNotes", editMedicalNotes).apply()
+                                    Toast.makeText(context, "Datos de emergencia guardados en este dispositivo", Toast.LENGTH_SHORT).show()
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp),
