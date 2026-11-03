@@ -39,9 +39,9 @@ data class UserProfile(
     val email: String = "",
     val phone: String = "",
     val avatarUrl: String = "",
-    val birthDate: String = "14/08/1994",
-    val pronouns: String = "Él / He",
-    val gender: String = "Masculino",
+    val birthDate: String = "",
+    val pronouns: String = "",
+    val gender: String = "",
     val isVerified: Boolean = false,
     val preferredLanguage: String = "Español (Latinoamérica)",
     val privacyLevel: String = "Público (Vecinos del Barrio)",
@@ -51,47 +51,45 @@ data class UserProfile(
     val tiktokHandle: String = "",
 
     // --- BILLETERA VIRTUAL (OMNIPAY) ---
-    val walletAlias: String = "omni.santi.ar",
-    val cvuCbu: String = "0000003100049281749281",
-    val nationalId: String = "38.291.842",
-    val accountBalance: Double = 34500.0,
-    val dailySpendingLimit: Double = 50000.0,
-    val autoCashbackEnabled: Boolean = true,
-    val savedCards: List<SavedCard> = listOf(
-        SavedCard("card_1", "Visa Débito", "4821", "Banco Galicia", "08/28", true),
+    val walletAlias: String = "",
+    val cvuCbu: String = "",
+    val nationalId: String = "",
+    val accountBalance: Double = 0.0,
+    val dailySpendingLimit: Double = 0.0,
+    val autoCashbackEnabled: Boolean = false,
+    val savedCards: List<SavedCard> = emptyList(),
         SavedCard("card_2", "Mastercard Black", "9102", "Banco Santander", "11/29", false)
     ),
 
     // --- MAPAS, NAVEGACIÓN & UBICACIONES ---
-    val currentGpsAddress: String = "Simón de Iriondo y San Martín, Romang, Santa Fe (CP 3555)",
-    val currentLatitude: Double = -29.5052,
-    val currentLongitude: Double = -59.7562,
+    val currentGpsAddress: String = "",
+    val currentLatitude: Double = 0.0,
+    val currentLongitude: Double = 0.0,
     val searchRadiusMeters: Int = 2000,
-    val preferredTransitMode: String = "A pie 🚶", // A pie, Auto 🚗, Bici 🚲, Transporte público 🚌
-    val mapStyle: String = "Satélite HD", // Satélite HD, Vectorial, Modo Noche
-    val addresses: List<UserAddress> = listOf(
-        UserAddress("addr_1", "Mi Local (Redcom)", "Simón de Iriondo y San Martín, Romang", true, "work"),
+    val preferredTransitMode: String = "", // A pie, Auto 🚗, Bici 🚲, Transporte público 🚌
+    val mapStyle: String = "", // Satélite HD, Vectorial, Modo Noche
+    val addresses: List<UserAddress> = emptyList(),
         UserAddress("addr_2", "Casa", "Calle Brigadier López 520, Romang", false, "home"),
         UserAddress("addr_3", "Club / Balneario", "Camping Comunal y Balneario Romang", false, "favorite")
     ),
 
     // --- SALUD, SEGURIDAD & EMERGENCIAS ---
-    val emergencyContactName: String = "Valeria Rossi (Hermana)",
-    val emergencyContactPhone: String = "+54 9 11 4433-2211",
-    val bloodType: String = "0 Positivo (0+)",
-    val medicalNotes: String = "Alérgico a la penicilina",
-    val morningDigestEnabled: Boolean = true,
-    val morningDigestTime: String = "06:45",
-    val silentWakeupActive: Boolean = true,
-    val severeWeatherAlertSound: Boolean = true,
-    val seismicAlertEnabled: Boolean = true,
-    val onRouteAlertsEnabled: Boolean = true,
+    val emergencyContactName: String = "",
+    val emergencyContactPhone: String = "",
+    val bloodType: String = "",
+    val medicalNotes: String = "",
+    val morningDigestEnabled: Boolean = false,
+    val morningDigestTime: String = "08:00",
+    val silentWakeupActive: Boolean = false,
+    val severeWeatherAlertSound: Boolean = false,
+    val seismicAlertEnabled: Boolean = false,
+    val onRouteAlertsEnabled: Boolean = false,
     val maxDetourAlertMeters: Int = 80,
 
     // --- COMUNIDAD & REPUTACIÓN ---
-    val neighborLevel: String = "Vecino Platino",
-    val monthlySavingsTotal: Double = 18450.0,
-    val dietaryPreference: DietaryPreference = DietaryPreference.SIN_TACC,
+    val neighborLevel: String = "",
+    val monthlySavingsTotal: Double = 0.0,
+    val dietaryPreference: DietaryPreference = DietaryPreference.TODO,
 
     // --- TEMA VISUAL ---
     val themeMode: AppThemeMode = AppThemeMode.NEON_EMERALD

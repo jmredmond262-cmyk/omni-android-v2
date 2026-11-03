@@ -71,7 +71,7 @@ fun MorningBriefingScreen(
         } else null
     }
     val profile by viewModel.userProfile.collectAsState()
-    val activeDeals = briefing.activeDealsCount
+    val activeDeals = 0
     val preferences = remember { context.getSharedPreferences("omni_morning_briefing", android.content.Context.MODE_PRIVATE) }
     var showWeather by remember { mutableStateOf(preferences.getBoolean("show_weather", true)) }
     var showMetrics by remember { mutableStateOf(preferences.getBoolean("show_metrics", true)) }
@@ -97,17 +97,17 @@ fun MorningBriefingScreen(
         ?: "¡Buen día! Esperamos que tengas una excelente jornada."
     val weatherLine = weather?.let {
         "${it.temperatureC.toInt()}°C · ${it.weatherDescription}"
-    } ?: briefing.weatherSummary
+    } ?: ""
     val temperatureLine = weather?.let {
         "Sensación ${it.apparentTemperatureC.toInt()}°C · Humedad ${it.humidityPercent}%"
-    } ?: briefing.temperatureRange
+    } ?: ""
 
     val shareMessage = buildString {
         appendLine("🌅 OMNI BUENOS DÍAS")
         appendLine(todayDateText)
-        appendLine("📍 ${city.ifBlank { "Tu ciudad" }}")
+        if (city.isNotBlank() && !city.equals("Detectando ubicación", true)) appendLine("📍 $city")
         if (showWeather) appendLine("🌤️ $weatherLine")
-        if (showMetrics) appendLine("📌 ${tasks.count { !it.isCompleted }} tareas pendientes · ${activeDeals} ofertas activas")
+        if (showMetrics && tasks.isNotEmpty()) appendLine("📌 ${tasks.count { !it.isCompleted }} tareas pendientes")
         if (showQuote) appendLine("💬 $dailyQuote")
         if (showYesterday) previousSummary?.let { appendLine("📋 Ayer: " + it.first + " de " + it.second + " tareas completadas") }
         appendLine()
@@ -146,7 +146,7 @@ fun MorningBriefingScreen(
             }
         }
 
-        if (showWeather) Card(
+        if (showWeather && weather != null) Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF10243A)),
             shape = RoundedCornerShape(20.dp)
@@ -154,7 +154,7 @@ fun MorningBriefingScreen(
             Column(Modifier.padding(17.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.WbSunny, contentDescription = null, tint = Color(0xFFFFC857))
-                    Text("  EL TIEMPO EN ${city.ifBlank { "TU ZONA" }.uppercase()}", color = Color(0xFF72E4FF), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text("  EL TIEMPO EN ${city.uppercase()}", color = Color(0xFF72E4FF), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
                 Text(weatherLine, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 Text(temperatureLine, color = Color(0xFFB5C7D9), fontSize = 12.sp)
@@ -190,7 +190,7 @@ fun MorningBriefingScreen(
             }
         }
 
-        if (showMetrics) Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+        if (showMetrics && (tasks.isNotEmpty() || activeDeals > 0)) Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
             BriefingMetric(
                 modifier = Modifier.weight(1f),
                 icon = { Icon(Icons.Default.LocalOffer, contentDescription = null, tint = Color(0xFFFFC857)) },

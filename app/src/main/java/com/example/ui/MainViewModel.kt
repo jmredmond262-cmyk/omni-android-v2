@@ -167,10 +167,10 @@ class MainViewModel : ViewModel() {
     val isSearchingPlaces: StateFlow<Boolean> = _isSearchingPlaces.asStateFlow()
 
     // Tareas y Necesidades
-    private val _tasks = MutableStateFlow<List<DailyTask>>(SampleData.initialTasks)
+    private val _tasks = MutableStateFlow<List<DailyTask>>(emptyList())
     val tasks: StateFlow<List<DailyTask>> = _tasks.asStateFlow()
 
-    private val _needs = MutableStateFlow<List<NeedItem>>(SampleData.initialNeeds)
+    private val _needs = MutableStateFlow<List<NeedItem>>(emptyList())
     val needs: StateFlow<List<NeedItem>> = _needs.asStateFlow()
 
     // Comercios: la búsqueda real comienza vacía; los catálogos de prueba se mantienen separados.
@@ -238,7 +238,7 @@ class MainViewModel : ViewModel() {
     }
 
     // Recompensas, Puntos & Rendimiento del Usuario
-    private val _userRewards = MutableStateFlow(UserRewards())
+    private val _userRewards = MutableStateFlow(UserRewards(points = 0, stars = 0, levelName = "Sin nivel", cashbackEarned = 0.0, annualYieldPercent = 0.0, dailyYieldEstimate = 0.0))
     val userRewards: StateFlow<UserRewards> = _userRewards.asStateFlow()
 
     // Beneficios y Nivel Comercial (Modo Comerciante)

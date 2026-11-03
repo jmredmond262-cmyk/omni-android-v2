@@ -195,7 +195,7 @@ fun UserProfileScreen(
         }
 
         // Puntos y recompensas: ubicados en Perfil, fuera de Inicio
-        item {
+        if (userRewards.points > 0 || userRewards.stars > 0) item {
             Card(
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF17243A)),
@@ -372,43 +372,7 @@ fun UserProfileScreen(
 
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        // Ahorro total y Saldo Billetera
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Surface(
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Column(modifier = Modifier.padding(10.dp)) {
-                                    Text("Ahorro Acumulado", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(
-                                        "$${String.format("%,.0f", profile.monthlySavingsTotal)}",
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = AmberDeal
-                                    )
-                                }
-                            }
-
-                            Surface(
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Column(modifier = Modifier.padding(10.dp)) {
-                                    Text("Saldo en OmniPay", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(
-                                        "$${String.format("%,.0f", profile.accountBalance)}",
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        }
+                        // Los saldos y ahorros se muestran desde sus fuentes reales.
                     }
                 }
             }
