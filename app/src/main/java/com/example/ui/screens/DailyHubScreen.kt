@@ -142,7 +142,6 @@ fun DailyHubScreen(
 
     var showTrackingDetails by remember { mutableStateOf(false) }
     var showRedeemDialog by remember { mutableStateOf(false) }
-    var selectedExperience by remember { mutableStateOf<String?>(null) }
 
     // Servicios principales, sin accesos duplicados con el dock inferior
     val categoryItems = listOf(
@@ -399,7 +398,7 @@ fun DailyHubScreen(
                         )
                         experiences.forEach { experience ->
                             Surface(
-                                modifier = Modifier.weight(1f).clickable { selectedExperience = experience.second }.testTag("home_experience_${experience.second.lowercase().replace(" ", "_")}"),
+                                modifier = Modifier.weight(1f).clickable { viewModel.navigateTo(Screen.OmniExperience) }.testTag("home_experience_${experience.second.lowercase().replace(" ", "_")}"),
                                 shape = RoundedCornerShape(11.dp), color = Color(0xFF111F35),
                                 border = androidx.compose.foundation.BorderStroke(0.8.dp, CyberGlowPurple.copy(alpha = 0.28f))
                             ) {
@@ -730,63 +729,7 @@ fun DailyHubScreen(
         }
     }
 
-    selectedExperience?.let { experience ->
-        if (experience == "OMNI Turista") {
-            Dialog(onDismissRequest = { selectedExperience = null }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Surface(modifier = Modifier.fillMaxWidth(0.94f).heightIn(max = 620.dp), color = Color(0xFF101B30), shape = RoundedCornerShape(22.dp)) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 620.dp)
-                            .verticalScroll(rememberScrollState()).padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("OMNI TURISTA", color = CyberGlowCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                Text("Lugares para descubrir", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
-                            }
-                            IconButton(onClick = { selectedExperience = null }) { Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = Color.White) }
-                        }
-                        Text("Cerca de $displayLocality · ${touristAttractions.size} atractivos disponibles", color = Color(0xFFB8C8D9), fontSize = 11.sp)
-                        if (touristAttractions.isEmpty()) {
-                            Box(modifier = Modifier.fillMaxWidth().height(190.dp), contentAlignment = Alignment.Center) {
-                                Text("Todavía no hay atractivos cargados en esta zona. Actualizá tu ubicación desde el perfil para consultar otros destinos.", color = Color(0xFFD2DCEC), fontSize = 12.sp)
-                            }
-                        } else {
-                            Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                                touristAttractions.take(20).forEach { attraction ->
-                                    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF172943)), shape = RoundedCornerShape(14.dp)) {
-                                        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                            Text(attraction.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                            Text("${attraction.category} · ${String.format("%.1f", attraction.distanceKm)} km · ${attraction.estimatedVisitTime}", color = CyberGlowCyan, fontSize = 10.sp)
-                                            Text(attraction.description, color = Color(0xFFB8C8D9), fontSize = 11.sp)
-                                            Button(onClick = {
-                                                viewModel.searchTrip(displayLocality, attraction.name)
-                                                viewModel.navigateTo(Screen.TripPlanner)
-                                                selectedExperience = null
-                                            }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF164B63)), contentPadding = PaddingValues(vertical = 8.dp)) {
-                                                Text("Planificar visita", color = CyberGlowCyan, fontSize = 11.sp)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        TextButton(onClick = { selectedExperience = null }, modifier = Modifier.align(Alignment.End)) { Text("Cerrar", color = CyberGlowCyan) }
-                    }
-                }
-            }
-        } else {
-            AlertDialog(onDismissRequest = { selectedExperience = null }, containerColor = Color(0xFF101B30),
-                title = { Text(experience, color = Color.White, fontWeight = FontWeight.ExtraBold) },
-                text = { Text(when (experience) {
-                    "OMNI Joven" -> "Beneficios para estudiantes: descuentos, promociones, cupones y recompensas en comercios adheridos."
-                    "OMNI Flash" -> "Promociones de duración limitada y oportunidades cercanas publicadas por comercios."
-                    else -> "Un espacio para consultar puntos, beneficios acumulados y futuras opciones de canje."
-                } + "\n\nEste módulo se encuentra en desarrollo.", color = Color(0xFFD2DCEC)) },
-                confirmButton = { TextButton(onClick = { selectedExperience = null }) { Text("Entendido", color = CyberGlowCyan) } }
-            )
-        }
-    }
+
 }
 
 /**
