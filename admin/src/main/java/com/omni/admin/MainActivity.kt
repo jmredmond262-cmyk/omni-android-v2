@@ -65,7 +65,7 @@ private data class AdminTab(val id: String, val label: String, val collection: S
 private val tabs = listOf(
   AdminTab("dashboard", "Resumen"), AdminTab("users", "Usuarios", "users"),
   AdminTab("wallets", "Billeteras", "walletAccounts"), AdminTab("operations", "Operaciones", "walletOperations"),
-  AdminTab("stores", "Comercios", "merchantProfiles"), AdminTab("orders", "Pedidos", "storeOrders"),
+  AdminTab("stores", "Comercios", "merchantProfiles"), AdminTab("orders", "Pedidos", "storeOrders"), AdminTab("events", "Eventos", "omniEvents"),
   AdminTab("feedback", "Comentarios", "appFeedback"), AdminTab("activity", "Actividad", "usageEvents"), AdminTab("modules", "Módulos", "moduleRegistry"),
   AdminTab("audit", "Auditoría", "adminAuditLogs"), AdminTab("invitations", "Invitaciones", "betaInvitations"), AdminTab("settings", "Configuración")
 )
@@ -74,7 +74,7 @@ private val navGroups = listOf(
   AdminNavGroup("overview", "Inicio", Icons.Default.Dashboard, listOf("dashboard")),
   AdminNavGroup("people", "Personas", Icons.Default.PeopleAlt, listOf("users", "feedback")),
   AdminNavGroup("commerce", "Comercio", Icons.Default.Storefront, listOf("stores", "orders", "wallets", "operations")),
-  AdminNavGroup("system", "Sistema", Icons.Default.Settings, listOf("activity", "modules", "audit", "invitations", "settings"))
+  AdminNavGroup("system", "Sistema", Icons.Default.Settings, listOf("activity", "events", "modules", "audit", "invitations", "settings"))
 )
 
 @Composable
@@ -332,7 +332,7 @@ private fun AdminHome(
         fontSize = 13.sp
       )
       when (selected) {
-        "dashboard" -> DashboardContent(payload)
+        "dashboard" -> DashboardContent(payload, onSelect)
         "modules" -> ModuleContent(payload.optJSONArray("items") ?: JSONArray(), onSaveModule)
         "settings" -> ConfigContent(payload.optJSONObject("config") ?: JSONObject(), onSaveConfig)
         "invitations" -> InvitationContent(payload.optJSONArray("items") ?: JSONArray(), onInvite)
@@ -343,7 +343,7 @@ private fun AdminHome(
 }
 
 @Composable
-private fun DashboardContent(payload: JSONObject) {
+private fun DashboardContent(payload: JSONObject, onSelect: (String) -> Unit) {
   val counts = payload.optJSONObject("counts") ?: JSONObject()
   val analytics = payload.optJSONObject("analytics") ?: JSONObject()
   val diagnostics = payload.optJSONObject("diagnostics") ?: JSONObject()
@@ -406,8 +406,19 @@ private fun DashboardContent(payload: JSONObject) {
           rowMetrics.forEachIndexed { index, metric ->
             val accents = listOf(Color(0xFF16CFFF), Color(0xFF32E7A0), Color(0xFFBD70FF), Color(0xFFFFB52E))
             val accent = accents[(metrics.indexOf(metric) % accents.size)]
+            val destination = when (metric.first) {
+              "Usuarios", "Activos · 7 días" -> "users"
+              "Comercios" -> "stores"
+              "Pedidos" -> "orders"
+              "Billeteras DEMO" -> "wallets"
+              "Sesiones · 7 días" -> "activity"
+              "Operaciones" -> "operations"
+              "Eventos" -> "events"
+              else -> "dashboard"
+            }
             Card(
               Modifier.weight(1f).heightIn(min = 118.dp)
+                .clickable { onSelect(destination) }
                 .border(1.dp, accent.copy(alpha = 0.72f), RoundedCornerShape(18.dp)),
               colors = CardDefaults.cardColors(containerColor = Color(0xFF0B1830)),
               shape = RoundedCornerShape(18.dp),
@@ -421,7 +432,7 @@ private fun DashboardContent(payload: JSONObject) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                   Icon(metric.third, null, tint = accent, modifier = Modifier.size(23.dp))
                   Spacer(Modifier.weight(1f))
-                  Box(Modifier.width(22.dp).height(3.dp).background(accent, RoundedCornerShape(3.dp)))
+                  Icon(Icons.Default.ArrowOutward, contentDescription = "Abrir ${metric.first}", tint = accent, modifier = Modifier.size(16.dp))
                 }
                 Text(metric.second, color = White, fontSize = if (tabletLayout) 27.sp else 24.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
                 Text(metric.first, color = Muted, fontSize = 10.sp, maxLines = 2, lineHeight = 13.sp)
@@ -618,6 +629,7 @@ private val fieldLabels = mapOf(
   "fulfillmentType" to "Entrega", "action" to "Acción", "target" to "Destino",
   "message" to "Mensaje", "description" to "Descripción", "enabled" to "Habilitado",
   "event" to "Evento", "module" to "Módulo", "eventName" to "Evento", "screen" to "Pantalla", "appVersion" to "Versión",
+  "category" to "Categoría", "startAt" to "Inicio", "endAt" to "Finalización",
   "createdAt" to "Fecha de registro", "updatedAt" to "Última actualización", "lastSeenAt" to "Última actividad", "userLabel" to "Usuario",
   "data" to "Detalles de acción", "screenName" to "Pantalla", "eventId" to "Identificador de evento",
   "cvu" to "CVU"
@@ -664,6 +676,7 @@ private fun RecordCard(item: Map<String, Any?>, type: String) {
     "storeOrders" -> "Pedido " + firstPresentValue(item, "orderNumber", "status").ifBlank { "OMNI" }
     "appFeedback" -> "Comentario de usuario"
     "usageEvents" -> friendlyEnum(firstPresentValue(item, "event", "eventName").ifBlank { "Actividad OMNI" })
+    "omniEvents" -> firstPresentValue(item, "title", "name", "event", "eventName").ifBlank { "Evento OMNI" }
     "adminAuditLogs" -> friendlyEnum(firstPresentValue(item, "action").ifBlank { "Actividad administrativa" })
     else -> firstPresentValue(item, "title", "name", "action").ifBlank { "Registro OMNI" }
   }
@@ -675,6 +688,7 @@ private fun RecordCard(item: Map<String, Any?>, type: String) {
     "storeOrders" -> listOf("total", "paymentStatus", "fulfillmentType", "createdAt")
     "appFeedback" -> listOf("message", "createdAt")
     "usageEvents" -> listOf("userLabel", "module", "appVersion", "createdAt")
+    "omniEvents" -> listOf("description", "category", "status", "startAt", "createdAt")
     else -> listOf("status", "createdAt", "updatedAt")
   }
   val visible = preferred.mapNotNull { key ->
