@@ -243,6 +243,7 @@ private fun AuthGate(activity: ComponentActivity, viewModel: MainViewModel) {
 fun OmniApp(viewModel: MainViewModel) {
     val context = LocalContext.current
     val currentScreen by viewModel.currentScreen.collectAsState()
+    val orderCenterReturnScreen by viewModel.orderCenterReturnScreen.collectAsState()
     val isLiveMode by viewModel.isLiveRealTimeMode.collectAsState()
     val activeTheme by viewModel.themeMode.collectAsState()
     val liveWeather by viewModel.liveWeatherData.collectAsState()
@@ -335,7 +336,7 @@ fun OmniApp(viewModel: MainViewModel) {
             is Screen.Events -> viewModel.navigateTo(Screen.DailyHub)
             is Screen.MyPurchases -> viewModel.navigateTo(Screen.DailyHub)
             is Screen.OffersBenefits -> viewModel.navigateTo(Screen.DailyHub)
-            is Screen.OrderCenter -> viewModel.navigateTo(Screen.StoreDetail)
+            is Screen.OrderCenter -> viewModel.navigateTo(orderCenterReturnScreen)
             is Screen.MerchantOrders -> viewModel.navigateTo(Screen.MerchantHub)
             else -> viewModel.navigateTo(Screen.DailyHub)
         }
@@ -679,7 +680,7 @@ fun OmniApp(viewModel: MainViewModel) {
                     Screen.Routine -> RoutineModeScreen(onBack = { viewModel.navigateTo(Screen.DailyHub) })
                     Screen.JobBoard -> JobBoardScreen(onBack = { viewModel.navigateTo(Screen.DailyHub) })
                     Screen.Events -> EventsScreen(onBack = { viewModel.navigateTo(Screen.DailyHub) })
-                    Screen.OrderCenter -> OrderCenterScreen(viewModel = viewModel, merchantMode = false, onBack = { viewModel.navigateTo(Screen.StoreDetail) })
+                    Screen.OrderCenter -> OrderCenterScreen(viewModel = viewModel, merchantMode = false, onBack = { viewModel.navigateTo(orderCenterReturnScreen) })
                     Screen.MerchantOrders -> OrderCenterScreen(viewModel = viewModel, merchantMode = true, onBack = { viewModel.navigateTo(Screen.MerchantHub) })
                 }
             }

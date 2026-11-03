@@ -136,6 +136,8 @@ class MainViewModel : ViewModel() {
 
     private val _currentScreen = MutableStateFlow<Screen>(Screen.DailyHub)
     val currentScreen: StateFlow<Screen> = _currentScreen.asStateFlow()
+    private val _orderCenterReturnScreen = MutableStateFlow<Screen>(Screen.StoreDetail)
+    val orderCenterReturnScreen: StateFlow<Screen> = _orderCenterReturnScreen.asStateFlow()
 
     // Control de Tema de Interfaz (Cyber Neon por defecto inspirado en la nueva UI)
     private val _themeMode = MutableStateFlow(AppThemeMode.CYBER_NEON)
@@ -1029,6 +1031,11 @@ class MainViewModel : ViewModel() {
 
     fun navigateTo(screen: Screen) {
         setTrackedScreen(screen)
+    }
+
+    fun openOrderCenter(returnTo: Screen) {
+        _orderCenterReturnScreen.value = returnTo
+        navigateTo(Screen.OrderCenter)
     }
 
     fun openStoreById(storeId: String) {

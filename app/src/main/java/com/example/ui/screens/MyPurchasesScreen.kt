@@ -125,7 +125,7 @@ fun MyPurchasesScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                 title = "Pedidos y seguimiento",
                 description = "Consultá pedidos QR, estados, retiro o envío a domicilio.",
                 action = "VER PEDIDOS",
-                onClick = { viewModel.navigateTo(Screen.OrderCenter) }
+                onClick = { viewModel.openOrderCenter(Screen.MyPurchases) }
             )
         }
         item {

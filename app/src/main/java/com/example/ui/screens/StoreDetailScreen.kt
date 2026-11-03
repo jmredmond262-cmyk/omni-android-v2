@@ -357,7 +357,7 @@ fun StoreDetailScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
-                        onClick = { viewModel.navigateTo(Screen.OrderCenter) },
+                        onClick = { viewModel.openOrderCenter(Screen.StoreDetail) },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF087EAB)),
                         shape = RoundedCornerShape(12.dp)
