@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import org.json.JSONArray
@@ -116,11 +117,39 @@ fun DemoMarketplaceScreen(onBack: () -> Unit) {
     var address by remember { mutableStateOf("") }
     var qrPayload by remember { mutableStateOf<String?>(null) }
     var qrTitle by remember { mutableStateOf("Código QR DEMO") }
+    var scanResult by remember { mutableStateOf<String?>(null) }
+    var scannedProductId by remember { mutableStateOf<String?>(null) }
     val total = demoCatalog.sumOf { product ->
         (if (store == 0) product.firstPrice else product.secondPrice) * (cart[product.id] ?: 0)
     }
     val count = cart.values.sum()
     val storeName = if (store == 0) "Mercado OMNI Demo" else "Tienda Nube Demo"
+
+    fun scanDemoQr() {
+        GmsBarcodeScanning.getClient(context).startScan()
+            .addOnSuccessListener { barcode ->
+                val parts = barcode.rawValue.orEmpty().split("|")
+                scannedProductId = null
+                scanResult = when {
+                    parts.size == 2 && parts[0] == "OMNI-DEMO-PRODUCT" -> {
+                        val product = demoCatalog.firstOrNull { it.id == parts[1] }
+                        if (product == null) "Producto no encontrado en el catálogo DEMO actual."
+                        else {
+                            scannedProductId = product.id
+                            val currentPrice = if (store == 0) product.firstPrice else product.secondPrice
+                            "Producto reconocido: ${product.name} · ${product.category} · ${product.unit}. Precio vigente en ${storeName}: ${demoPrice(currentPrice)}. El importe se consulta del catálogo seleccionado."
+                        }
+                    }
+                    parts.size == 2 && parts[0] == "OMNI-DEMO-ORDER" -> {
+                        val order = orders.firstOrNull { it.id == parts[1] }
+                        if (order == null) "El pedido no existe en este dispositivo. Los pedidos DEMO se guardan localmente y no se sincronizan entre dispositivos."
+                        else "Pedido DEMO verificado: ${order.id.take(8).uppercase()} · ${demoPrice(order.total)} · ${order.date} · ${order.delivery}. Es una referencia local, no acredita pagos."
+                    }
+                    else -> "QR no reconocido. Este lector admite productos y pedidos del catálogo DEMO."
+                }
+            }
+            .addOnFailureListener { scanResult = "No se pudo completar el escaneo QR. Intentá nuevamente." }
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(DemoBg),
@@ -287,6 +316,26 @@ fun DemoMarketplaceScreen(onBack: () -> Unit) {
                 }) { Text("Generar pedido y QR") }
             },
             dismissButton = { TextButton(onClick = { checkout = false }) { Text("Cancelar") } }
+        )
+    }
+
+    scanResult?.let { result ->
+        AlertDialog(
+            onDismissRequest = { scanResult = null; scannedProductId = null },
+            title = { Text("Resultado del QR DEMO") },
+            text = { Text(result, fontSize = 12.sp) },
+            confirmButton = {
+                Row {
+                    scannedProductId?.let { productId ->
+                        TextButton(onClick = {
+                            cart[productId] = (cart[productId] ?: 0) + 1
+                            scanResult = null
+                            scannedProductId = null
+                        }) { Text("Agregar al carrito") }
+                    }
+                    TextButton(onClick = { scanResult = null; scannedProductId = null }) { Text("Cerrar") }
+                }
+            }
         )
     }
 
