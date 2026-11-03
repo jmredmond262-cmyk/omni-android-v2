@@ -45,6 +45,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -83,7 +84,7 @@ import com.example.ui.theme.SlateNavy
 import com.example.ui.util.GoogleMapsHelper
 
 
-/** Evalúa el horario local real del dispositivo; nunca usa una hora simulada. */
+/** Evalúa horarios publicados contra el reloj local del dispositivo. */
 private fun isStoreOpenAtCurrentTime(store: com.example.model.Store): Boolean {
     if (store.is24Hours || store.isOnDuty) return true
     val now = java.util.Calendar.getInstance()
@@ -99,18 +100,30 @@ private fun isStoreOpenAtCurrentTime(store: com.example.model.Store): Boolean {
         return hour * 60 + minute
     }
 
+    fun containsCurrentTime(text: String): Boolean {
+        val ranges = Regex("(\\d{1,2}:\\d{2})\\s*(?:-|–|a)\\s*(\\d{1,2}:\\d{2})")
+            .findAll(text)
+        for (range in ranges) {
+            val start = parseMinute(range.groupValues[1]) ?: continue
+            val end = parseMinute(range.groupValues[2]) ?: continue
+            if (if (end >= start) minuteNow in start until end else minuteNow >= start || minuteNow < end) return true
+        }
+        return false
+    }
+
     val weekend = day == java.util.Calendar.SATURDAY || day == java.util.Calendar.SUNDAY
     if (weekend) {
-        val dayLabel = if (day == java.util.Calendar.SATURDAY) "(?i)s[aá]b(?:ado)?\\s*:" else "(?i)dom(?:ingo)?\\s*:"
-        val dayText = Regex(dayLabel + "([^•]+)").find(store.weekendHoursText)?.groupValues?.getOrNull(1).orEmpty()
-        if (dayText.contains("cerrado", ignoreCase = true)) return false
-        val times = Regex("(\\d{1,2}:\\d{2})\\s*[-–a]+\\s*(\\d{1,2}:\\d{2})").find(dayText)
-        val start = times?.groupValues?.getOrNull(1)?.let(::parseMinute)
-        val end = times?.groupValues?.getOrNull(2)?.let(::parseMinute)
-        if (start != null && end != null) {
-            return if (end >= start) minuteNow in start until end else minuteNow >= start || minuteNow < end
+        val dayPattern = if (day == java.util.Calendar.SATURDAY) "(?i)s[aá]b(?:ado)?s?\\\\s*:" else "(?i)dom(?:ingo)?s?\\\\s*:"
+        val dayText = Regex(dayPattern + "([^•]+)").find(store.weekendHoursText)?.groupValues?.getOrNull(1).orEmpty()
+        if (dayText.isNotBlank()) {
+            if (dayText.contains("cerrado", ignoreCase = true)) return false
+            if (containsCurrentTime(dayText)) return true
+            if (Regex("\\\\d{1,2}:\\\\d{2}").containsMatchIn(dayText)) return false
         }
     }
+
+    if (containsCurrentTime(store.hoursText)) return true
+    if (Regex("\\\\d{1,2}:\\\\d{2}").containsMatchIn(store.hoursText)) return false
 
     val start = parseMinute(store.openTime)
     val end = parseMinute(store.closeTime)
@@ -133,11 +146,18 @@ fun StoresListScreen(
     val userProfile by viewModel.userProfile.collectAsState()
 
     val currentCity by viewModel.currentCity.collectAsState()
+    var clockMinute by remember { mutableStateOf(System.currentTimeMillis() / 60000L) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(60_000L)
+            clockMinute = System.currentTimeMillis() / 60000L
+        }
+    }
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedType by remember { mutableStateOf<StoreType?>(null) }
 
-    val filteredAndRankedStores = remember(stores, searchQuery, selectedType, scheduleFilter, currentCity, System.currentTimeMillis() / 60000L) {
+    val filteredAndRankedStores = remember(stores, searchQuery, selectedType, scheduleFilter, currentCity, clockMinute) {
         stores.filter { store ->
             val localityToken = currentCity.substringBefore(",").trim()
             val matchesLocality = localityToken.isNotBlank() && store.address.contains(localityToken, ignoreCase = true)
