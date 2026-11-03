@@ -35,10 +35,10 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.charset.StandardCharsets
 
-private val Navy = Color(0xFF0B1220)
-private val Panel = Color(0xFF151F31)
-private val PanelSoft = Color(0xFF1D2A40)
-private val Mint = Color(0xFF55E0B8)
+private val Navy = Color(0xFF060B16)
+private val Panel = Color(0xFF0D1729)
+private val PanelSoft = Color(0xFF14243B)
+private val Mint = Color(0xFF00E5FF)
 private val Muted = Color(0xFF9EADC3)
 private val White = Color(0xFFF4F7FC)
 private val Danger = Color(0xFFFF8585)
@@ -47,8 +47,8 @@ private const val ADMIN_API_URL = "https://omni-admin-api.jmredmond262.workers.d
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    window.statusBarColor = android.graphics.Color.rgb(11, 18, 32)
-    window.navigationBarColor = android.graphics.Color.rgb(11, 18, 32)
+    window.statusBarColor = android.graphics.Color.rgb(6, 11, 22)
+    window.navigationBarColor = android.graphics.Color.rgb(6, 11, 22)
     setContent {
       MaterialTheme(colorScheme = darkColorScheme(
         primary = Mint, onPrimary = Navy, background = Navy, surface = Panel,
