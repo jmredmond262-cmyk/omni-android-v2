@@ -32,6 +32,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -43,6 +44,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import java.time.LocalDate
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -61,6 +63,16 @@ fun MorningBriefingScreen(
     val briefing by viewModel.morningBriefing.collectAsState()
     val city by viewModel.currentCity.collectAsState()
     val weather by viewModel.liveWeatherData.collectAsState()
+    val tasks by viewModel.tasks.collectAsState()
+    val previousSummary = remember {
+        val summaryPrefs = context.getSharedPreferences("omni_daily_summary", android.content.Context.MODE_PRIVATE)
+        val yesterday = LocalDate.now().minusDays(1).toString()
+        if (summaryPrefs.getString("summary_date", "") == yesterday) {
+            summaryPrefs.getInt("summary_completed", 0) to summaryPrefs.getInt("summary_total", 0)
+        } else null
+    }
+    val todayCompleted = tasks.count { it.isCompleted }
+    val todayTotal = tasks.size
     val tasks by viewModel.tasks.collectAsState()
     val profile by viewModel.userProfile.collectAsState()
     val activeDeals = briefing.activeDealsCount
@@ -91,6 +103,7 @@ fun MorningBriefingScreen(
         appendLine("📍 ${city.ifBlank { "Tu ciudad" }}")
         appendLine("🌤️ $weatherLine")
         appendLine("💬 $dailyQuote")
+        previousSummary?.let { appendLine("📋 Ayer: " + it.first + " de " + it.second + " tareas completadas") }
         appendLine()
         append("Descubrí tu día con OMNI. Muy pronto vas a poder descargar la app.")
     }
@@ -210,7 +223,12 @@ fun MorningBriefingScreen(
         ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text("AYER EN OMNI", color = Color(0xFF72E4FF), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Text("Todavía no hay un historial diario consolidado para mostrar un resumen real de ayer. Cuando OMNI registre actividad histórica, este espacio podrá mostrarla.", color = Color(0xFFB5C7D9), fontSize = 11.sp)
+                if (previousSummary != null) {
+                    Text(previousSummary.first.toString() + " de " + previousSummary.second + " tareas completadas", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Text("Resumen local de tareas del día anterior. Solo se guardan cantidades, no los títulos de tus actividades.", color = Color(0xFFB5C7D9), fontSize = 10.sp)
+                } else {
+                    Text("Todavía no hay un resumen guardado de ayer. OMNI comenzará a registrar el progreso diario de tus tareas en este dispositivo.", color = Color(0xFFB5C7D9), fontSize = 11.sp)
+                }
             }
         }
 
