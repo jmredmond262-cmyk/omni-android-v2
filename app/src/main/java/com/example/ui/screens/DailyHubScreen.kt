@@ -203,6 +203,7 @@ fun DailyHubScreen(
             icon = Icons.Default.GridView,
             accentColor = Color(0xFF54E5FF),
             onClick = {
+                viewModel.clearStoreTypeFilter()
                 viewModel.setScheduleFilter(StoreScheduleFilter.TODOS)
                 viewModel.navigateTo(Screen.StoresList)
             }
