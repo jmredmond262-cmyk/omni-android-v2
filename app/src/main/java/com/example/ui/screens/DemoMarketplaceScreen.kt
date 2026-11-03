@@ -87,11 +87,29 @@ private fun writeDemoOrders(context: Context, orders: List<DemoOrder>) {
         .edit().putString("orders", array.toString()).apply()
 }
 
+private fun readDemoCart(context: Context): Map<String, Int> = runCatching {
+    val raw = context.getSharedPreferences("omni_demo_market", Context.MODE_PRIVATE)
+        .getString("cart", "{}") ?: "{}"
+    val json = JSONObject(raw)
+    json.keys().asSequence().mapNotNull { key ->
+        val quantity = json.optInt(key, 0)
+        if (quantity > 0) key to quantity else null
+    }.toMap()
+}.getOrDefault(emptyMap())
+
+private fun writeDemoCart(context: Context, cart: Map<String, Int>) {
+    val json = JSONObject()
+    cart.filterValues { it > 0 }.forEach { (id, quantity) -> json.put(id, quantity) }
+    context.getSharedPreferences("omni_demo_market", Context.MODE_PRIVATE)
+        .edit().putString("cart", json.toString()).apply()
+}
+
 @Composable
 fun DemoMarketplaceScreen(onBack: () -> Unit) {
     val context = LocalContext.current
-    val cart = remember { mutableStateMapOf<String, Int>() }
+    val cart = remember { mutableStateMapOf<String, Int>().apply { putAll(readDemoCart(context)) } }
     val orders = remember { mutableStateListOf<DemoOrder>().apply { addAll(readDemoOrders(context)) } }
+    LaunchedEffect(cart.toMap()) { writeDemoCart(context, cart.toMap()) }
     var store by remember { mutableIntStateOf(0) }
     var checkout by remember { mutableStateOf(false) }
     var fulfillment by remember { mutableStateOf("RETIRO") }
@@ -209,7 +227,7 @@ fun DemoMarketplaceScreen(onBack: () -> Unit) {
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF087D98))) {
                         Text("Continuar con compra DEMO")
                     }
-                    Text("El carrito se guarda solo durante esta sesión. El checkout no debita OMNI Pay ni mueve dinero.", color = DemoMuted, fontSize = 9.sp)
+                    Text("El carrito se conserva localmente en este dispositivo. El checkout no debita OMNI Pay ni mueve dinero.", color = DemoMuted, fontSize = 9.sp)
                 }
             }
         }
