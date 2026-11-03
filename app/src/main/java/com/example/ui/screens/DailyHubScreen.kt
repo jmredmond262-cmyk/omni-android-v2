@@ -361,7 +361,7 @@ fun DailyHubScreen(
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF0B1629)),
                 border = androidx.compose.foundation.BorderStroke(1.dp, CyberGlowPurple.copy(alpha = 0.48f)),
-                modifier = Modifier.fillMaxWidth().testTag("home_omni_experience_card")
+                modifier = Modifier.fillMaxWidth().clickable { viewModel.navigateTo(Screen.OmniExperience) }.testTag("home_omni_experience_card")
             ) {
                 Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -396,6 +396,9 @@ fun DailyHubScreen(
                                 }
                             }
                         }
+                    }
+                    TextButton(onClick = { viewModel.navigateTo(Screen.OmniExperience) }, modifier = Modifier.align(Alignment.End), contentPadding = PaddingValues(horizontal = 8.dp, vertical = 3.dp)) {
+                        Text("EXPLORAR EXPERIENCE ›", color = CyberGlowPurple, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
                     }
                 }
             }
