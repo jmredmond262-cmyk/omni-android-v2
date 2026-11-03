@@ -75,3 +75,50 @@ data class Store(
         get() = isOpen || is24Hours || isOnDuty
 }
 
+
+
+/** True only when the current local time falls inside hours explicitly published by the store. */
+fun Store.isOpenAtCurrentTime(): Boolean {
+    if (is24Hours || isOnDuty) return true
+    val now = java.util.Calendar.getInstance()
+    val day = now.get(java.util.Calendar.DAY_OF_WEEK)
+    val minuteNow = now.get(java.util.Calendar.HOUR_OF_DAY) * 60 + now.get(java.util.Calendar.MINUTE)
+
+    fun parseMinute(value: String): Int? {
+        val parts = value.trim().split(":")
+        if (parts.size != 2) return null
+        val hour = parts[0].toIntOrNull() ?: return null
+        val minute = parts[1].toIntOrNull() ?: return null
+        if (hour !in 0..23 || minute !in 0..59) return null
+        return hour * 60 + minute
+    }
+
+    fun containsCurrentTime(text: String): Boolean {
+        val ranges = Regex("(\\d{1,2}:\\d{2})\\s*(?:-|–|a)\\s*(\\d{1,2}:\\d{2})").findAll(text)
+        for (range in ranges) {
+            val start = parseMinute(range.groupValues[1]) ?: continue
+            val end = parseMinute(range.groupValues[2]) ?: continue
+            if (if (end >= start) minuteNow in start until end else minuteNow >= start || minuteNow < end) return true
+        }
+        return false
+    }
+
+    if (day == java.util.Calendar.SATURDAY || day == java.util.Calendar.SUNDAY) {
+        val pattern = if (day == java.util.Calendar.SATURDAY) "(?i)s[aá]b(?:ado)?s?\\s*:" else "(?i)dom(?:ingo)?s?\\s*:"
+        val dayText = Regex(pattern + "([^•]+)").find(weekendHoursText)?.groupValues?.getOrNull(1).orEmpty()
+        if (dayText.isNotBlank()) {
+            if (dayText.contains("cerrado", ignoreCase = true)) return false
+            if (containsCurrentTime(dayText)) return true
+            if (Regex("\\d{1,2}:\\d{2}").containsMatchIn(dayText)) return false
+        }
+    }
+
+    if (containsCurrentTime(hoursText)) return true
+    if (Regex("\\d{1,2}:\\d{2}").containsMatchIn(hoursText)) return false
+    val start = parseMinute(openTime)
+    val end = parseMinute(closeTime)
+    if (start != null && end != null) {
+        return if (end >= start) minuteNow in start until end else minuteNow >= start || minuteNow < end
+    }
+    return isOpen
+}

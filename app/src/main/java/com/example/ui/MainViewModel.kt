@@ -688,8 +688,8 @@ class MainViewModel : ViewModel() {
             name.contains("Redcom", ignoreCase = true) || name.contains("computacion", ignoreCase = true) || name.contains("informatica", ignoreCase = true) -> StoreType.ALMACEN
             else -> StoreType.ALMACEN
         }
-        val isPharm = mappedType == StoreType.FARMACIA
-        val is24 = openingHours.contains("24/7", true) || openingHours.contains("24 horas", true) || isPharm
+        val is24 = openingHours.contains("24/7", true) || openingHours.contains("24 horas", true)
+        val isOnDuty = openingHours.contains("guardia", true) || openingHours.contains("de turno", true)
 
         val descriptionText = buildString {
             append("Comercio real registrado en $address. Rubro: $category ($typeLabel). ")
@@ -699,33 +699,33 @@ class MainViewModel : ViewModel() {
             id = id,
             name = name,
             type = mappedType,
-            rating = 4.6f + ((kotlin.math.abs(id.hashCode()) % 5) * 0.08f),
-            reviewsCount = 40 + (kotlin.math.abs(id.hashCode()) % 120),
+            rating = 0f,
+            reviewsCount = 0,
             distanceMeters = distanceMeters.coerceAtLeast(30),
             address = address,
-            isOpen = true,
-            hoursText = if (is24) "DE TURNO 24HS • Guardia Activa" else if (openingHours.isNotBlank()) openingHours else "Abierto de 08:30 a 20:30 hs",
-            accentColorHex = if (isPharm) 0xFF0D9488 else 0xFF059669,
-            photosCount = 5,
-            hasVideoTour = true,
-            videoTourDuration = "0:30",
+            isOpen = false,
+            hoursText = if (is24) "24 horas (horario publicado)" else openingHours.ifBlank { "Horario no informado" },
+            accentColorHex = if (mappedType == StoreType.FARMACIA) 0xFF0D9488 else 0xFF059669,
+            photosCount = 0,
+            hasVideoTour = false,
+            videoTourDuration = "",
             description = descriptionText,
-            specialOfferText = "10% reintegro abonando con OmniPay QR",
-            minSpendDiscountThreshold = 5000.0,
-            minSpendDiscountPercent = 10,
-            comboDeals = listOf(ComboDeal("Ahorro Barrial", "Descuento en compras", "-10%")),
+            specialOfferText = "",
+            minSpendDiscountThreshold = 0.0,
+            minSpendDiscountPercent = 0,
+            comboDeals = emptyList(),
             // Los resultados de mapas/directorios no incluyen precios ni stock verificados.
             // No inventar un catálogo: solo comparar o pedir productos cargados por el comercio.
             inventory = emptyList(),
             mapOffsetX = 0.5f,
             mapOffsetY = 0.5f,
-            openTime = if (is24) "00:00" else "08:30",
-            closeTime = if (is24) "23:59" else "20:30",
-            weekendHoursText = "Atención regular",
+            openTime = if (is24) "00:00" else "",
+            closeTime = if (is24) "23:59" else "",
+            weekendHoursText = "Horario no informado",
             is24Hours = is24,
-            isOnDuty = isPharm,
-            openOnHolidays = is24,
-            scheduleNotes = "Fuente oficial: OpenStreetMap · $category"
+            isOnDuty = isOnDuty,
+            openOnHolidays = openingHours.contains("feriado", true) || is24,
+            scheduleNotes = if (openingHours.isBlank()) "Horario no informado por la fuente" else "Horario publicado por la fuente del directorio"
         )
     }
 

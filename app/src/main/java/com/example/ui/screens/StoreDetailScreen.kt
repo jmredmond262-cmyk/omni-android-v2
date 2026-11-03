@@ -61,6 +61,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.Store
+import com.example.model.isOpenAtCurrentTime
 import com.example.ui.MainViewModel
 import com.example.ui.Screen
 import com.example.ui.components.DistancePill
@@ -86,6 +87,8 @@ fun StoreDetailScreen(
 ) {
     val context = LocalContext.current
     val store = viewModel.selectedStore.collectAsState().value ?: return
+    val scheduleKnown = store.hoursText.isNotBlank() && !store.hoursText.equals("Horario no informado", ignoreCase = true)
+    val openNow = store.isOpenAtCurrentTime()
 
     var showVideoTourModal by remember { mutableStateOf(false) }
     var addedMessage by remember { mutableStateOf<String?>(null) }
@@ -248,7 +251,7 @@ fun StoreDetailScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        RatingBadge(rating = store.rating, reviewsCount = store.reviewsCount)
+                        if (store.rating > 0f && store.reviewsCount > 0) RatingBadge(rating = store.rating, reviewsCount = store.reviewsCount)
                         DistancePill(distanceMeters = store.distanceMeters, walkingMinutes = store.walkingTimeMin)
                     }
 
@@ -256,24 +259,32 @@ fun StoreDetailScreen(
 
                     // Horario y Guardia destacada con pelotita verde parpadeando
                     Surface(
-                        color = if (store.isEffectivelyOpen) Color(0xFFECFDF5) else Color(0xFFF8FAFC),
+                        color = if (!scheduleKnown) Color(0xFFF1F5F9) else if (openNow) Color(0xFFECFDF5) else Color(0xFFF8FAFC),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                OpenStatusBadge(
-                                    isOpen = store.isOpen,
-                                    is24Hours = store.is24Hours,
-                                    isOnDuty = store.isOnDuty,
-                                    openOnHolidays = store.openOnHolidays
-                                )
+                                if (scheduleKnown) {
+                                    OpenStatusBadge(
+                                        isOpen = openNow,
+                                        is24Hours = store.is24Hours,
+                                        isOnDuty = store.isOnDuty,
+                                        openOnHolidays = store.openOnHolidays
+                                    )
+                                } else {
+                                    Text("Horario no informado", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = Color.Gray)
+                                }
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = if (store.isEffectivelyOpen) "Atendiendo en este momento" else "Cerrado",
+                                    text = when {
+                                        !scheduleKnown -> "El comercio no publicó sus horarios"
+                                        openNow -> "Atendiendo en este momento"
+                                        else -> "Cerrado según el horario publicado"
+                                    },
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = if (store.isEffectivelyOpen) EmeraldDark else Color.Gray
+                                    color = if (scheduleKnown && openNow) EmeraldDark else Color.Gray
                                 )
                             }
 
@@ -282,7 +293,7 @@ fun StoreDetailScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(imageVector = Icons.Default.Schedule, contentDescription = null, tint = EmeraldPrimary, modifier = Modifier.size(15.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text(text = "Lunes a Viernes: ${store.openTime} a ${store.closeTime} hs", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = SlateNavy)
+                                Text(text = store.hoursText.ifBlank { "Horario no informado" }, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = SlateNavy)
                             }
 
                             Spacer(modifier = Modifier.height(4.dp))

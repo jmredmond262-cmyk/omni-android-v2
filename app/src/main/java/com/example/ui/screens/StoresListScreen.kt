@@ -84,55 +84,6 @@ import com.example.ui.theme.SlateNavy
 import com.example.ui.util.GoogleMapsHelper
 
 
-/** Evalúa horarios publicados contra el reloj local del dispositivo. */
-private fun isStoreOpenAtCurrentTime(store: com.example.model.Store): Boolean {
-    if (store.is24Hours || store.isOnDuty) return true
-    val now = java.util.Calendar.getInstance()
-    val day = now.get(java.util.Calendar.DAY_OF_WEEK)
-    val minuteNow = now.get(java.util.Calendar.HOUR_OF_DAY) * 60 + now.get(java.util.Calendar.MINUTE)
-
-    fun parseMinute(value: String): Int? {
-        val parts = value.trim().split(":")
-        if (parts.size != 2) return null
-        val hour = parts[0].toIntOrNull() ?: return null
-        val minute = parts[1].toIntOrNull() ?: return null
-        if (hour !in 0..23 || minute !in 0..59) return null
-        return hour * 60 + minute
-    }
-
-    fun containsCurrentTime(text: String): Boolean {
-        val ranges = Regex("(\\d{1,2}:\\d{2})\\s*(?:-|–|a)\\s*(\\d{1,2}:\\d{2})")
-            .findAll(text)
-        for (range in ranges) {
-            val start = parseMinute(range.groupValues[1]) ?: continue
-            val end = parseMinute(range.groupValues[2]) ?: continue
-            if (if (end >= start) minuteNow in start until end else minuteNow >= start || minuteNow < end) return true
-        }
-        return false
-    }
-
-    val weekend = day == java.util.Calendar.SATURDAY || day == java.util.Calendar.SUNDAY
-    if (weekend) {
-        val dayPattern = if (day == java.util.Calendar.SATURDAY) "(?i)s[aá]b(?:ado)?s?\\s*:" else "(?i)dom(?:ingo)?s?\\s*:"
-        val dayText = Regex(dayPattern + "([^•]+)").find(store.weekendHoursText)?.groupValues?.getOrNull(1).orEmpty()
-        if (dayText.isNotBlank()) {
-            if (dayText.contains("cerrado", ignoreCase = true)) return false
-            if (containsCurrentTime(dayText)) return true
-            if (Regex("\\d{1,2}:\\d{2}").containsMatchIn(dayText)) return false
-        }
-    }
-
-    if (containsCurrentTime(store.hoursText)) return true
-    if (Regex("\\d{1,2}:\\d{2}").containsMatchIn(store.hoursText)) return false
-
-    val start = parseMinute(store.openTime)
-    val end = parseMinute(store.closeTime)
-    if (start != null && end != null) {
-        return if (end >= start) minuteNow in start until end else minuteNow >= start || minuteNow < end
-    }
-    return store.isOpen
-}
-
 @Composable
 fun StoresListScreen(
     viewModel: MainViewModel,
@@ -170,7 +121,7 @@ fun StoresListScreen(
 
             val matchesSchedule = when (scheduleFilter) {
                 StoreScheduleFilter.TODOS -> true
-                StoreScheduleFilter.ABIERTOS_AHORA -> isStoreOpenAtCurrentTime(store)
+                StoreScheduleFilter.ABIERTOS_AHORA -> store.isOpenAtCurrentTime()
                 StoreScheduleFilter.FARMACIAS_TURNO -> store.type == StoreType.FARMACIA || store.isOnDuty
                 StoreScheduleFilter.TURNO_24HS -> store.is24Hours || store.isOnDuty
                 StoreScheduleFilter.FERIADOS -> store.openOnHolidays || store.is24Hours || store.isOnDuty
@@ -183,7 +134,7 @@ fun StoresListScreen(
                 when {
                     it.isOnDuty -> 4
                     it.is24Hours -> 3
-                    isStoreOpenAtCurrentTime(it) -> 2
+                    it.isOpenAtCurrentTime() -> 2
                     else -> 0
                 }
             }.thenBy { it.distanceMeters }
@@ -577,14 +528,17 @@ fun StoreDirectoryCard(
                         Text(store.type.name.replace("_", " "), color = colors.primary, fontSize = 9.sp,
                             fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp))
                     }
+                    val scheduleKnown = store.hoursText.isNotBlank() && !store.hoursText.equals("Horario no informado", ignoreCase = true)
+                    val openNow = store.isOpenAtCurrentTime()
                     val openLabel = when {
                         store.isOnDuty -> "DE TURNO"
                         store.is24Hours -> "24 HORAS"
-                        store.isEffectivelyOpen -> "ABIERTO"
+                        !scheduleKnown -> "HORARIO S/D"
+                        openNow -> "ABIERTO"
                         else -> "CERRADO"
                     }
                     Text(openLabel,
-                        color = if (store.isEffectivelyOpen || store.isOnDuty || store.is24Hours) colors.primary else colors.onSurfaceVariant,
+                        color = if (scheduleKnown && (openNow || store.isOnDuty || store.is24Hours)) colors.primary else colors.onSurfaceVariant,
                         fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                     if (store.rating > 0f && store.reviewsCount > 0) {
                         Text("★ ${"%.1f".format(store.rating)}", color = colors.tertiary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
