@@ -97,9 +97,10 @@ fun MorningBriefingScreen(
         appendLine("🌅 OMNI BUENOS DÍAS")
         appendLine(todayDateText)
         appendLine("📍 ${city.ifBlank { "Tu ciudad" }}")
-        appendLine("🌤️ $weatherLine")
-        appendLine("💬 $dailyQuote")
-        previousSummary?.let { appendLine("📋 Ayer: " + it.first + " de " + it.second + " tareas completadas") }
+        if (showWeather) appendLine("🌤️ $weatherLine")
+        if (showMetrics) appendLine("📌 ${tasks.count { !it.isCompleted }} tareas pendientes · ${activeDeals} ofertas activas")
+        if (showQuote) appendLine("💬 $dailyQuote")
+        if (showYesterday) previousSummary?.let { appendLine("📋 Ayer: " + it.first + " de " + it.second + " tareas completadas") }
         appendLine()
         append("Descubrí tu día con OMNI. Muy pronto vas a poder descargar la app.")
     }
