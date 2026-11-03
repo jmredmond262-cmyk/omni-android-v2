@@ -123,6 +123,16 @@ import com.example.ui.theme.MyApplicationTheme
 class MainActivity : ComponentActivity() {
     private var pendingStoreDeepLink by mutableStateOf<String?>(null)
 
+    override fun onStart() {
+        super.onStart()
+        FirebaseAuth.getInstance().currentUser?.uid?.let(UsageAnalyticsRepository::resumeSession)
+    }
+
+    override fun onStop() {
+        UsageAnalyticsRepository.endSession()
+        super.onStop()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
@@ -233,10 +243,6 @@ fun OmniApp(viewModel: MainViewModel) {
     val activeTheme by viewModel.themeMode.collectAsState()
     val liveWeather by viewModel.liveWeatherData.collectAsState()
     val userProfile by viewModel.userProfile.collectAsState()
-
-    LaunchedEffect(currentScreen, userProfile.id) {
-        if (userProfile.id.isNotBlank()) UsageAnalyticsRepository.trackScreen(userProfile.id, currentScreen.title)
-    }
 
     var overflowMenuExpanded by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
