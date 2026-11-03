@@ -155,14 +155,23 @@ fun WeatherForecastScreen(viewModel: MainViewModel) {
             val maxRain = nextHours.maxOfOrNull { it.precipitationProbability } ?: 0
             val maxWind = nextHours.maxOfOrNull { it.windSpeedKmh } ?: w.windSpeedKmh
             val maxUv = nextHours.maxOfOrNull { it.uvIndex } ?: 0.0
+            val coldestFeelsLike = nextHours.minOfOrNull { it.apparentTemperatureC } ?: w.apparentTemperatureC
             val clothingAdvice = when {
-                maxTemp <= 10 -> "Abrigo de invierno, varias capas y calzado cerrado."
-                minTemp <= 13 -> "Llevá campera o buzo: refresca en algún momento del día."
-                maxTemp >= 29 -> "Ropa liviana, fresca y de colores claros."
-                else -> "Ropa cómoda de media estación; una capa liviana puede servir."
+                coldestFeelsLike <= 5.0 || minTemp <= 7.0 -> "Abrigo de invierno: varias capas, campera térmica y calzado cerrado."
+                coldestFeelsLike <= 12.0 || minTemp <= 12.0 -> "Campera o buzo abrigado; llevá una capa extra para las horas más frescas."
+                maxTemp >= 30.0 && minTemp >= 20.0 -> "Ropa muy liviana y transpirable; priorizá telas frescas y colores claros."
+                maxTemp >= 27.0 -> "Ropa liviana para el día y una prenda fina por si refresca."
+                minTemp <= 16.0 -> "Vestite en capas: remera y campera liviana que puedas quitarte al subir la temperatura."
+                else -> "Ropa cómoda de media estación, con una capa liviana según tu actividad."
+            }
+            val rainAdvice = when {
+                maxRain >= 70 -> "Alta probabilidad de lluvia: llevá paraguas o impermeable."
+                maxRain >= 40 -> "Posibles chaparrones: conviene llevar paraguas compacto."
+                maxRain >= 20 -> "Hay una posibilidad baja a moderada de lluvia; revisá el cielo antes de salir."
+                else -> "No se espera lluvia significativa en las próximas horas."
             }
             val precautionAdvice = buildList {
-                if (maxRain >= 40) add("Llevá paraguas o impermeable: hay probabilidad de lluvia.")
+                add(rainAdvice)
                 if (maxWind >= 35) add("Asegurá objetos livianos y tené cuidado al circular.")
                 if (maxUv >= 6.0) add("Usá protector solar, gorra y buscá sombra al mediodía.")
                 if (w.apparentTemperatureC >= 32) add("Hidratate y evitá esfuerzos prolongados al sol.")
