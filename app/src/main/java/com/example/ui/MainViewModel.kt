@@ -71,6 +71,7 @@ sealed class Screen(val title: String) {
     object TripPlanner : Screen("Buscador de Viaje")
     object OmniAi : Screen("Omni AI Assistant")
     object MorningBriefing : Screen("OMNI Buenos Días")
+    object OmniExperience : Screen("OMNI Experience")
     object Routine : Screen("Modo Rutina")
     object JobBoard : Screen("Bolsa de Trabajo y Servicios")
     object Events : Screen("Eventos OMNI")
