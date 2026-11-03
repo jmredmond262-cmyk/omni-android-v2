@@ -179,7 +179,7 @@ fun ContactsScreen(
             ) {
                 listOf("Mi agenda", "Directorio OMNI").forEachIndexed { index, label ->
                     Surface(
-                        color = if (selectedTab == index) EmeraldPrimary else Color.Transparent,
+                        color = if (selectedTab == index) CyberGlowCyan else Color.Transparent,
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.weight(1f).clickable {
                             selectedTab = index
@@ -322,7 +322,7 @@ fun ContactsScreen(
                                 }
                                 context.startActivity(Intent.createChooser(share, "Compartir con ${entry.first}"))
                             }) {
-                                Icon(Icons.Default.Share, contentDescription = "Compartir", tint = EmeraldPrimary)
+                                Icon(Icons.Default.Share, contentDescription = "Compartir", tint = CyberGlowCyan)
                             }
                         }
                     }
@@ -463,10 +463,10 @@ fun ContactCard(
                     },
                     contentDescription = null,
                     tint = when (contact.category) {
-                        ContactCategory.REMIS, ContactCategory.TAXI -> AmberDeal
-                        ContactCategory.FARMACIA_TURNO -> EmeraldDark
-                        ContactCategory.EMERGENCIA -> RosePromo
-                        else -> SlateNavy
+                        ContactCategory.REMIS, ContactCategory.TAXI -> CyberGlowAmber
+                        ContactCategory.FARMACIA_TURNO -> CyberGlowCyan
+                        ContactCategory.EMERGENCIA -> CyberGlowAmber
+                        else -> Color(0xFFEAF4FF)
                     },
                     modifier = Modifier.size(22.dp)
                 )
@@ -490,7 +490,7 @@ fun ContactCard(
                         Icon(
                             imageVector = if (contact.isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
                             contentDescription = "Favorito",
-                            tint = if (contact.isFavorite) AmberDeal else Color(0xFF64748B),
+                            tint = if (contact.isFavorite) CyberGlowAmber else Color(0xFF64748B),
                             modifier = Modifier.size(18.dp)
                         )
                     }
