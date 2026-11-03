@@ -49,6 +49,13 @@ jobs:
               raise SystemExit("El archivo Firebase no contiene una app Android registrada como com.omni.adminpanel.")
           print("Configuración de autenticación administrativa validada.")
           PY
+      - name: Configure persistent OMNI signing identity
+        env:
+          OMNI_DEBUG_KEYSTORE_BASE64: ${{ secrets.OMNI_DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$OMNI_DEBUG_KEYSTORE_BASE64" || { echo "::error::Falta OMNI_DEBUG_KEYSTORE_BASE64. Se necesita la misma firma persistente para actualizar OMNI Admin sin desinstalar."; exit 1; }
+          printf '%s' "$OMNI_DEBUG_KEYSTORE_BASE64" | base64 --decode > debug.keystore
+          keytool -list -v -keystore debug.keystore -storepass android -alias androiddebugkey | grep -E 'SHA1:|SHA256:'
       - name: Build standalone Admin APK
         run: gradle :admin:assembleDebug
       - name: Upload OMNI Admin APK
