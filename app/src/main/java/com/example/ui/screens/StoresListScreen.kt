@@ -236,119 +236,135 @@ fun StoresListScreen(
                         Text(if (showRadarControls) "▲" else "▼", color = MaterialTheme.colorScheme.primary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                     if (showRadarControls) {
-                        val activeKey = viewModel.getGoogleApiKey(context)
-                        val isGoogleActive = activeKey.isNotBlank()
-    
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = if (isGoogleActive) "🟢 Google Places API (New) Activa" else "🗺️ Google Places: Clave de demostración",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = EmeraldDark
-                            )
-                            TextButton(
-                                onClick = {
-                                    inputDemoKey = viewModel.getGoogleApiKey(context)
-                                    showDemoKeyDialog = true
-                                },
-                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
-                            ) {
-                                Text(
-                                    text = if (isGoogleActive) "Editar clave" else "🔑 Cargar clave",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-    
-                        Spacer(modifier = Modifier.height(10.dp))
-    
-                        // Selector de Radio de Búsqueda Configurable
-                        Text(
-                            text = "Configurar Radio de Cobertura:",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = EmeraldDark
-                        )
-    
-                        Spacer(modifier = Modifier.height(6.dp))
-    
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            listOf(500 to "500 m", 1000 to "1 km", 2000 to "2 km", 5000 to "5 km", 10000 to "10 km").forEach { (meters, label) ->
-                                val isSelected = searchRadius == meters
-                                Surface(
-                                    color = if (isSelected) EmeraldPrimary else Color.White,
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clickable { viewModel.setSearchRadius(meters, context) }
+                        AlertDialog(
+                            onDismissRequest = { showRadarControls = false },
+                            title = { Text("Configurar radar cercano", fontWeight = FontWeight.Bold) },
+                            text = {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    Box(
-                                        modifier = Modifier.padding(vertical = 6.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = label,
-                                            fontSize = 10.sp,
-                                            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
-                                            color = if (isSelected) Color.White else SlateNavy
-                                        )
-                                    }
-                                }
-                            }
-                        }
-    
-                        Spacer(modifier = Modifier.height(10.dp))
-    
-                        // BOTÓN PRINCIPAL: Buscar Nuevamente en esta área
-                        Button(
-                            onClick = { viewModel.rescanAreaStores(context) },
-                            enabled = !isLoadingGps,
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
-                            modifier = Modifier.fillMaxWidth(),
-                            contentPadding = PaddingValues(vertical = 10.dp)
-                        ) {
-                            Icon(imageVector = Icons.Default.Search, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = if (isLoadingGps) "Escaneando comercios en vivo..." else "🔄 Buscar Nuevamente en Esta Área",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp,
-                                color = Color.White
-                            )
-                        }
-    
-                        Spacer(modifier = Modifier.height(8.dp))
-    
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
+                            val activeKey = viewModel.getGoogleApiKey(context)
+                            val isGoogleActive = activeKey.isNotBlank()
+        
                             Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "✅ ${filteredAndRankedStores.size} locales escaneados y listados directamente en tu app",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = SlateNavy
+                                    text = if (isGoogleActive) "🟢 Google Places API (New) Activa" else "🗺️ Google Places: Clave de demostración",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = EmeraldDark
+                                )
+                                TextButton(
+                                    onClick = {
+                                        inputDemoKey = viewModel.getGoogleApiKey(context)
+                                        showDemoKeyDialog = true
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                                ) {
+                                    Text(
+                                        text = if (isGoogleActive) "Editar clave" else "🔑 Cargar clave",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+        
+                            Spacer(modifier = Modifier.height(10.dp))
+        
+                            // Selector de Radio de Búsqueda Configurable
+                            Text(
+                                text = "Configurar Radio de Cobertura:",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = EmeraldDark
+                            )
+        
+                            Spacer(modifier = Modifier.height(6.dp))
+        
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                listOf(500 to "500 m", 1000 to "1 km", 2000 to "2 km", 5000 to "5 km", 10000 to "10 km").forEach { (meters, label) ->
+                                    val isSelected = searchRadius == meters
+                                    Surface(
+                                        color = if (isSelected) EmeraldPrimary else Color.White,
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clickable { viewModel.setSearchRadius(meters, context) }
+                                    ) {
+                                        Box(
+                                            modifier = Modifier.padding(vertical = 6.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = label,
+                                                fontSize = 10.sp,
+                                                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
+                                                color = if (isSelected) Color.White else SlateNavy
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+        
+                            Spacer(modifier = Modifier.height(10.dp))
+        
+                            // BOTÓN PRINCIPAL: Buscar Nuevamente en esta área
+                            Button(
+                                onClick = { viewModel.rescanAreaStores(context) },
+                                enabled = !isLoadingGps,
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
+                                modifier = Modifier.fillMaxWidth(),
+                                contentPadding = PaddingValues(vertical = 10.dp)
+                            ) {
+                                Icon(imageVector = Icons.Default.Search, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (isLoadingGps) "Escaneando comercios en vivo..." else "🔄 Buscar Nuevamente en Esta Área",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    color = Color.White
                                 )
                             }
-                        }
-    
-                        Spacer(modifier = Modifier.height(6.dp))
+        
+                            Spacer(modifier = Modifier.height(8.dp))
+        
+                            Surface(
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "✅ ${filteredAndRankedStores.size} locales escaneados y listados directamente en tu app",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = SlateNavy
+                                    )
+                                }
+                            }
+        
+                            Spacer(modifier = Modifier.height(6.dp))
+                                }
+                            },
+                            confirmButton = {
+                                TextButton(onClick = { showRadarControls = false }) {
+                                    Text("Listo")
+                                }
+                            }
+                        )
                     }
                     TextButton(
                         onClick = { showOsmAdvancedPanel = !showOsmAdvancedPanel },
