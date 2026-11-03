@@ -310,7 +310,21 @@ service cloud.firestore {
         && request.resource.data.event is string
         && request.resource.data.appVersion is string
         && request.resource.data.createdAt is timestamp
-        && request.resource.data.keys().hasOnly(["uid", "module", "event", "appVersion", "createdAt", "campaignId", "sessionId"]);
+        && (!("eventId" in request.resource.data) || request.resource.data.eventId is string)
+        && (!("platform" in request.resource.data) || request.resource.data.platform == "android")
+        && (!("schemaVersion" in request.resource.data) || request.resource.data.schemaVersion is int)
+        && (!("data" in request.resource.data) || (
+          request.resource.data.data is map
+          && request.resource.data.data.keys().hasOnly([
+            "category", "source", "resultCount", "durationMs", "success",
+            "itemType", "method", "flow", "surface", "destinationType",
+            "screenName", "radiusBucket", "status"
+          ])
+        ))
+        && request.resource.data.keys().hasOnly([
+          "uid", "module", "event", "appVersion", "createdAt", "campaignId",
+          "sessionId", "eventId", "platform", "schemaVersion", "data"
+        ]);
       allow update, delete: if false;
     }
 

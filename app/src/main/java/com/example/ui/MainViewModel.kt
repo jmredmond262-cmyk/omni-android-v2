@@ -687,7 +687,14 @@ class MainViewModel : ViewModel() {
         latitude: Double = _userProfile.value.currentLatitude,
         longitude: Double = _userProfile.value.currentLongitude
     ) {
-        trackUsageAction("LOCAL_DIRECTORY_SEARCH", "discovery")
+        trackUsageAction("LOCAL_DIRECTORY_SEARCH", "maps_locations", mapOf(
+            "category" to category.take(40),
+            "radiusBucket" to when {
+                radiusMeters <= 1000 -> "0-1km"
+                radiusMeters <= 5000 -> "1-5km"
+                else -> "5km+"
+            }
+        ))
         directorySearchRequestId += 1
         val requestId = directorySearchRequestId
         _isSearchingOmniDirectory.value = true
@@ -754,6 +761,8 @@ class MainViewModel : ViewModel() {
             val city = details.city.ifBlank { "Romang" }
             _currentCity.value = city
             _touristAttractions.value = ArgentinaAttractions.nearby(lat, lon)
+            trackUsageAction("TOURISM_NEARBY_LOADED", "tourism", mapOf("resultCount" to _touristAttractions.value.size))
+            trackUsageAction("NEARBY_AREA_REFRESHED", "maps_locations")
             saveLocation(context, city, lat, lon)
 
             _userProfile.value = _userProfile.value.copy(
@@ -819,7 +828,7 @@ class MainViewModel : ViewModel() {
     }
 
     fun refreshWeatherNow() {
-        trackUsageAction("WEATHER_REFRESH", "weather")
+        trackUsageAction("WEATHER_REFRESH", "routine_weather")
         val profile = _userProfile.value
         fetchLiveWeatherAndAlerts(
             profile.currentLatitude,
@@ -939,9 +948,9 @@ class MainViewModel : ViewModel() {
         _selectedWaypointLandmark.value = name
     }
 
-    private fun trackUsageAction(action: String, module: String) {
+    private fun trackUsageAction(action: String, module: String, metadata: Map<String, Any> = emptyMap()) {
         _userProfile.value.id.takeIf { it.isNotBlank() }?.let { uid ->
-            UsageAnalyticsRepository.trackAction(uid, action, module)
+            UsageAnalyticsRepository.trackEvent(uid, module, action, metadata)
         }
     }
 
@@ -972,6 +981,7 @@ class MainViewModel : ViewModel() {
 
     fun selectStoreAndOpenRoute(store: Store) {
         _selectedStore.value = store
+        trackUsageAction("STORE_ROUTE_OPENED", "maps_locations", mapOf("source" to "store_detail"))
         setTrackedScreen(Screen.InteractiveRoute)
     }
 
@@ -1096,6 +1106,7 @@ class MainViewModel : ViewModel() {
     }
 
     fun addStopToTrip(stopName: String, extraDistanceKm: Double = 1.2) {
+        trackUsageAction("ROUTE_STOP_ADDED", "maps_locations")
         val current = _currentTrip.value
         val newDistance = current.distanceKm + extraDistanceKm
         val newWalking = (newDistance * 14).toInt()
@@ -1155,10 +1166,12 @@ class MainViewModel : ViewModel() {
     }
 
     fun toggleMorningDigest(enabled: Boolean) {
+        trackUsageAction(if (enabled) "MORNING_DIGEST_ENABLED" else "MORNING_DIGEST_DISABLED", "routine_weather")
         _userProfile.value = _userProfile.value.copy(morningDigestEnabled = enabled)
     }
 
     fun toggleOnRouteAlerts(enabled: Boolean) {
+        trackUsageAction(if (enabled) "ROUTE_ALERTS_ENABLED" else "ROUTE_ALERTS_DISABLED", "routine_weather")
         _userProfile.value = _userProfile.value.copy(onRouteAlertsEnabled = enabled)
     }
 
@@ -1212,6 +1225,7 @@ class MainViewModel : ViewModel() {
     }
 
     fun updateDiscountThreshold(threshold: Double, percent: Int) {
+        trackUsageAction("STORE_DISCOUNT_UPDATED", "merchant")
         val current = _managedStore.value
         val updated = current.copy(
             minSpendDiscountThreshold = threshold,
@@ -1259,6 +1273,7 @@ class MainViewModel : ViewModel() {
         scheduleNotes: String,
         isOpenNow: Boolean
     ) {
+        trackUsageAction("STORE_SCHEDULE_UPDATED", "merchant")
         val current = _managedStore.value
         val hoursDisplay = when {
             isOnDuty -> "DE TURNO 24HS • Guardia Activa Nocturna y Feriados"

@@ -175,6 +175,7 @@ fun EventsScreen(onBack: () -> Unit) {
                                     if (!next.add(event.id)) next.remove(event.id)
                                     favorites = next
                                     prefs.edit().putStringSet("ids", next).apply()
+                                    UsageAnalyticsRepository.trackCurrentAction("events", "EVENT_FAVORITE_TOGGLED")
                                 }) {
                                     Icon(if (favorites.contains(event.id)) Icons.Default.Favorite else Icons.Default.FavoriteBorder, "Favorito", tint = Color(0xFFFF6F91))
                                 }
@@ -194,6 +195,7 @@ fun EventsScreen(onBack: () -> Unit) {
                                             .putExtra(CalendarContract.Events.EVENT_LOCATION, event.location)
                                             .putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, parsed.time)
                                             .putExtra(CalendarContract.EXTRA_EVENT_END_TIME, end)
+                                        UsageAnalyticsRepository.trackCurrentAction("events", "EVENT_CALENDAR_REMINDER_OPENED")
                                         runCatching { context.startActivity(intent) }.onFailure { feedback = "No se encontró una aplicación de calendario." }
                                     }
                                 }, modifier = Modifier.weight(1f)) { Text("Recordarme", fontSize = 10.sp) }
@@ -218,6 +220,7 @@ fun EventsScreen(onBack: () -> Unit) {
                                     putExtra(Intent.EXTRA_SUBJECT, event.title)
                                     putExtra(Intent.EXTRA_TEXT, share)
                                 }
+                                UsageAnalyticsRepository.trackCurrentAction("events", "EVENT_SHARED", mapOf("method" to "share_sheet"))
                                 runCatching { context.startActivity(Intent.createChooser(send, "Compartir evento OMNI")) }
                                     .onFailure { feedback = "No se pudo abrir el menú para compartir." }
                             }) {

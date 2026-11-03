@@ -107,6 +107,9 @@ jobs:
             "configuration_version": "1"
           }
           JSON
+      - name: Create temporary compile-only signing key
+        run: |
+          keytool -genkeypair -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -dname "CN=OMNI Compile Check,O=OMNI,C=AR" -keyalg RSA -keysize 2048 -validity 2
       - name: Compile Admin APK (not published)
         run: gradle :admin:assembleDebug
   backend:

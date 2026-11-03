@@ -216,6 +216,7 @@ function summarizeUsage(events) {
   let actions7d = 0;
   const topScreens = new Map();
   const moduleUsage = new Map();
+  const eventUsage = new Map();
   const reserved = new Set(["SESSION_START", "SESSION_END", "APP_FOREGROUND", "APP_BACKGROUND", "SCREEN_VIEW", "SCREEN_EXIT", "DIAGNOSTIC_TEST"]);
   for (const event of meaningful) {
     if (event.event === "SCREEN_VIEW") {
@@ -224,6 +225,7 @@ function summarizeUsage(events) {
     } else if (!reserved.has(event.event)) {
       actions7d += 1;
       moduleUsage.set(event.module, (moduleUsage.get(event.module) || 0) + 1);
+      eventUsage.set(event.event, (eventUsage.get(event.event) || 0) + 1);
     }
   }
   for (const group of sessionGroups.values()) {
@@ -259,7 +261,18 @@ function summarizeUsage(events) {
     averageSessionSeconds: completedSessions ? Math.round(totalSessionMs / completedSessions / 1000) : 0,
     averageScreenSeconds: measuredScreens ? Math.round(totalScreenMs / measuredScreens / 1000) : 0,
     topScreens: [...topScreens.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 6),
-    moduleUsage: [...moduleUsage.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 6)
+    moduleUsage: [...moduleUsage.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 10),
+    eventBreakdown: [...eventUsage.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 10),
+    featureMetrics: {
+      aiCameraScans: moduleUsage.get("ai_camera") || 0,
+      mapsInteractions: moduleUsage.get("maps_locations") || 0,
+      commerceShares: [...eventUsage.entries()].filter(([name]) => name.includes("SHARED") || name.includes("SHARE")).reduce((sum, [, count]) => sum + count, 0),
+      jobInteractions: moduleUsage.get("jobs") || 0,
+      tourismInteractions: moduleUsage.get("tourism") || 0,
+      routineWeatherInteractions: moduleUsage.get("routine_weather") || 0,
+      eventInteractions: (moduleUsage.get("events") || 0) + (moduleUsage.get("community") || 0),
+      walletUsageActions: (moduleUsage.get("wallet") || 0) + (moduleUsage.get("wallet_qr") || 0)
+    }
   };
 }
 async function dashboard(env) {

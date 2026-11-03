@@ -215,6 +215,7 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
     }
 
     fun scanOrder() {
+        UsageAnalyticsRepository.trackCurrentAction("orders", "ORDER_QR_SCAN_STARTED")
         GmsBarcodeScanning.getClient(context).startScan()
             .addOnSuccessListener { barcode ->
                 val parts = barcode.rawValue.orEmpty().split("|")
@@ -230,6 +231,7 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
                                 feedback = "QR inválido, vencido, ya cerrado o no corresponde a este comercio."
                             } else {
                                 scannedOrderId = order.id
+                                UsageAnalyticsRepository.trackCurrentAction("orders", "ORDER_QR_VERIFIED", mapOf("success" to true))
                                 feedback = "Pedido verificado: ${order.id.take(8)} · ${order.status}"
                             }
                         }.addOnFailureListener { feedback = "No se pudo verificar el pedido en Firestore." }
@@ -370,6 +372,7 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
                                 val qrFile = File(folder, "omni-pedido-${order.id.take(10)}.png")
                                 FileOutputStream(qrFile).use { output -> check(qrBitmap.compress(Bitmap.CompressFormat.PNG, 100, output)) }
                                 val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", qrFile)
+                                UsageAnalyticsRepository.trackCurrentAction("orders", "ORDER_SHARED", mapOf("method" to "share_sheet"))
                                 val share = Intent(Intent.ACTION_SEND).apply {
                                     type = "image/png"
                                     putExtra(Intent.EXTRA_STREAM, uri)

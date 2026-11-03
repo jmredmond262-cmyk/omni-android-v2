@@ -278,6 +278,12 @@ private fun DashboardContent(payload: JSONObject) {
     "Pantallas vistas · 7 días" to analytics.optInt("screenViews7d").toString(),
     "Acciones · 7 días" to analytics.optInt("actions7d").toString(),
     "Promedio por sesión" to analytics.optInt("averageSessionSeconds").let { if (it > 0) "${it}s" else "—" },
+    "Cámara IA · análisis" to analytics.optJSONObject("featureMetrics")?.optInt("aiCameraScans", 0).toString(),
+    "Interacciones en mapas" to analytics.optJSONObject("featureMetrics")?.optInt("mapsInteractions", 0).toString(),
+    "Bolsa de trabajo" to analytics.optJSONObject("featureMetrics")?.optInt("jobInteractions", 0).toString(),
+    "Eventos e interacciones" to analytics.optJSONObject("featureMetrics")?.optInt("eventInteractions", 0).toString(),
+    "Rutinas y clima" to analytics.optJSONObject("featureMetrics")?.optInt("routineWeatherInteractions", 0).toString(),
+    "Compartidos" to analytics.optJSONObject("featureMetrics")?.optInt("commerceShares", 0).toString(),
     "Billeteras" to counts.optInt("walletAccounts").toString(),
     "Operaciones" to counts.optInt("walletOperations").toString(),
     "Comercios" to counts.optInt("merchantProfiles").toString(),
@@ -397,6 +403,15 @@ private fun DashboardContent(payload: JSONObject) {
                 Text(row["count"]?.toString().orEmpty(), color = Mint, fontSize = 12.sp, fontWeight = FontWeight.Bold)
               }
             }
+            val eventBreakdown = jsonArrayToList(analytics.optJSONArray("eventBreakdown"))
+            Text("Acciones más frecuentes", color = White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            if (eventBreakdown.isEmpty()) Text("Las acciones aparecerán cuando se utilicen los módulos.", color = Muted, fontSize = 12.sp)
+            eventBreakdown.take(8).forEach { row ->
+              Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(friendlyEnum(row["name"]?.toString().orEmpty()), color = White, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                Text(row["count"]?.toString().orEmpty(), color = Mint, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+              }
+            }
           }
         }
       }
@@ -486,6 +501,7 @@ private val fieldLabels = mapOf(
   "message" to "Mensaje", "description" to "Descripción", "enabled" to "Habilitado",
   "event" to "Evento", "module" to "Módulo", "eventName" to "Evento", "screen" to "Pantalla", "appVersion" to "Versión",
   "createdAt" to "Fecha de registro", "updatedAt" to "Última actualización", "lastSeenAt" to "Última actividad", "userLabel" to "Usuario",
+  "data" to "Detalles de acción", "screenName" to "Pantalla", "eventId" to "Identificador de evento",
   "cvu" to "CVU"
 )
 private fun friendlyEnum(value: String): String = when (value.uppercase()) {

@@ -138,7 +138,7 @@ fun JobBoardScreen(onBack: () -> Unit) {
             "status" to "ACTIVE",
             "createdAt" to FieldValue.serverTimestamp()
         )).addOnSuccessListener {
-            UsageAnalyticsRepository.trackAction(uid, "JOB_POST_PUBLISHED", "jobs")
+            UsageAnalyticsRepository.trackEvent(uid, "jobs", "JOB_POST_PUBLISHED", mapOf("category" to postCategory, "success" to true))
             busy = false
             showPublish = false
             selectedTab = 0
@@ -172,7 +172,7 @@ fun JobBoardScreen(onBack: () -> Unit) {
                         "status" to "RECIBIDA",
                         "createdAt" to FieldValue.serverTimestamp()
                     )).addOnSuccessListener {
-                        UsageAnalyticsRepository.trackAction(uid, "JOB_APPLICATION_SENT", "jobs")
+                        UsageAnalyticsRepository.trackEvent(uid, "jobs", "JOB_APPLICATION_SENT", mapOf("success" to true))
                         busy = false
                         feedback = "Postulación enviada correctamente."
                     }.addOnFailureListener { e ->
@@ -248,12 +248,14 @@ fun JobBoardScreen(onBack: () -> Unit) {
                                             if (phoneNumber.isNotBlank()) {
                                                 context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$phoneNumber")))
                                             } else if (post.contactEmail.isNotBlank()) {
+                                                UsageAnalyticsRepository.trackCurrentAction("jobs", "JOB_CONTACT_OPENED", mapOf("method" to "email"))
                                                 context.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:${post.contactEmail}")))
                                             }
                                         } catch (_: Exception) { feedback = "No se encontró una aplicación para contactar." }
                                     }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF087EAB))) { Text("Contactar", fontSize = 10.sp) }
                                     IconButton(onClick = {
                                         val share = "🧰 ${post.title}\n${post.category} · ${post.location}\n\n${post.description}\n\nContacto: ${post.contactPhone.ifBlank { post.contactEmail }}\n\nCompartido desde OMNI."
+                                        UsageAnalyticsRepository.trackCurrentAction("jobs", "JOB_POST_SHARED", mapOf("method" to "share_sheet"))
                                         val send = Intent(Intent.ACTION_SEND).apply {
                                             type = "text/plain"
                                             putExtra(Intent.EXTRA_SUBJECT, post.title)

@@ -40,6 +40,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.analytics.UsageAnalyticsRepository
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Calendar
@@ -240,8 +241,18 @@ fun RoutineModeScreen(onBack: () -> Unit) {
     var mode by remember { mutableStateOf("SOUND") }
 
     fun persist(next: List<OmniRoutine>) {
+        val previousCount = routines.size
         routines = next
         RoutineStore.save(context, next)
+        val action = when {
+            next.size > previousCount -> "ROUTINE_CREATED"
+            next.size < previousCount -> "ROUTINE_DELETED"
+            else -> "ROUTINE_UPDATED"
+        }
+        UsageAnalyticsRepository.trackCurrentAction(
+            "routine_weather", action,
+            mapOf("resultCount" to next.count { it.enabled }, "source" to "routine_screen")
+        )
     }
     fun openEditor(item: OmniRoutine? = null) {
         editing = item

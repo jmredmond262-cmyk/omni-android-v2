@@ -160,9 +160,11 @@ fun MerchantHubScreen(
                 ProductCategory.values().firstOrNull { it.name == draft.category }?.let { prodCategory = it }
                 if (draft.barcode.isNotBlank()) prodBarcode = draft.barcode
                 aiAnalysisMessage = "Ficha sugerida por IA. Revisá los datos antes de publicar."
+                UsageAnalyticsRepository.trackCurrentAction("ai_camera", "AI_PRODUCT_PHOTO_ANALYZED", mapOf("category" to draft.category.take(40), "success" to true))
             }.onFailure { error ->
                 aiAnalysisMessage = error.localizedMessage
                     ?: "No se pudo analizar la foto. Podés completar los datos manualmente."
+                UsageAnalyticsRepository.trackCurrentAction("ai_camera", "AI_PRODUCT_PHOTO_FAILED", mapOf("success" to false))
             }
             isAiAnalyzing = false
         }
