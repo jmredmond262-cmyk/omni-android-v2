@@ -637,7 +637,7 @@ private fun FinanceContent(payload: JSONObject) {
     if (transactions.isEmpty()) item { EmptyState("Todavía no hay movimientos individuales registrados.") }
     else items(transactions, key = { it["id"]?.toString() ?: it.hashCode().toString() }) { RecordCard(it, "walletTransactions") }
     item { Text("Operaciones globales", color = White, fontSize = 17.sp, fontWeight = FontWeight.Bold) }
-    if (operations.isEmpty()) item { EmptyState("Todavía no hay operaciones globales.") }
+    if (operations.isEmpty()) item { EmptyState("Las operaciones se reflejan en el historial individual de cada billetera. La colección global todavía no contiene registros.") }
     else items(operations.take(100), key = { it["id"]?.toString() ?: it.hashCode().toString() }) { RecordCard(it, "walletOperations") }
   }
 }
