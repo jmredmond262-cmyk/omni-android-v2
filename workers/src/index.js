@@ -188,6 +188,80 @@ async function audit(env, actor, action, target, details = {}) {
     createdAt: new Date().toISOString()
   });
 }
+function userLabels(profiles) {
+  return new Map(profiles.map(profile => [
+    String(profile.uid || profile.id || ""),
+    String(profile.displayName || profile.fullName || profile.name || profile.email || "Usuario OMNI")
+  ]).filter(([uid]) => uid));
+}
+function attachUserLabels(events, profiles) {
+  const labels = userLabels(profiles);
+  return events.map(event => ({ ...event, userLabel: labels.get(String(event.uid || "")) || "Usuario OMNI" }));
+}
+function summarizeUsage(events) {
+  const meaningful = events.filter(event => event.event !== "DIAGNOSTIC_TEST");
+  const activeUids = new Set(meaningful.map(event => String(event.uid || "")).filter(Boolean));
+  const sessionGroups = new Map();
+  for (const event of meaningful) {
+    const key = String(event.sessionId || "");
+    if (!key) continue;
+    if (!sessionGroups.has(key)) sessionGroups.set(key, []);
+    sessionGroups.get(key).push(event);
+  }
+  let totalSessionMs = 0;
+  let completedSessions = 0;
+  let totalScreenMs = 0;
+  let measuredScreens = 0;
+  let screenViews7d = 0;
+  let actions7d = 0;
+  const topScreens = new Map();
+  const moduleUsage = new Map();
+  const reserved = new Set(["SESSION_START", "SESSION_END", "APP_FOREGROUND", "APP_BACKGROUND", "SCREEN_VIEW", "SCREEN_EXIT", "DIAGNOSTIC_TEST"]);
+  for (const event of meaningful) {
+    if (event.event === "SCREEN_VIEW") {
+      screenViews7d += 1;
+      topScreens.set(event.module, (topScreens.get(event.module) || 0) + 1);
+    } else if (!reserved.has(event.event)) {
+      actions7d += 1;
+      moduleUsage.set(event.module, (moduleUsage.get(event.module) || 0) + 1);
+    }
+  }
+  for (const group of sessionGroups.values()) {
+    group.sort((a, b) => Date.parse(a.createdAt || 0) - Date.parse(b.createdAt || 0));
+    const start = group.find(event => event.event === "SESSION_START");
+    const finish = [...group].reverse().find(event => event.event === "SESSION_END");
+    if (start && finish) {
+      const duration = Date.parse(finish.createdAt) - Date.parse(start.createdAt);
+      if (Number.isFinite(duration) && duration >= 0) {
+        totalSessionMs += duration;
+        completedSessions += 1;
+      }
+    }
+    for (let i = 0; i < group.length; i++) {
+      const event = group[i];
+      if (event.event !== "SCREEN_VIEW") continue;
+      const next = group.slice(i + 1).find(item =>
+        item.event === "SCREEN_VIEW" || item.event === "APP_BACKGROUND" || item.event === "SESSION_END"
+      );
+      if (!next) continue;
+      const duration = Date.parse(next.createdAt) - Date.parse(event.createdAt);
+      if (Number.isFinite(duration) && duration >= 0 && duration <= 6 * 60 * 60 * 1000) {
+        totalScreenMs += duration;
+        measuredScreens += 1;
+      }
+    }
+  }
+  return {
+    activeUsers7d: activeUids.size,
+    sessions7d: new Set(meaningful.filter(event => event.event === "SESSION_START").map(event => event.sessionId).filter(Boolean)).size,
+    screenViews7d,
+    actions7d,
+    averageSessionSeconds: completedSessions ? Math.round(totalSessionMs / completedSessions / 1000) : 0,
+    averageScreenSeconds: measuredScreens ? Math.round(totalScreenMs / measuredScreens / 1000) : 0,
+    topScreens: [...topScreens.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 6),
+    moduleUsage: [...moduleUsage.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 6)
+  };
+}
 async function dashboard(env) {
   const collections = ["users", "walletAccounts", "walletOperations", "merchantProfiles", "storeOrders", "omniEvents", "appFeedback", "usageEvents", "moduleRegistry", "adminAuditLogs"];
   const counts = await Promise.all(collections.map(name => countDocuments(env, name)));
@@ -211,28 +285,27 @@ async function dashboard(env) {
     return date.toISOString().slice(0, 10);
   });
   const usageByDay = Object.fromEntries(dayKeys.map(day => [day, 0]));
-  const activeUids = new Set();
   for (const event of usageEvents) {
+    if (event.event === "DIAGNOSTIC_TEST") continue;
     const day = String(event.createdAt || "").slice(0, 10);
-    if (Object.prototype.hasOwnProperty.call(usageByDay, day)) {
-      usageByDay[day] += 1;
-      if (event.uid) activeUids.add(String(event.uid));
-    }
+    if (Object.prototype.hasOwnProperty.call(usageByDay, day)) usageByDay[day] += 1;
   }
   const usageTrend = dayKeys.map(day => ({
     date: day.slice(8, 10) + "/" + day.slice(5, 7),
     count: usageByDay[day]
   }));
+  const analytics = summarizeUsage(usageEvents);
   return {
     counts: resolvedCounts,
-    activeUsers7d: activeUids.size,
+    activeUsers7d: analytics.activeUsers7d,
+    analytics,
     usageTrend,
     walletBalanceSample: wallets.reduce((sum, item) => sum + (Number(item.balance) || 0), 0),
     walletSampleSize: wallets.length,
     usageSampleLimit: 5000,
     usageSampleComplete: usageEvents.length < 5000,
     recentUsers, recentOperations: operations,
-    recentUsageEvents: usageEvents.slice(0, 8),
+    recentUsageEvents: attachUserLabels(usageEvents.filter(event => event.event !== "DIAGNOSTIC_TEST").slice(0, 8), userProfiles),
     diagnostics: {
       usageEventsVisibleLast7Days: usageEvents.length,
       diagnosticEventSeen: usageEvents.some(event => event.event === "DIAGNOSTIC_TEST"),
@@ -252,9 +325,12 @@ async function handleAction(env, actor, action, data) {
       if (collection === "usageEvents") {
         const offset = Math.max(0, Math.min(Number(data.offset) || 0, 50000));
         const pageSize = Math.min(Math.max(Number(data.limit) || 100, 1), 100);
-        const items = await recentDocuments(env, collection, pageSize + 1, offset);
+        const [items, profiles] = await Promise.all([
+          recentDocuments(env, collection, pageSize + 1, offset),
+          recentDocuments(env, "users", 200)
+        ]);
         const hasMore = items.length > pageSize;
-        return { items: items.slice(0, pageSize), hasMore, nextOffset: hasMore ? offset + pageSize : null };
+        return { items: attachUserLabels(items.slice(0, pageSize), profiles), hasMore, nextOffset: hasMore ? offset + pageSize : null };
       }
       const page = await listDocumentsPage(env, collection, data.limit, String(data.pageToken || ""));
       return { items: page.items, nextPageToken: page.nextPageToken, hasMore: Boolean(page.nextPageToken) };
