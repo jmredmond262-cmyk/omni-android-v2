@@ -125,7 +125,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        FirebaseAuth.getInstance().currentUser?.uid?.let(UsageAnalyticsRepository::resumeSession)
+        FirebaseAuth.getInstance().currentUser?.uid?.let { uid -> UsageAnalyticsRepository.resumeSession(uid) }
     }
 
     override fun onStop() {
