@@ -113,17 +113,17 @@ private fun isStoreOpenAtCurrentTime(store: com.example.model.Store): Boolean {
 
     val weekend = day == java.util.Calendar.SATURDAY || day == java.util.Calendar.SUNDAY
     if (weekend) {
-        val dayPattern = if (day == java.util.Calendar.SATURDAY) "(?i)s[aá]b(?:ado)?s?\\\\s*:" else "(?i)dom(?:ingo)?s?\\\\s*:"
+        val dayPattern = if (day == java.util.Calendar.SATURDAY) "(?i)s[aá]b(?:ado)?s?\\s*:" else "(?i)dom(?:ingo)?s?\\s*:"
         val dayText = Regex(dayPattern + "([^•]+)").find(store.weekendHoursText)?.groupValues?.getOrNull(1).orEmpty()
         if (dayText.isNotBlank()) {
             if (dayText.contains("cerrado", ignoreCase = true)) return false
             if (containsCurrentTime(dayText)) return true
-            if (Regex("\\\\d{1,2}:\\\\d{2}").containsMatchIn(dayText)) return false
+            if (Regex("\\d{1,2}:\\d{2}").containsMatchIn(dayText)) return false
         }
     }
 
     if (containsCurrentTime(store.hoursText)) return true
-    if (Regex("\\\\d{1,2}:\\\\d{2}").containsMatchIn(store.hoursText)) return false
+    if (Regex("\\d{1,2}:\\d{2}").containsMatchIn(store.hoursText)) return false
 
     val start = parseMinute(store.openTime)
     val end = parseMinute(store.closeTime)
