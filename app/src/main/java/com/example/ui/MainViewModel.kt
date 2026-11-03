@@ -185,6 +185,9 @@ class MainViewModel : ViewModel() {
             if (requestId != storeCatalogRequestId) return@loadPublicCatalogs
             _allStores.value = enriched
             _stores.value = selectedStoreType?.let { type -> enriched.filter { it.type == type } } ?: enriched
+            _selectedStore.value?.let { selected ->
+                enriched.firstOrNull { it.id == selected.id }?.let { _selectedStore.value = it }
+            }
         }
     }
 
