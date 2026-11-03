@@ -103,12 +103,8 @@ object GooglePlacesApi {
 
             val requestBody = JSONObject().apply {
                 put("maxResultCount", 20)
-                put("includedTypes", JSONArray(listOf(
-                    "store", "supermarket", "grocery_store", "convenience_store",
-                    "bakery", "pharmacy", "restaurant", "cafe", "meal_takeaway",
-                    "bank", "gas_station", "hardware_store", "electronics_store",
-                    "clothing_store", "car_repair"
-                )))
+                // Sin includedTypes: la búsqueda devuelve todos los lugares cercanos.
+                // La clasificación y los filtros por rubro se aplican después en OMNI.
                 val center = JSONObject().apply {
                     put("latitude", userLat)
                     put("longitude", userLon)
@@ -148,7 +144,7 @@ object GooglePlacesApi {
             Log.e(TAG, "Excepción consultando Google Places API (New): ${e.message}", e)
         }
 
-        stores.filter { it.distanceMeters <= (safeRadius * 1.25).toInt() }.sortedBy { it.distanceMeters }
+        stores.filter { it.distanceMeters <= safeRadius.toInt() }.sortedBy { it.distanceMeters }
     }
 
     /**
