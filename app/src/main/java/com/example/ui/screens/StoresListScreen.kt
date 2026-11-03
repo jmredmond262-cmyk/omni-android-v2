@@ -82,6 +82,44 @@ import com.example.ui.theme.RosePromo
 import com.example.ui.theme.SlateNavy
 import com.example.ui.util.GoogleMapsHelper
 
+
+/** Evalúa el horario local real del dispositivo; nunca usa una hora simulada. */
+private fun isStoreOpenAtCurrentTime(store: com.example.model.Store): Boolean {
+    if (store.is24Hours || store.isOnDuty) return true
+    val now = java.util.Calendar.getInstance()
+    val day = now.get(java.util.Calendar.DAY_OF_WEEK)
+    val minuteNow = now.get(java.util.Calendar.HOUR_OF_DAY) * 60 + now.get(java.util.Calendar.MINUTE)
+
+    fun parseMinute(value: String): Int? {
+        val parts = value.trim().split(":")
+        if (parts.size != 2) return null
+        val hour = parts[0].toIntOrNull() ?: return null
+        val minute = parts[1].toIntOrNull() ?: return null
+        if (hour !in 0..23 || minute !in 0..59) return null
+        return hour * 60 + minute
+    }
+
+    val weekend = day == java.util.Calendar.SATURDAY || day == java.util.Calendar.SUNDAY
+    if (weekend) {
+        val dayLabel = if (day == java.util.Calendar.SATURDAY) "(?i)s[aá]b(?:ado)?\\s*:" else "(?i)dom(?:ingo)?\\s*:"
+        val dayText = Regex(dayLabel + "([^•]+)").find(store.weekendHoursText)?.groupValues?.getOrNull(1).orEmpty()
+        if (dayText.contains("cerrado", ignoreCase = true)) return false
+        val times = Regex("(\\d{1,2}:\\d{2})\\s*[-–a]+\\s*(\\d{1,2}:\\d{2})").find(dayText)
+        val start = times?.groupValues?.getOrNull(1)?.let(::parseMinute)
+        val end = times?.groupValues?.getOrNull(2)?.let(::parseMinute)
+        if (start != null && end != null) {
+            return if (end >= start) minuteNow in start until end else minuteNow >= start || minuteNow < end
+        }
+    }
+
+    val start = parseMinute(store.openTime)
+    val end = parseMinute(store.closeTime)
+    if (start != null && end != null) {
+        return if (end >= start) minuteNow in start until end else minuteNow >= start || minuteNow < end
+    }
+    return store.isOpen
+}
+
 @Composable
 fun StoresListScreen(
     viewModel: MainViewModel,
@@ -90,8 +128,6 @@ fun StoresListScreen(
     val context = LocalContext.current
     val stores by viewModel.stores.collectAsState()
     val scheduleFilter by viewModel.scheduleFilter.collectAsState()
-    val simulatedHour by viewModel.simulatedHour.collectAsState()
-    val isSimulatedHoliday by viewModel.isSimulatedHoliday.collectAsState()
     val isLoadingGps by viewModel.isLoadingLiveLocation.collectAsState()
     val searchRadius by viewModel.searchRadiusMeters.collectAsState()
     val userProfile by viewModel.userProfile.collectAsState()
@@ -101,7 +137,7 @@ fun StoresListScreen(
     var searchQuery by remember { mutableStateOf("") }
     var selectedType by remember { mutableStateOf<StoreType?>(null) }
 
-    val filteredAndRankedStores = remember(stores, searchQuery, selectedType, scheduleFilter, simulatedHour, isSimulatedHoliday, currentCity) {
+    val filteredAndRankedStores = remember(stores, searchQuery, selectedType, scheduleFilter, currentCity, System.currentTimeMillis() / 60000L) {
         stores.filter { store ->
             val localityToken = currentCity.substringBefore(",").trim()
             val matchesLocality = localityToken.isNotBlank() && store.address.contains(localityToken, ignoreCase = true)
@@ -114,7 +150,7 @@ fun StoresListScreen(
 
             val matchesSchedule = when (scheduleFilter) {
                 StoreScheduleFilter.TODOS -> true
-                StoreScheduleFilter.ABIERTOS_AHORA -> store.isEffectivelyOpen
+                StoreScheduleFilter.ABIERTOS_AHORA -> isStoreOpenAtCurrentTime(store)
                 StoreScheduleFilter.FARMACIAS_TURNO -> store.type == StoreType.FARMACIA || store.isOnDuty
                 StoreScheduleFilter.TURNO_24HS -> store.is24Hours || store.isOnDuty
                 StoreScheduleFilter.FERIADOS -> store.openOnHolidays || store.is24Hours || store.isOnDuty
@@ -127,8 +163,7 @@ fun StoresListScreen(
                 when {
                     it.isOnDuty -> 4
                     it.is24Hours -> 3
-                    it.isOpen -> 2
-                    it.openOnHolidays && isSimulatedHoliday -> 2
+                    isStoreOpenAtCurrentTime(it) -> 2
                     else -> 0
                 }
             }.thenBy { it.distanceMeters }
@@ -404,112 +439,6 @@ fun StoresListScreen(
                             ),
                             modifier = Modifier.testTag("filter_schedule_${filter.name}")
                         )
-                    }
-                }
-            }
-        }
-
-        // Barra de Simulación Horaria (Para probar horarios no habituales o días no laborables)
-        item {
-            Card(
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F5F9)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(10.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(imageVector = Icons.Default.AccessTime, contentDescription = null, tint = SlateNavy, modifier = Modifier.size(15.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "Simular Situación Horaria:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = SlateNavy)
-                        }
-
-                        if (isSimulatedHoliday || simulatedHour == 2) {
-                            Surface(
-                                color = EmeraldPrimary.copy(alpha = 0.15f),
-                                shape = RoundedCornerShape(6.dp)
-                            ) {
-                                Text(
-                                    text = "Filtrando por Guardia activa",
-                                    color = EmeraldDark,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Surface(
-                            color = if (simulatedHour == 14 && !isSimulatedHoliday) EmeraldPrimary else Color.White,
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable {
-                                    viewModel.setSimulatedHour(14)
-                                    if (isSimulatedHoliday) viewModel.toggleSimulatedHoliday()
-                                    viewModel.setScheduleFilter(StoreScheduleFilter.TODOS)
-                                }
-                        ) {
-                            Text(
-                                text = "☀️ Horario Normal (14hs)",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (simulatedHour == 14 && !isSimulatedHoliday) Color.White else SlateNavy,
-                                modifier = Modifier.padding(vertical = 6.dp, horizontal = 4.dp),
-                                maxLines = 1
-                            )
-                        }
-
-                        Surface(
-                            color = if (simulatedHour == 2) Color(0xFF0F172A) else Color.White,
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable {
-                                    viewModel.setSimulatedHour(2)
-                                    viewModel.setScheduleFilter(StoreScheduleFilter.TURNO_24HS)
-                                }
-                        ) {
-                            Text(
-                                text = "🌙 Madrugada (02:00 am)",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (simulatedHour == 2) Color.White else SlateNavy,
-                                modifier = Modifier.padding(vertical = 6.dp, horizontal = 4.dp),
-                                maxLines = 1
-                            )
-                        }
-
-                        Surface(
-                            color = if (isSimulatedHoliday) Color(0xFFD97706) else Color.White,
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable {
-                                    viewModel.toggleSimulatedHoliday()
-                                    viewModel.setScheduleFilter(StoreScheduleFilter.FERIADOS)
-                                }
-                        ) {
-                            Text(
-                                text = "📅 Día Feriado",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (isSimulatedHoliday) Color.White else SlateNavy,
-                                modifier = Modifier.padding(vertical = 6.dp, horizontal = 4.dp),
-                                maxLines = 1
-                            )
-                        }
                     }
                 }
             }
