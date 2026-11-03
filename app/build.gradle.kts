@@ -16,8 +16,8 @@ android {
     applicationId = "com.aistudio.omnihub.qtzmvd"
     minSdk = 24
     targetSdk = 36
-    versionCode = 2
-    versionName = "1.1.0"
+    versionCode = 3
+    versionName = "1.2.0"
 
     // Inyecta la clave desde GitHub Actions o desde la variable de entorno local.
     val googleMapsApiKey = System.getenv("GOOGLE_MAPS_API_KEY")
