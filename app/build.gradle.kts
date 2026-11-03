@@ -18,7 +18,7 @@ android {
     targetSdk = 36
     // Increasing CI run numbers keep in-place Android updates installable.
     versionCode = (System.getenv("OMNI_VERSION_CODE") ?: System.getenv("GITHUB_RUN_NUMBER") ?: "4").toInt()
-    versionName = "1.3.0"
+    versionName = "1.4.0"
 
     // Inyecta la clave desde GitHub Actions o desde la variable de entorno local.
     val googleMapsApiKey = System.getenv("GOOGLE_MAPS_API_KEY")
