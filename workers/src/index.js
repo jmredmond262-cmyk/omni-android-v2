@@ -353,7 +353,7 @@ async function financialOverview(env) {
   const sum = (items, predicate, amount = amountOf) => items.filter(predicate).reduce((total, item) => total + amount(item), 0);
   const initialCapital = accounts.reduce((total, account) =>
     total + (String(account.environment || "DEMO").toUpperCase() === "DEMO" ? 50000 : 0), 0);
-  const deposits = sum(transactions, item => typeOf(item) === "CARGA_SALDO" && amountOf(item) > 0);
+  const deposits = sum(transactions, item => typeOf(item) === "CARGA_SALDO" && amountOf(item) > 0 && String(item.id) !== "welcome" && !String(item.title || "").toLowerCase().includes("crédito inicial"));
   const transferOut = sum(transactions, item => typeOf(item) === "TRANSFERENCIA_ENVIADA" && amountOf(item) < 0, item => Math.abs(amountOf(item)));
   const transferIn = sum(transactions, item => typeOf(item) === "TRANSFERENCIA_RECIBIDA" && amountOf(item) > 0);
   const qrOut = sum(transactions, item => typeOf(item) === "QR_PAGO" && amountOf(item) < 0, item => Math.abs(amountOf(item)));
