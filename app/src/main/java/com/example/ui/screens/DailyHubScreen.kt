@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.LunchDining
+import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Redeem
@@ -157,12 +158,12 @@ fun DailyHubScreen(
         ),
         HomeCategoryItem(
             id = "orders",
-            title = "Pedidos",
-            subtitle = "Seguí y gestioná compras",
+            title = "Mis compras",
+            subtitle = "Listas, comparaciones y pedidos",
             icon = Icons.Default.ShoppingCart,
             accentColor = Color(0xFF25D9FF),
             onClick = {
-                viewModel.navigateTo(Screen.SmartList)
+                viewModel.navigateTo(Screen.MyPurchases)
             }
         ),
         HomeCategoryItem(
@@ -207,6 +208,16 @@ fun DailyHubScreen(
                 viewModel.clearStoreTypeFilter()
                 viewModel.setScheduleFilter(StoreScheduleFilter.TODOS)
                 viewModel.navigateTo(Screen.StoresList)
+            }
+        ),
+        HomeCategoryItem(
+            id = "offers",
+            title = "Ofertas",
+            subtitle = "Promociones y combos vigentes",
+            icon = Icons.Default.LocalOffer,
+            accentColor = Color(0xFFFFC857),
+            onClick = {
+                viewModel.navigateTo(Screen.OmniExperience)
             }
         ),
         HomeCategoryItem(

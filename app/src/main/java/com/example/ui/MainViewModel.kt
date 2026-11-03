@@ -62,6 +62,7 @@ sealed class Screen(val title: String) {
     object DailyHub : Screen("Tu Día")
     object Weather : Screen("Clima")
     object SmartList : Screen("Mi Lista")
+    object MyPurchases : Screen("Mis compras")
     object StoresList : Screen("Comercios")
     object Comparison : Screen("Comparador")
     object StoreDetail : Screen("Detalle del Local")

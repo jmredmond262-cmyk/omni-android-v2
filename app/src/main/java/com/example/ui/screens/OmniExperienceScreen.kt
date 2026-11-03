@@ -73,8 +73,8 @@ fun OmniExperienceScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                     Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = Color.White)
                 }
                 Column(Modifier.weight(1f)) {
-                    Text("OMNI EXPERIENCE", color = ExperiencePurple, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp)
-                    Text("Beneficios y experiencias", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("OFERTAS Y BENEFICIOS", color = ExperiencePurple, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp)
+                    Text("Promociones, combos y beneficios de tu zona", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
                 }
                 Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = ExperiencePurple)
             }
