@@ -12,8 +12,24 @@ android {
     applicationId = "com.omni.adminpanel"
     minSdk = 24
     targetSdk = 36
-    versionCode = 2
-    versionName = "1.1.0"
+    versionCode = 3
+    versionName = "1.2.0"
+  }
+
+  signingConfigs {
+    create("debugConfig") {
+      // Share the persistent debug signing identity used by the main OMNI app.
+      storeFile = file("${rootDir}/debug.keystore")
+      storePassword = "android"
+      keyAlias = "androiddebugkey"
+      keyPassword = "android"
+    }
+  }
+
+  buildTypes {
+    debug {
+      signingConfig = signingConfigs.getByName("debugConfig")
+    }
   }
 
   compileOptions {
