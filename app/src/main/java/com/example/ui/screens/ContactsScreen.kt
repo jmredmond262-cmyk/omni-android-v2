@@ -58,6 +58,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -124,6 +125,10 @@ fun ContactsScreen(
         hasContactsPermission = granted
         if (granted) loadPhoneContacts()
     }
+    LaunchedEffect(hasContactsPermission, selectedTab) {
+        if (selectedTab == 0 && hasContactsPermission) loadPhoneContacts()
+    }
+
     var selectedCategory by remember { mutableStateOf<ContactCategory?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
 
