@@ -1,0 +1,1 @@
+Solicitud de regeneración del artifact de OMNI Admin. Este archivo solo dispara la compilación; no modifica código de la aplicación.
