@@ -11,7 +11,6 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
-import java.util.UUID
 
 data class WeatherHour(
     val time: String,
@@ -164,13 +163,14 @@ object RealWeatherApi {
         longitude: Double
     ): List<WeatherAlert> = withContext(Dispatchers.IO) {
         val alerts = mutableListOf<WeatherAlert>()
+        val alertDate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
 
         // 1. Alerta de Calor Extremo
         if (weather.temperatureC >= 34.0) {
             val severity = if (weather.temperatureC >= 38.0) AlertSeverity.ROJO else AlertSeverity.NARANJA
             alerts.add(
                 WeatherAlert(
-                    id = "alert_heat_${UUID.randomUUID().toString().take(6)}",
+                    id = "alert_heat_$alertDate",
                     type = AlertType.CLIMA_CALOR,
                     severity = severity,
                     title = "Alerta por Ola de Calor (${weather.temperatureC}°C)",
@@ -186,7 +186,7 @@ object RealWeatherApi {
             val severity = if (weather.temperatureC <= 0.0) AlertSeverity.ROJO else AlertSeverity.AMARILLO
             alerts.add(
                 WeatherAlert(
-                    id = "alert_cold_${UUID.randomUUID().toString().take(6)}",
+                    id = "alert_cold_$alertDate",
                     type = AlertType.CLIMA_FRIO,
                     severity = severity,
                     title = "Alerta por Bajas Temperaturas (${weather.temperatureC}°C)",
@@ -202,7 +202,7 @@ object RealWeatherApi {
             val severity = if (weather.windSpeedKmh >= 70.0 || weather.weatherCode in listOf(96, 99)) AlertSeverity.ROJO else AlertSeverity.NARANJA
             alerts.add(
                 WeatherAlert(
-                    id = "alert_storm_${UUID.randomUUID().toString().take(6)}",
+                    id = "alert_storm_$alertDate",
                     type = AlertType.TORMENTA,
                     severity = severity,
                     title = "Alerta de Tormentas y Ráfagas (${weather.windSpeedKmh} km/h)",

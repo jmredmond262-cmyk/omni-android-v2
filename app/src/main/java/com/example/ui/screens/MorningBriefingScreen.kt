@@ -62,6 +62,14 @@ fun MorningBriefingScreen(
     val city by viewModel.currentCity.collectAsState()
     val weather by viewModel.liveWeatherData.collectAsState()
     val tasks by viewModel.tasks.collectAsState()
+    val previousSummary = remember {
+        val summaryPrefs = context.getSharedPreferences("omni_daily_summary", android.content.Context.MODE_PRIVATE)
+        val yesterdayCalendar = java.util.Calendar.getInstance().apply { add(java.util.Calendar.DAY_OF_YEAR, -1) }
+        val yesterday = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(yesterdayCalendar.time)
+        if (summaryPrefs.getString("summary_date", "") == yesterday) {
+            summaryPrefs.getInt("summary_completed", 0) to summaryPrefs.getInt("summary_total", 0)
+        } else null
+    }
     val profile by viewModel.userProfile.collectAsState()
     val activeDeals = briefing.activeDealsCount
     val preferences = remember { context.getSharedPreferences("omni_morning_briefing", android.content.Context.MODE_PRIVATE) }
@@ -89,8 +97,10 @@ fun MorningBriefingScreen(
         appendLine("🌅 OMNI BUENOS DÍAS")
         appendLine(todayDateText)
         appendLine("📍 ${city.ifBlank { "Tu ciudad" }}")
-        appendLine("🌤️ $weatherLine")
-        appendLine("💬 $dailyQuote")
+        if (showWeather) appendLine("🌤️ $weatherLine")
+        if (showMetrics) appendLine("📌 ${tasks.count { !it.isCompleted }} tareas pendientes · ${activeDeals} ofertas activas")
+        if (showQuote) appendLine("💬 $dailyQuote")
+        if (showYesterday) previousSummary?.let { appendLine("📋 Ayer: " + it.first + " de " + it.second + " tareas completadas") }
         appendLine()
         append("Descubrí tu día con OMNI. Muy pronto vas a poder descargar la app.")
     }
@@ -210,7 +220,12 @@ fun MorningBriefingScreen(
         ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text("AYER EN OMNI", color = Color(0xFF72E4FF), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Text("Todavía no hay un historial diario consolidado para mostrar un resumen real de ayer. Cuando OMNI registre actividad histórica, este espacio podrá mostrarla.", color = Color(0xFFB5C7D9), fontSize = 11.sp)
+                if (previousSummary != null) {
+                    Text(previousSummary.first.toString() + " de " + previousSummary.second + " tareas completadas", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Text("Resumen local de tareas del día anterior. Solo se guardan cantidades, no los títulos de tus actividades.", color = Color(0xFFB5C7D9), fontSize = 10.sp)
+                } else {
+                    Text("Todavía no hay un resumen guardado de ayer. OMNI comenzará a registrar el progreso diario de tus tareas en este dispositivo.", color = Color(0xFFB5C7D9), fontSize = 11.sp)
+                }
             }
         }
 

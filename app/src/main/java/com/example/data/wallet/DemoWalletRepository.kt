@@ -142,15 +142,19 @@ class DemoWalletRepository(
                 executeTransfer(recipientUid, amount, false, done)
             }
         }
-        if (input.startsWith("omni-")) {
-            directory.document(input).get()
-                .addOnSuccessListener { onResolved(it.getString("uid")) }
-                .addOnFailureListener { done(Result.failure(it)) }
-        } else {
-            directory.whereEqualTo("cvu", input).limit(1).get()
-                .addOnSuccessListener { onResolved(it.documents.firstOrNull()?.getString("uid")) }
-                .addOnFailureListener { done(Result.failure(it)) }
-        }
+        // Resolve any registered alias first, not only aliases with the "omni-" prefix.
+        directory.document(input).get()
+            .addOnSuccessListener { aliasSnapshot ->
+                val aliasUid = aliasSnapshot.getString("uid")
+                if (!aliasUid.isNullOrBlank()) {
+                    onResolved(aliasUid)
+                } else {
+                    directory.whereEqualTo("cvu", input).limit(1).get()
+                        .addOnSuccessListener { onResolved(it.documents.firstOrNull()?.getString("uid")) }
+                        .addOnFailureListener { done(Result.failure(it)) }
+                }
+            }
+            .addOnFailureListener { done(Result.failure(it)) }
     }
 
     fun payDemoQr(payload: String, amount: Double, done: (Result<String>) -> Unit) {

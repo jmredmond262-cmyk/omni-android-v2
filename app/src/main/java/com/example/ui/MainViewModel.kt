@@ -10,6 +10,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.SampleData
 import com.example.data.analytics.UsageAnalyticsRepository
+import com.example.data.merchant.MerchantProfileRepository
+import com.google.firebase.auth.FirebaseAuth
 import com.example.data.ArgentinaAttractions
 import com.example.data.api.RealLocationHelper
 import com.example.data.api.RealLocationResult
@@ -71,6 +73,7 @@ sealed class Screen(val title: String) {
     object TripPlanner : Screen("Buscador de Viaje")
     object OmniAi : Screen("Omni AI Assistant")
     object MorningBriefing : Screen("OMNI Buenos Días")
+    object OmniExperience : Screen("OMNI Experience")
     object Routine : Screen("Modo Rutina")
     object JobBoard : Screen("Bolsa de Trabajo y Servicios")
     object Events : Screen("Eventos OMNI")
@@ -142,6 +145,7 @@ class MainViewModel : ViewModel() {
     // Estado del Clima en Tiempo Real
     private val _liveWeatherData = MutableStateFlow<RealWeatherData?>(null)
     val liveWeatherData: StateFlow<RealWeatherData?> = _liveWeatherData.asStateFlow()
+    @Volatile private var weatherRequestSequence: Long = 0L
 
     private val _isLoadingLiveLocation = MutableStateFlow(false)
     val isLoadingLiveLocation: StateFlow<Boolean> = _isLoadingLiveLocation.asStateFlow()
@@ -169,8 +173,20 @@ class MainViewModel : ViewModel() {
     val needs: StateFlow<List<NeedItem>> = _needs.asStateFlow()
 
     // Comercios (Inicializados con los locales reales de Romang: Redcom, Coop. Agrícola, etc.)
+    private val _allStores = MutableStateFlow<List<Store>>(SampleData.sampleStores)
     private val _stores = MutableStateFlow<List<Store>>(SampleData.sampleStores)
     val stores: StateFlow<List<Store>> = _stores.asStateFlow()
+    private var selectedStoreType: StoreType? = null
+
+    private fun publishStoreResults(items: List<Store>) {
+        _allStores.value = items
+        _stores.value = selectedStoreType?.let { type -> items.filter { it.type == type } } ?: items
+    }
+
+    private fun updateManagedStoreInCollections(updated: Store) {
+        _allStores.value = _allStores.value.map { if (it.id == updated.id) updated else it }
+        _stores.value = _stores.value.map { if (it.id == updated.id) updated else it }
+    }
 
     private val _selectedStore = MutableStateFlow<Store?>(SampleData.sampleStores.first())
     val selectedStore: StateFlow<Store?> = _selectedStore.asStateFlow()
@@ -289,6 +305,50 @@ class MainViewModel : ViewModel() {
     // Muro de Noticias Barriales
     private val _storeNews = MutableStateFlow<List<StoreNews>>(SampleData.sampleNews)
     val storeNews: StateFlow<List<StoreNews>> = _storeNews.asStateFlow()
+    private val _merchantProfileMessage = MutableStateFlow<String?>(null)
+    val merchantProfileMessage: StateFlow<String?> = _merchantProfileMessage.asStateFlow()
+    private var merchantProfileReady = false
+    private var merchantProfileLoading = false
+    private val _merchantProfileLoadingState = MutableStateFlow(false)
+    val merchantProfileLoadingState: StateFlow<Boolean> = _merchantProfileLoadingState.asStateFlow()
+
+    fun activateMerchantProfile() {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+        if (uid.isBlank()) {
+            _merchantProfileMessage.value = "Iniciá sesión para administrar tu comercio."
+            return
+        }
+        if (merchantProfileReady || merchantProfileLoading) return
+        merchantProfileLoading = true
+        _merchantProfileLoadingState.value = true
+        MerchantProfileRepository.loadOrClaim(_managedStore.value, uid) { result ->
+            merchantProfileLoading = false
+            _merchantProfileLoadingState.value = false
+            result.onSuccess { (store, news) ->
+                _managedStore.value = store
+                _storeNews.value = news
+                updateManagedStoreInCollections(store)
+                merchantProfileReady = true
+                _merchantProfileMessage.value = null
+            }.onFailure { error ->
+                _merchantProfileMessage.value = error.localizedMessage ?: "No se pudo cargar el perfil comercial."
+                android.util.Log.e("MainViewModel", "Merchant profile load failed", error)
+            }
+        }
+    }
+
+    private fun persistManagedStore() {
+        if (!merchantProfileReady) return
+        val uid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+        if (uid.isBlank()) return
+        MerchantProfileRepository.save(_managedStore.value, _storeNews.value, uid) { result ->
+            result.onSuccess { _merchantProfileMessage.value = null }
+            result.onFailure { error ->
+                _merchantProfileMessage.value = error.localizedMessage ?: "No se pudo guardar el comercio en Firebase."
+                android.util.Log.e("MainViewModel", "Merchant profile save failed", error)
+            }
+        }
+    }
 
     // Buscador de Viajes y Recorridos (Por defecto Romang hacia Reconquista o destino regional)
     private val _tripOrigin = MutableStateFlow("Simón de Iriondo y San Martín, Romang")
@@ -706,7 +766,7 @@ class MainViewModel : ViewModel() {
                 if (requestId != directorySearchRequestId) return@launch
                 val googleLocalStores = onlySelectedLocality(googleStores)
                 if (googleLocalStores.isNotEmpty()) {
-                    _stores.value = googleLocalStores.sortedBy { it.distanceMeters }
+                    publishStoreResults(googleLocalStores.sortedBy { it.distanceMeters })
                     _omniDirectoryMessage.value = "📍 ${googleLocalStores.size} comercios de ${_currentCity.value} verificados con Google Places API (New)."
                 } else {
                     // Respaldo secundario si aún no hay clave o para servicios ampliados
@@ -717,18 +777,18 @@ class MainViewModel : ViewModel() {
                         val mappedStores = found.map { it.toOmniStore() }
                         val localVerified = RealPlacesApi.fetchNearbyRealStores(latitude, longitude, radiusMeters, _currentCity.value, context)
                         val merged = onlySelectedLocality(localVerified + mappedStores).distinctBy { it.id.lowercase() }.sortedBy { it.distanceMeters }
-                        _stores.value = merged
+                        publishStoreResults(merged)
                         _omniDirectoryMessage.value = if (merged.isEmpty()) "No encontramos comercios publicados en ${_currentCity.value}. Podés elegir otra localidad para ampliar la búsqueda." else "${merged.size} comercios y servicios de ${_currentCity.value}."
                     } else {
                         val fallback = onlySelectedLocality(RealPlacesApi.fetchNearbyRealStores(latitude, longitude, radiusMeters, _currentCity.value, context))
-                        _stores.value = fallback
+                        publishStoreResults(fallback)
                         _omniDirectoryMessage.value = if (fallback.isEmpty()) "No encontramos comercios publicados en ${_currentCity.value}. Podés elegir otra localidad para ampliar la búsqueda." else "${fallback.size} comercios de ${_currentCity.value}."
                     }
                 }
             } catch (e: Exception) {
                 if (requestId == directorySearchRequestId) {
                     val fallback = onlySelectedLocality(RealPlacesApi.fetchNearbyRealStores(latitude, longitude, radiusMeters, _currentCity.value, context))
-                    _stores.value = fallback
+                    publishStoreResults(fallback)
                     _omniDirectoryMessage.value = if (fallback.isEmpty()) "No encontramos comercios publicados en ${_currentCity.value}. Podés elegir otra localidad para ampliar la búsqueda." else "${fallback.size} comercios de ${_currentCity.value}."
                 }
             } finally {
@@ -778,7 +838,7 @@ class MainViewModel : ViewModel() {
             // Cargar comercios reales con Google Places API (New) y base local verificada
             val localStores = RealPlacesApi.fetchNearbyRealStores(lat, lon, _searchRadiusMeters.value, city, context)
             // Nunca conservar resultados de otra localidad ni dejar visibles comercios fuera de la zona elegida.
-            _stores.value = onlySelectedLocality(localStores)
+            publishStoreResults(onlySelectedLocality(localStores))
 
             // Actualizar viaje con origen real
             searchTrip(address, _tripDestination.value)
@@ -838,14 +898,21 @@ class MainViewModel : ViewModel() {
     }
 
     fun fetchLiveWeatherAndAlerts(lat: Double, lon: Double, label: String) {
+        val requestId = ++weatherRequestSequence
         viewModelScope.launch {
             val weatherResult = RealWeatherApi.fetchCurrentWeather(lat, lon, label)
             weatherResult.onSuccess { weather ->
+                // Evita que una respuesta lenta de una ubicación anterior reemplace la localidad más reciente.
+                if (requestId != weatherRequestSequence) return@onSuccess
                 _liveWeatherData.value = weather
                 val liveAlerts = RealWeatherApi.fetchLiveAlerts(weather, lat, lon)
-                _weatherAlerts.value = liveAlerts.filter { !dismissedAlertIds.value.contains(it.id) }
+                if (requestId == weatherRequestSequence) {
+                    _weatherAlerts.value = liveAlerts.filter { !dismissedAlertIds.value.contains(it.id) }
+                }
             }.onFailure { error ->
-                android.util.Log.e("MainViewModel", "No se pudo actualizar el clima", error)
+                if (requestId == weatherRequestSequence) {
+                    android.util.Log.e("MainViewModel", "No se pudo actualizar el clima", error)
+                }
             }
         }
     }
@@ -1181,7 +1248,8 @@ class MainViewModel : ViewModel() {
         val current = _managedStore.value
         val updated = current.copy(isOpen = !current.isOpen)
         _managedStore.value = updated
-        _stores.value = _stores.value.map { if (it.id == updated.id) updated else it }
+        updateManagedStoreInCollections(updated)
+        persistManagedStore()
     }
 
     fun addProductToManagedStore(
@@ -1208,20 +1276,22 @@ class MainViewModel : ViewModel() {
         )
         val updated = current.copy(inventory = listOf(newProd) + current.inventory)
         _managedStore.value = updated
-        _stores.value = _stores.value.map { if (it.id == updated.id) updated else it }
+        updateManagedStoreInCollections(updated)
+        persistManagedStore()
         // Premiar al comerciante por sumar artículos con fotos y datos
         _merchantBenefits.value = _merchantBenefits.value.copy(
             merchantPoints = _merchantBenefits.value.merchantPoints + 25
         )
     }
 
-    fun addComboToManagedStore(title: String, description: String, discountBadge: String) {
+    fun addComboToManagedStore(title: String, description: String, discountBadge: String, audience: String = "TODOS") {
         trackUsageAction("COMBO_CREATE", "merchant")
         val current = _managedStore.value
-        val newCombo = ComboDeal(title, description, discountBadge)
+        val newCombo = ComboDeal(title, description, discountBadge, audience)
         val updated = current.copy(comboDeals = listOf(newCombo) + current.comboDeals)
         _managedStore.value = updated
-        _stores.value = _stores.value.map { if (it.id == updated.id) updated else it }
+        updateManagedStoreInCollections(updated)
+        persistManagedStore()
     }
 
     fun updateDiscountThreshold(threshold: Double, percent: Int) {
@@ -1233,7 +1303,8 @@ class MainViewModel : ViewModel() {
             specialOfferText = "$percent% de reintegro en canasta total superando los $${String.format("%,.0f", threshold)}"
         )
         _managedStore.value = updated
-        _stores.value = _stores.value.map { if (it.id == updated.id) updated else it }
+        updateManagedStoreInCollections(updated)
+        persistManagedStore()
     }
 
     fun publishStoreNews(title: String, content: String, badge: String) {
@@ -1249,6 +1320,7 @@ class MainViewModel : ViewModel() {
             badge = badge.ifBlank { "Novedad Flash 🔥" }
         )
         _storeNews.value = listOf(newNews) + _storeNews.value
+        persistManagedStore()
     }
 
     fun setScheduleFilter(filter: StoreScheduleFilter) {
@@ -1292,7 +1364,8 @@ class MainViewModel : ViewModel() {
             hoursText = hoursDisplay
         )
         _managedStore.value = updated
-        _stores.value = _stores.value.map { if (it.id == updated.id) updated else it }
+        updateManagedStoreInCollections(updated)
+        persistManagedStore()
     }
 
     // ==========================================
@@ -1444,6 +1517,12 @@ class MainViewModel : ViewModel() {
 
     fun filterStoresByType(type: StoreType) {
         trackUsageAction("STORE_TYPE_FILTER", "discovery")
-        _stores.value = _stores.value.filter { it.type == type }
+        selectedStoreType = type
+        _stores.value = _allStores.value.filter { it.type == type }
+    }
+
+    fun clearStoreTypeFilter() {
+        selectedStoreType = null
+        _stores.value = _allStores.value
     }
 }

@@ -46,6 +46,17 @@ private data class OmniJobPost(
     val createdAt: Long
 )
 
+private data class OmniJobApplication(
+    val id: String,
+    val postId: String,
+    val applicantName: String,
+    val applicantEmail: String,
+    val applicantPhone: String,
+    val message: String,
+    val cvLink: String,
+    val status: String
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JobBoardScreen(onBack: () -> Unit) {
@@ -54,6 +65,8 @@ fun JobBoardScreen(onBack: () -> Unit) {
     val user = FirebaseAuth.getInstance().currentUser
     val uid = user?.uid.orEmpty()
     var posts by remember { mutableStateOf<List<OmniJobPost>>(emptyList()) }
+    var applications by remember { mutableStateOf<List<OmniJobApplication>>(emptyList()) }
+    var applicationsLoading by remember { mutableStateOf(true) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var search by remember { mutableStateOf("") }
@@ -109,6 +122,51 @@ fun JobBoardScreen(onBack: () -> Unit) {
             error = "Iniciá sesión para consultar la Bolsa de Trabajo."
         }
         onDispose { registration?.remove() }
+    }
+
+    DisposableEffect(uid) {
+        var registration: ListenerRegistration? = null
+        if (uid.isNotBlank()) {
+            registration = db.collection("jobApplications")
+                .whereEqualTo("postOwnerUid", uid)
+                .addSnapshotListener { snapshot, exception ->
+                    if (exception != null) {
+                        error = exception.localizedMessage ?: "No se pudieron cargar las postulaciones."
+                        applicationsLoading = false
+                    } else {
+                        applications = snapshot?.documents.orEmpty().map { doc ->
+                            OmniJobApplication(
+                                id = doc.id,
+                                postId = doc.getString("postId").orEmpty(),
+                                applicantName = doc.getString("applicantName").orEmpty(),
+                                applicantEmail = doc.getString("applicantEmail").orEmpty(),
+                                applicantPhone = doc.getString("applicantPhone").orEmpty(),
+                                message = doc.getString("message").orEmpty(),
+                                cvLink = doc.getString("cvAndCertificatesLinks").orEmpty(),
+                                status = doc.getString("status").orEmpty()
+                            )
+                        }
+                        applicationsLoading = false
+                    }
+                }
+        } else {
+            applicationsLoading = false
+        }
+        onDispose { registration?.remove() }
+    }
+
+    fun updateApplicationStatus(application: OmniJobApplication, nextStatus: String) {
+        busy = true
+        db.collection("jobApplications").document(application.id).update("status", nextStatus)
+            .addOnSuccessListener {
+                UsageAnalyticsRepository.trackEvent(uid, "jobs", "JOB_APPLICATION_REVIEWED", mapOf("status" to nextStatus))
+                busy = false
+                feedback = "Postulación actualizada: " + nextStatus
+            }
+            .addOnFailureListener { exception ->
+                busy = false
+                feedback = exception.localizedMessage ?: "No se pudo actualizar la postulación."
+            }
     }
 
     val visiblePosts = posts.filter { post ->
@@ -199,8 +257,9 @@ fun JobBoardScreen(onBack: () -> Unit) {
         }
         Spacer(Modifier.height(10.dp))
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-            SegmentedButton(selected = selectedTab == 0, onClick = { selectedTab = 0 }, shape = SegmentedButtonDefaults.itemShape(0, 2)) { Text("Buscar") }
-            SegmentedButton(selected = selectedTab == 1, onClick = { selectedTab = 1 }, shape = SegmentedButtonDefaults.itemShape(1, 2)) { Text("Publicar") }
+            SegmentedButton(selected = selectedTab == 0, onClick = { selectedTab = 0 }, shape = SegmentedButtonDefaults.itemShape(0, 3)) { Text("Buscar") }
+            SegmentedButton(selected = selectedTab == 1, onClick = { selectedTab = 1 }, shape = SegmentedButtonDefaults.itemShape(1, 3)) { Text("Publicar") }
+            SegmentedButton(selected = selectedTab == 2, onClick = { selectedTab = 2 }, shape = SegmentedButtonDefaults.itemShape(2, 3)) { Text("Postulaciones") }
         }
         if (selectedTab == 0) {
             Spacer(Modifier.height(10.dp))
@@ -270,7 +329,7 @@ fun JobBoardScreen(onBack: () -> Unit) {
                     }
                 }
             }
-        } else {
+        } else if (selectedTab == 1) {
             Spacer(Modifier.height(10.dp))
             Text("Compartí una oportunidad con personas de tu zona.", color = Color(0xFF9AAAC2), fontSize = 11.sp)
             OutlinedTextField(title, { title = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Título de la publicación") }, singleLine = true)
@@ -295,6 +354,44 @@ fun JobBoardScreen(onBack: () -> Unit) {
                 if (busy) CircularProgressIndicator(Modifier.size(17.dp), strokeWidth = 2.dp) else Text("Publicar oportunidad")
             }
             Text("No publiques datos sensibles. El contacto que ingreses será visible para usuarios autenticados de OMNI.", color = Color(0xFFFFC66D), fontSize = 10.sp)
+        } else {
+            Spacer(Modifier.height(10.dp))
+            Text("Postulaciones recibidas en tus publicaciones", color = Color(0xFF9AAAC2), fontSize = 11.sp)
+            when {
+                applicationsLoading -> Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFF57DDF5)) }
+                applications.isEmpty() -> Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.Work, null, tint = Color(0xFF57DDF5), modifier = Modifier.size(34.dp))
+                        Text("Todavía no recibiste postulaciones", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("Cuando alguien se postule a tus avisos, podrás revisar su perfil y CV aquí.", color = Color(0xFF9AAAC2), fontSize = 11.sp)
+                    }
+                }
+                else -> LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(bottom = 90.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(applications, key = { it.id }) { application ->
+                        val postTitle = posts.firstOrNull { it.id == application.postId }?.title ?: "Publicación " + application.postId.take(8)
+                        Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF101B30)), shape = RoundedCornerShape(15.dp)) {
+                            Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(postTitle, color = Color(0xFF57DDF5), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                Text(application.applicantName, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                if (application.applicantEmail.isNotBlank()) Text(application.applicantEmail, color = Color(0xFFB8C8D9), fontSize = 10.sp)
+                                if (application.applicantPhone.isNotBlank()) Text(application.applicantPhone, color = Color(0xFFB8C8D9), fontSize = 10.sp)
+                                Text("Estado: " + application.status, color = Color(0xFF65E3B0), fontSize = 10.sp)
+                                if (application.cvLink.isNotBlank()) {
+                                    TextButton(onClick = {
+                                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(application.cvLink))) }
+                                            .onFailure { feedback = "No se pudo abrir el enlace del CV." }
+                                    }) { Text("Abrir CV / certificados", color = Color(0xFF57DDF5), fontSize = 10.sp) }
+                                }
+                                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    OutlinedButton(onClick = { updateApplicationStatus(application, "EN_REVISION") }, enabled = !busy, modifier = Modifier.weight(1f)) { Text("Revisar", fontSize = 9.sp) }
+                                    Button(onClick = { updateApplicationStatus(application, "ACEPTADA") }, enabled = !busy, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF087EAB))) { Text("Aceptar", fontSize = 9.sp) }
+                                    TextButton(onClick = { updateApplicationStatus(application, "RECHAZADA") }, enabled = !busy, modifier = Modifier.weight(1f)) { Text("Rechazar", fontSize = 9.sp) }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
     feedback?.let { message ->

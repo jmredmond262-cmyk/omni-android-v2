@@ -50,6 +50,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -63,6 +64,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -76,7 +78,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
 import android.content.Intent
-import android.graphics.Bitmap
 import android.net.Uri
 import java.io.File
 import java.io.FileOutputStream
@@ -108,6 +109,10 @@ fun MerchantHubScreen(
     val context = LocalContext.current
     val store by viewModel.managedStore.collectAsState()
     val newsList by viewModel.storeNews.collectAsState()
+    val merchantProfileMessage by viewModel.merchantProfileMessage.collectAsState()
+    val merchantProfileLoading by viewModel.merchantProfileLoadingState.collectAsState()
+
+    LaunchedEffect(viewModel) { viewModel.activateMerchantProfile() }
 
     var showAddProductDialog by remember { mutableStateOf(false) }
     var showAddComboDialog by remember { mutableStateOf(false) }
@@ -136,6 +141,8 @@ fun MerchantHubScreen(
     var prodPrice by remember { mutableStateOf("") }
     var prodOriginalPrice by remember { mutableStateOf("") }
     var prodPhotoUri by remember { mutableStateOf<String?>(null) }
+    var pendingCameraPhoto by remember { mutableStateOf<Uri?>(null) }
+    var pendingCameraPhotoFile by remember { mutableStateOf<File?>(null) }
     var prodBarcode by remember { mutableStateOf("") }
     var categoryExpanded by remember { mutableStateOf(false) }
 
@@ -180,20 +187,29 @@ fun MerchantHubScreen(
         }
     }
 
-    // Captura real desde la cámara del dispositivo y copia la imagen al almacenamiento privado de OMNI.
-    val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicturePreview()
-    ) { bitmap ->
-        if (bitmap != null) {
-            runCatching {
-                val photoDir = File(context.filesDir, "product_photos").apply { mkdirs() }
-                val photoFile = File(photoDir, "product_${System.currentTimeMillis()}.jpg")
-                FileOutputStream(photoFile).use { output ->
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 92, output)
-                }
-                prodPhotoUri = Uri.fromFile(photoFile).toString()
-                analyzeProductPhoto(prodPhotoUri!!)
-            }
+    // Captura de resolución completa usando FileProvider; evita la miniatura limitada de TakePicturePreview.
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { saved ->
+        val capturedUri = pendingCameraPhoto
+        if (saved && capturedUri != null) {
+            prodPhotoUri = capturedUri.toString()
+            analyzeProductPhoto(prodPhotoUri!!)
+        } else if (capturedUri != null) {
+            pendingCameraPhotoFile?.delete()
+        }
+        pendingCameraPhoto = null
+        pendingCameraPhotoFile = null
+    }
+
+    fun launchProductCamera() {
+        runCatching {
+            val photoDir = File(context.filesDir, "product_photos").apply { mkdirs() }
+            val photoFile = File(photoDir, "product_" + System.currentTimeMillis() + ".jpg")
+            val outputUri = FileProvider.getUriForFile(context, context.packageName + ".fileprovider", photoFile)
+            pendingCameraPhotoFile = photoFile
+            pendingCameraPhoto = outputUri
+            cameraLauncher.launch(outputUri)
+        }.onFailure { error ->
+            aiAnalysisMessage = error.localizedMessage ?: "No se pudo abrir la cámara."
         }
     }
 
@@ -201,6 +217,8 @@ fun MerchantHubScreen(
     var comboTitle by remember { mutableStateOf("") }
     var comboDesc by remember { mutableStateOf("") }
     var comboBadge by remember { mutableStateOf("-20%") }
+    var comboAudience by remember { mutableStateOf("TODOS") }
+    var comboAudienceExpanded by remember { mutableStateOf(false) }
 
     // Campos formulario noticia
     var newsTitle by remember { mutableStateOf("") }
@@ -222,6 +240,22 @@ fun MerchantHubScreen(
         contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 100.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        if (merchantProfileLoading || merchantProfileMessage != null) {
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF101B30)),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = if (merchantProfileLoading) "Sincronizando tu comercio con Firebase…" else merchantProfileMessage.orEmpty(),
+                        color = if (merchantProfileLoading) Color(0xFF57DDF5) else Color(0xFFFFB4A8),
+                        fontSize = 11.sp,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+            }
+        }
         // Cabecera del Comercio Administrado
         item {
             Card(
@@ -736,7 +770,7 @@ fun MerchantHubScreen(
                     Button(
                         onClick = {
                             showAddProductDialog = true
-                            cameraLauncher.launch(null)
+                            launchProductCamera()
                         },
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = AmberDeal),
@@ -995,7 +1029,7 @@ fun MerchantHubScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Button(
-                                onClick = { cameraLauncher.launch(null) },
+                                onClick = { launchProductCamera() },
                                 shape = RoundedCornerShape(10.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
                                 modifier = Modifier.weight(1f)
@@ -1060,7 +1094,7 @@ fun MerchantHubScreen(
                                 .menuAnchor()
                                 .fillMaxWidth()
                         )
-                        ExposedDropdownMenu(
+                        DropdownMenu(
                             expanded = categoryExpanded,
                             onDismissRequest = { categoryExpanded = false }
                         ) {
@@ -1190,15 +1224,51 @@ fun MerchantHubScreen(
                         placeholder = { Text("Ej: -20% o 2x1") },
                         modifier = Modifier.fillMaxWidth()
                     )
+                    ExposedDropdownMenuBox(
+                        expanded = comboAudienceExpanded,
+                        onExpandedChange = { comboAudienceExpanded = !comboAudienceExpanded }
+                    ) {
+                        OutlinedTextField(
+                            value = when (comboAudience) {
+                                "ESTUDIANTES" -> "Estudiantes · OMNI Joven"
+                                "TURISTAS" -> "Turistas · OMNI Turista"
+                                "USUARIOS" -> "Usuarios OMNI"
+                                else -> "Todos los usuarios"
+                            },
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Público del beneficio") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = comboAudienceExpanded) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth()
+                        )
+                        DropdownMenu(
+                            expanded = comboAudienceExpanded,
+                            onDismissRequest = { comboAudienceExpanded = false }
+                        ) {
+                            listOf("TODOS", "ESTUDIANTES", "TURISTAS", "USUARIOS").forEach { audience ->
+                                DropdownMenuItem(
+                                    text = { Text(when (audience) {
+                                        "ESTUDIANTES" -> "Estudiantes · OMNI Joven"
+                                        "TURISTAS" -> "Turistas · OMNI Turista"
+                                        "USUARIOS" -> "Usuarios OMNI"
+                                        else -> "Todos los usuarios"
+                                    }) },
+                                    onClick = { comboAudience = audience; comboAudienceExpanded = false }
+                                )
+                            }
+                        }
+                    }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
                         if (comboTitle.isNotBlank() && comboDesc.isNotBlank()) {
-                            viewModel.addComboToManagedStore(comboTitle, comboDesc, comboBadge)
+                            viewModel.addComboToManagedStore(comboTitle, comboDesc, comboBadge, comboAudience)
                             comboTitle = ""
                             comboDesc = ""
+                            comboBadge = "-20%"
+                            comboAudience = "TODOS"
                             showAddComboDialog = false
                         }
                     },

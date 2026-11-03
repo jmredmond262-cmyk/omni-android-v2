@@ -30,6 +30,7 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.SetOptions
 import com.example.data.analytics.UsageAnalyticsRepository
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -59,6 +60,8 @@ fun EventsScreen(onBack: () -> Unit) {
     var category by remember { mutableStateOf("Todos") }
     var search by remember { mutableStateOf("") }
     var showPublish by remember { mutableStateOf(false) }
+    var editingEventId by remember { mutableStateOf<String?>(null) }
+    var pendingDeleteEvent by remember { mutableStateOf<OmniEvent?>(null) }
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var eventCategory by remember { mutableStateOf("Comunidad") }
@@ -111,23 +114,41 @@ fun EventsScreen(onBack: () -> Unit) {
             return
         }
         val parsed = runCatching { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale("es", "AR")).apply { isLenient = false }.parse(dateTime) }.getOrNull()
-        if (parsed == null || parsed.time < System.currentTimeMillis() - 60_000) {
+        if (parsed == null || parsed.time <= System.currentTimeMillis()) {
             feedback = "La fecha debe tener formato dd/MM/aaaa HH:mm y ser futura."
             return
         }
+        if (uid.isBlank()) {
+            feedback = "Iniciá sesión para publicar o editar eventos."
+            return
+        }
         busy = true
-        db.collection("omniEvents").add(mapOf(
-            "ownerUid" to uid, "title" to title.trim(), "description" to description.trim(),
-            "category" to eventCategory, "dateTime" to dateTime.trim(),
-            "location" to location.trim(), "contact" to contact.trim(),
-            "status" to "PUBLISHED", "createdAt" to FieldValue.serverTimestamp()
-        )).addOnSuccessListener {
-            UsageAnalyticsRepository.trackAction(uid, "EVENT_PUBLISHED", "community")
-            busy = false; showPublish = false
+        val isEditing = editingEventId != null
+        val eventRef = editingEventId?.let { db.collection("omniEvents").document(it) }
+            ?: db.collection("omniEvents").document()
+        val eventData = mutableMapOf<String, Any>(
+            "title" to title.trim(),
+            "description" to description.trim(),
+            "category" to eventCategory,
+            "dateTime" to dateTime.trim(),
+            "location" to location.trim(),
+            "contact" to contact.trim()
+        )
+        if (!isEditing) {
+            eventData["ownerUid"] = uid
+            eventData["status"] = "PUBLISHED"
+            eventData["createdAt"] = FieldValue.serverTimestamp()
+        }
+        eventRef.set(eventData, SetOptions.merge()).addOnSuccessListener {
+            UsageAnalyticsRepository.trackAction(uid, if (isEditing) "EVENT_UPDATED" else "EVENT_PUBLISHED", "community")
+            busy = false
+            showPublish = false
+            editingEventId = null
             title = ""; description = ""; dateTime = ""; location = ""; contact = ""
-            feedback = "Evento publicado para la comunidad OMNI."
+            feedback = if (isEditing) "Evento actualizado correctamente." else "Evento publicado para la comunidad OMNI."
         }.addOnFailureListener { e ->
-            busy = false; feedback = e.localizedMessage ?: "No se pudo publicar. Revisá las reglas de Firestore."
+            busy = false
+            feedback = e.localizedMessage ?: "No se pudo guardar. Revisá las reglas de Firestore."
         }
     }
 
@@ -207,6 +228,21 @@ fun EventsScreen(onBack: () -> Unit) {
                                     Icon(Icons.Default.Map, null, modifier = Modifier.size(15.dp)); Spacer(Modifier.width(4.dp)); Text("Mapa", fontSize = 10.sp)
                                 }
                             }
+                            if (event.ownerUid == uid) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    TextButton(onClick = {
+                                        editingEventId = event.id
+                                        title = event.title
+                                        description = event.description
+                                        eventCategory = event.category
+                                        dateTime = event.dateTime
+                                        location = event.location
+                                        contact = event.contact
+                                        showPublish = true
+                                    }) { Text("Editar", color = Color(0xFF57DDF5), fontSize = 10.sp) }
+                                    TextButton(onClick = { pendingDeleteEvent = event }) { Text("Eliminar", color = Color(0xFFFF8F8F), fontSize = 10.sp) }
+                                }
+                            }
                             if (event.contact.isNotBlank()) TextButton(onClick = {
                                 val value = event.contact.trim()
                                 val intent = if (value.contains("@")) Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:$value"))
@@ -254,8 +290,32 @@ fun EventsScreen(onBack: () -> Unit) {
                     OutlinedTextField(contact, { contact = it }, label = { Text("WhatsApp o correo (opcional)") }, singleLine = true)
                 }
             },
-            confirmButton = { TextButton(onClick = { publish() }, enabled = !busy) { Text(if (busy) "Publicando…" else "Publicar") } },
-            dismissButton = { TextButton(onClick = { showPublish = false }, enabled = !busy) { Text("Cancelar") } }
+            confirmButton = { TextButton(onClick = { publish() }, enabled = !busy) { Text(if (busy) "Guardando…" else if (editingEventId != null) "Guardar cambios" else "Publicar") } },
+            dismissButton = { TextButton(onClick = { showPublish = false; editingEventId = null }, enabled = !busy) { Text("Cancelar") } }
+        )
+    }
+    pendingDeleteEvent?.let { event ->
+        AlertDialog(
+            onDismissRequest = { if (!busy) pendingDeleteEvent = null },
+            title = { Text("Eliminar evento") },
+            text = { Text("¿Querés eliminar \"" + event.title + "\"? Esta acción no se puede deshacer.") },
+            confirmButton = {
+                TextButton(enabled = !busy, onClick = {
+                    busy = true
+                    db.collection("omniEvents").document(event.id).delete()
+                        .addOnSuccessListener {
+                            UsageAnalyticsRepository.trackAction(uid, "EVENT_DELETED", "community")
+                            busy = false
+                            pendingDeleteEvent = null
+                            feedback = "Evento eliminado."
+                        }
+                        .addOnFailureListener { exception ->
+                            busy = false
+                            feedback = exception.localizedMessage ?: "No se pudo eliminar el evento."
+                        }
+                }) { Text(if (busy) "Eliminando…" else "Eliminar") }
+            },
+            dismissButton = { TextButton(enabled = !busy, onClick = { pendingDeleteEvent = null }) { Text("Cancelar") } }
         )
     }
     feedback?.let { message ->
