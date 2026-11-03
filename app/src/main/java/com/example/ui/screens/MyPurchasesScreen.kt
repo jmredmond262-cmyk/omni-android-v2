@@ -81,6 +81,15 @@ fun MyPurchasesScreen(viewModel: MainViewModel, onBack: () -> Unit) {
         }
         item {
             PurchaseActionCard(
+                icon = { Icon(Icons.Default.Storefront, contentDescription = null, tint = Color(0xFFB69CFF)) },
+                title = "Mercado OMNI DEMO",
+                description = "Probá tiendas ficticias, carrito, comparación de precios y checkout sin pagos reales.",
+                action = "EXPLORAR DEMO",
+                onClick = { viewModel.navigateTo(Screen.DemoMarketplace) }
+            )
+        }
+        item {
+            PurchaseActionCard(
                 icon = { Icon(Icons.Default.ListAlt, contentDescription = null, tint = PurchasesCyan) },
                 title = "Mis listas",
                 description = "Organizá productos, cantidades y necesidades.",

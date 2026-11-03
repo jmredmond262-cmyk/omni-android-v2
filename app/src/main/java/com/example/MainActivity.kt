@@ -58,6 +58,7 @@ import com.example.ui.screens.OmniAiScreen
 import com.example.ui.screens.OmniExperienceScreen
 import com.example.ui.screens.MorningBriefingScreen
 import com.example.ui.screens.MyPurchasesScreen
+import com.example.ui.screens.DemoMarketplaceScreen
 import com.example.ui.screens.OmniSplashScreen
 import com.example.ui.theme.CyberGlowAmber
 import com.example.ui.theme.CyberGlowCyan
@@ -661,6 +662,7 @@ fun OmniApp(viewModel: MainViewModel) {
                     )
                     Screen.SmartList -> SmartListScreen(viewModel = viewModel)
                     Screen.MyPurchases -> MyPurchasesScreen(viewModel = viewModel, onBack = { viewModel.navigateTo(Screen.DailyHub) })
+                    Screen.DemoMarketplace -> DemoMarketplaceScreen(onBack = { viewModel.navigateTo(Screen.MyPurchases) })
                     Screen.StoresList -> StoresListScreen(viewModel = viewModel)
                     Screen.Comparison -> ComparisonScreen(viewModel = viewModel)
                     Screen.StoreDetail -> StoreDetailScreen(viewModel = viewModel)
