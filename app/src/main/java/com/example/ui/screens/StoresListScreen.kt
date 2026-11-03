@@ -59,6 +59,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.Store
+import com.example.model.isOpenAtCurrentTime
 import com.example.model.StoreType
 import com.example.ui.MainViewModel
 import com.example.ui.screens.OmniDirectoryPanel
