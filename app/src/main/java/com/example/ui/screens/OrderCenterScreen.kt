@@ -11,6 +11,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -30,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.Store
 import com.example.model.StoreProduct
+import com.example.model.ProductCategory
 import com.example.ui.MainViewModel
 import com.example.data.analytics.UsageAnalyticsRepository
 import com.google.firebase.auth.FirebaseAuth
@@ -73,6 +75,8 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
     var merchantError by remember { mutableStateOf<String?>(null) }
     var orders by remember { mutableStateOf<List<OmniStoreOrder>>(emptyList()) }
     var cart by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+    var productSearch by remember { mutableStateOf("") }
+    var selectedProductCategory by remember { mutableStateOf<ProductCategory?>(null) }
     var fulfillmentType by remember { mutableStateOf("RETIRO") }
     var deliveryAddress by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
@@ -159,6 +163,11 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
         onDispose { listener?.remove() }
     }
 
+    val visibleProducts = store.inventory.filter { product ->
+        product.inStock &&
+            (selectedProductCategory == null || product.category == selectedProductCategory) &&
+            (productSearch.isBlank() || product.name.contains(productSearch.trim(), ignoreCase = true) || product.category.displayName.contains(productSearch.trim(), ignoreCase = true))
+    }
     val cartLines = store.inventory.filter { (cart[it.id] ?: 0) > 0 && it.inStock }.map {
         OrderLine(it.id, it.name, it.price, cart[it.id] ?: 0)
     }
@@ -266,9 +275,46 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
             else if (!merchantReady) Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFF57DDF5)) }
         } else {
             Text("Elegí productos y enviá tu pedido al comercio. El QR identifica el pedido; no acredita un pago.", color = Color(0xFF9AAAC2), fontSize = 11.sp)
-            if (store.inventory.isEmpty()) Text("Este comercio todavía no publicó productos para pedidos.", color = Color(0xFFFFC978), fontSize = 12.sp)
-            else LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(top = 10.dp, bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(store.inventory.filter { it.inStock }, key = { it.id }) { product ->
+            if (store.inventory.none { it.inStock }) Text("Este comercio todavía no publicó productos para pedidos.", color = Color(0xFFFFC978), fontSize = 12.sp)
+            else {
+                OutlinedTextField(
+                    value = productSearch,
+                    onValueChange = { productSearch = it },
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    singleLine = true,
+                    label = { Text("Buscar producto o categoría") },
+                    placeholder = { Text("Ej.: leche, bebidas, limpieza") },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF00E5FF),
+                        unfocusedBorderColor = Color(0xFF29415F),
+                        focusedLabelColor = Color(0xFF00E5FF),
+                        cursorColor = Color(0xFF00E5FF)
+                    )
+                )
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    item {
+                        FilterChip(
+                            selected = selectedProductCategory == null,
+                            onClick = { selectedProductCategory = null },
+                            label = { Text("Todas") }
+                        )
+                    }
+                    items(ProductCategory.values().toList()) { category ->
+                        FilterChip(
+                            selected = selectedProductCategory == category,
+                            onClick = { selectedProductCategory = if (selectedProductCategory == category) null else category },
+                            label = { Text(category.displayName) }
+                        )
+                    }
+                }
+                if (visibleProducts.isEmpty()) {
+                    Text("No hay productos que coincidan con la búsqueda en este comercio.", color = Color(0xFFFFC978), fontSize = 12.sp)
+                }
+                LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(top = 4.dp, bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(visibleProducts, key = { it.id }) { product ->
                     OrderProductRow(product, cart[product.id] ?: 0,
                         onAdd = {
                             if (!cart.containsKey(product.id) && cart.size >= 30) {
@@ -282,6 +328,7 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
                             cart = if (next <= 0) cart - product.id else cart + (product.id to next)
                         }
                     )
+                }
                 }
             }
             if (cartLines.isNotEmpty()) {
