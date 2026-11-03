@@ -67,14 +67,14 @@ private val tabs = listOf(
   AdminTab("wallets", "Billeteras", "walletAccounts"), AdminTab("operations", "Operaciones", "walletOperations"),
   AdminTab("stores", "Comercios", "merchantProfiles"), AdminTab("orders", "Pedidos", "storeOrders"),
   AdminTab("feedback", "Comentarios", "appFeedback"), AdminTab("activity", "Actividad", "usageEvents"), AdminTab("modules", "Módulos", "moduleRegistry"),
-  AdminTab("audit", "Auditoría", "adminAuditLogs")
+  AdminTab("audit", "Auditoría", "adminAuditLogs"), AdminTab("invitations", "Invitaciones", "betaInvitations"), AdminTab("settings", "Configuración")
 )
 private data class AdminNavGroup(val id: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val tabIds: List<String>)
 private val navGroups = listOf(
   AdminNavGroup("overview", "Inicio", Icons.Default.Dashboard, listOf("dashboard")),
   AdminNavGroup("people", "Personas", Icons.Default.PeopleAlt, listOf("users", "feedback")),
   AdminNavGroup("commerce", "Comercio", Icons.Default.Storefront, listOf("stores", "orders", "wallets", "operations")),
-  AdminNavGroup("system", "Sistema", Icons.Default.Settings, listOf("activity", "modules", "audit"))
+  AdminNavGroup("system", "Sistema", Icons.Default.Settings, listOf("activity", "modules", "audit", "invitations", "settings"))
 )
 
 @Composable
@@ -333,6 +333,9 @@ private fun AdminHome(
       )
       when (selected) {
         "dashboard" -> DashboardContent(payload)
+        "modules" -> ModuleContent(payload.optJSONArray("items") ?: JSONArray(), onSaveModule)
+        "settings" -> ConfigContent(payload.optJSONObject("config") ?: JSONObject(), onSaveConfig)
+        "invitations" -> InvitationContent(payload.optJSONArray("items") ?: JSONArray(), onInvite)
         else -> RecordsContent(selected, payload.optJSONArray("items") ?: JSONArray(), hasMore, onLoadMore)
       }
     }
@@ -721,24 +724,55 @@ private fun ConfigContent(config: JSONObject, onSave: (JSONObject) -> Unit) {
 }
 
 @Composable
+private fun ModuleSummary(label: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier) {
+  Card(modifier, colors = CardDefaults.cardColors(containerColor = Color(0xFF10243A)), shape = RoundedCornerShape(13.dp)) {
+    Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+      Icon(icon, null, tint = Mint, modifier = Modifier.size(17.dp))
+      Text(value, color = White, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+      Text(label, color = Muted, fontSize = 9.sp, maxLines = 1)
+    }
+  }
+}
+
+@Composable
 private fun ModuleContent(array: JSONArray, onSave: (String, String, String, Boolean) -> Unit) {
   val records = jsonArrayToList(array)
-  LazyColumn(Modifier.fillMaxSize().padding(16.dp), contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-    item { Text("Módulos de OMNI", color = White, fontSize = 25.sp, fontWeight = FontWeight.Bold); Text("Activá o desactivá módulos registrados.", color = Muted, fontSize = 12.sp) }
-    if (records.isEmpty()) item { EmptyState("No hay módulos registrados todavía.") }
+  val enabledCount = records.count { it["enabled"] == true }
+  LazyColumn(Modifier.fillMaxSize().padding(16.dp), contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+    item {
+      Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Brush.linearGradient(listOf(Color(0xFF123A5D), Panel, Color(0xFF0A1426)))).border(1.dp, Color(0xFF1679A6), RoundedCornerShape(22.dp)).padding(19.dp)) {
+        Text("CENTRO DE FUNCIONES", color = Mint, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.6.sp)
+        Text("Módulos de OMNI", color = White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+        Text("Supervisión del catálogo registrado. Los cambios quedan auditados.", color = Muted, fontSize = 12.sp)
+        Spacer(Modifier.height(14.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+          ModuleSummary("Registrados", records.size.toString(), Icons.Default.Apps, Modifier.weight(1f))
+          ModuleSummary("Habilitados", enabledCount.toString(), Icons.Default.CheckCircle, Modifier.weight(1f))
+          ModuleSummary("Pausados", (records.size - enabledCount).toString(), Icons.Default.PauseCircle, Modifier.weight(1f))
+        }
+      }
+    }
+    if (records.isEmpty()) item { EmptyState("No hay módulos registrados en moduleRegistry. No se muestran módulos inventados.") }
     items(records) { item ->
       val id = item["id"]?.toString() ?: return@items
       var enabled by remember(id, item["enabled"]) { mutableStateOf(item["enabled"] == true) }
       val title = item["title"]?.toString() ?: id
-      val description = item["description"]?.toString() ?: ""
-      Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp)) {
-        Column(Modifier.padding(15.dp)) {
+      val description = item["description"]?.toString() ?: "Sin descripción registrada."
+      Card(Modifier.fillMaxWidth().border(1.dp, if (enabled) Color(0xFF17647A) else Color(0xFF34445B), RoundedCornerShape(18.dp)), colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(18.dp)) {
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
           Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) { Text(title, color = White, fontWeight = FontWeight.SemiBold); Text(id, color = Muted, fontSize = 10.sp) }
-            Switch(enabled, { enabled = it })
+            Box(Modifier.size(42.dp).clip(RoundedCornerShape(13.dp)).background(if (enabled) Color(0xFF103B4B) else PanelSoft), contentAlignment = Alignment.Center) { Icon(Icons.Default.Extension, null, tint = if (enabled) Mint else Muted) }
+            Spacer(Modifier.width(11.dp))
+            Column(Modifier.weight(1f)) { Text(title, color = White, fontWeight = FontWeight.Bold, fontSize = 15.sp); Text(id, color = Muted, fontSize = 10.sp) }
+            Column(horizontalAlignment = Alignment.End) {
+              Text(if (enabled) "HABILITADO" else "PAUSADO", color = if (enabled) Mint else Muted, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
+              Switch(checked = enabled, onCheckedChange = { enabled = it })
+            }
           }
-          if (description.isNotBlank()) Text(description, color = Muted, fontSize = 12.sp)
-          TextButton(onClick = { onSave(id, title, description, enabled) }) { Text("Guardar estado", color = Mint) }
+          Text(description, color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
+          val updated = item["updatedAt"]?.toString().orEmpty()
+          if (updated.isNotBlank()) Text("Última modificación: ${updated.take(16).replace("T", " ")}", color = Color(0xFF7890AA), fontSize = 10.sp)
+          Button(onClick = { onSave(id, title, description, enabled) }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Save, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(7.dp)); Text("Guardar cambio") }
         }
       }
     }
