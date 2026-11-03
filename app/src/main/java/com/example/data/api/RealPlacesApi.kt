@@ -240,22 +240,24 @@ object RealPlacesApi {
             }
         }
 
-        // 2. Base verificada local de Romang (para garantizar que nunca quede vacía)
-        val baseStores = if (cleanLocality.contains("romang", ignoreCase = true) || calculateDistanceMeters(userLat, userLon, -29.5052, -59.7562) < 30000) {
-            SampleData.sampleStores
+        // 2. Base DEMO local: solo se permite en Romang y nunca se renombra
+        // para simular comercios de otra localidad. Las distancias del catálogo
+        // también deben respetar el radio solicitado.
+        val isRomangArea = cleanLocality.contains("romang", ignoreCase = true) ||
+            calculateDistanceMeters(userLat, userLon, -29.5052, -59.7562) <= 30000.0
+        val safeRadius = radiusMeters.coerceIn(300, 15000)
+        val baseStores = if (isRomangArea) {
+            SampleData.sampleStores.filter { it.distanceMeters in 1..safeRadius }
         } else {
-            SampleData.sampleStores.map { s ->
-                s.copy(
-                    id = "${s.id}_$cleanLocality",
-                    address = s.address.replace("Romang", cleanLocality),
-                    distanceMeters = (s.distanceMeters + 150).coerceAtLeast(60)
-                )
-            }
+            emptyList()
         }
 
-        // 3. RESPALDO OSM (Preservado para contingencia si Google Places no devuelve resultados)
-        val osmBackup = fetchOsmStoresBackup(userLat, userLon, radiusMeters, cleanLocality)
-        (baseStores + osmBackup).distinctBy { it.id.lowercase() }.sortedBy { it.distanceMeters }
+        // 3. Respaldo OSM: solo lugares encontrados dentro del radio real.
+        val osmBackup = fetchOsmStoresBackup(userLat, userLon, safeRadius, cleanLocality)
+        (baseStores + osmBackup)
+            .filter { it.distanceMeters in 1..safeRadius }
+            .distinctBy { it.id.lowercase() }
+            .sortedBy { it.distanceMeters }
     }
 
     /** Motor de respaldo sobre OpenStreetMap / Overpass (anulado como primario pero conservado) */
