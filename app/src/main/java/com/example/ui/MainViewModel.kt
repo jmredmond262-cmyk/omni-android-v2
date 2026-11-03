@@ -342,6 +342,7 @@ class MainViewModel : ViewModel() {
         val uid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
         if (uid.isBlank()) return
         MerchantProfileRepository.save(_managedStore.value, _storeNews.value, uid) { result ->
+            result.onSuccess { _merchantProfileMessage.value = null }
             result.onFailure { error ->
                 _merchantProfileMessage.value = error.localizedMessage ?: "No se pudo guardar el comercio en Firebase."
                 android.util.Log.e("MainViewModel", "Merchant profile save failed", error)
