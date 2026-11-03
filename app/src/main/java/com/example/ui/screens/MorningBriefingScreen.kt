@@ -43,7 +43,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import java.time.LocalDate
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -65,7 +64,8 @@ fun MorningBriefingScreen(
     val tasks by viewModel.tasks.collectAsState()
     val previousSummary = remember {
         val summaryPrefs = context.getSharedPreferences("omni_daily_summary", android.content.Context.MODE_PRIVATE)
-        val yesterday = LocalDate.now().minusDays(1).toString()
+        val yesterdayCalendar = java.util.Calendar.getInstance().apply { add(java.util.Calendar.DAY_OF_YEAR, -1) }
+        val yesterday = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(yesterdayCalendar.time)
         if (summaryPrefs.getString("summary_date", "") == yesterday) {
             summaryPrefs.getInt("summary_completed", 0) to summaryPrefs.getInt("summary_total", 0)
         } else null
