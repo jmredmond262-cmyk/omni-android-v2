@@ -353,13 +353,15 @@ fun UserProfileScreen(
                                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
-                                    Text(
-                                        text = "⭐ ${profile.neighborLevel}",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                                    )
+                                    if (profile.neighborLevel.isNotBlank()) {
+                                        Text(
+                                            text = "⭐ ${profile.neighborLevel}",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -683,8 +685,14 @@ fun UserProfileScreen(
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text("Ubicación Detectada en Vivo (GPS):", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        Text(profile.currentGpsAddress, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
-                                        Text("Lat: ${profile.currentLatitude} | Lon: ${profile.currentLongitude}", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary)
+                                        Text(
+                                            profile.currentGpsAddress.ifBlank { "Todavía no se detectó una ubicación" },
+                                            fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        if (profile.currentLatitude != 0.0 || profile.currentLongitude != 0.0) {
+                                            Text("Lat: ${profile.currentLatitude} | Lon: ${profile.currentLongitude}", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary)
+                                        }
                                     }
 
                                     Button(

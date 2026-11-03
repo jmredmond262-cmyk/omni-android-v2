@@ -898,6 +898,11 @@ class MainViewModel : ViewModel() {
     }
 
     fun fetchLiveWeatherAndAlerts(lat: Double, lon: Double, label: String) {
+        if (!lat.isFinite() || !lon.isFinite() || lat !in -90.0..90.0 || lon !in -180.0..180.0 || (lat == 0.0 && lon == 0.0)) {
+            _liveWeatherData.value = null
+            _weatherAlerts.value = emptyList()
+            return
+        }
         val requestId = ++weatherRequestSequence
         viewModelScope.launch {
             val weatherResult = RealWeatherApi.fetchCurrentWeather(lat, lon, label)
