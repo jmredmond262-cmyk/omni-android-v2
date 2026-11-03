@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import { FieldValue, getFirestore, Timestamp, type QuerySnapshot } from "firebase-admin/firestore";
+import { FieldPath, FieldValue, getFirestore, Timestamp, type QuerySnapshot } from "firebase-admin/firestore";
 import { defineString } from "firebase-functions/params";
 import { HttpsError, onRequest } from "firebase-functions/v2/https";
 
@@ -132,11 +132,24 @@ async function dashboard() {
   };
 }
 
-async function listCollection(name: string, limit = 100) {
+async function listCollection(name: string, limit = 100, pageToken = "") {
   const allowed = new Set(["users", "walletAccounts", "walletOperations", "merchantProfiles", "storeOrders", "omniEvents", "appFeedback", "usageEvents", "moduleRegistry", "adminAuditLogs", "betaInvitations"]);
   if (!allowed.has(name)) throw new HttpsError("invalid-argument", "Colección no disponible.");
-  const snapshot = await db.collection(name).limit(Math.min(Math.max(limit, 1), 200)).get();
-  return docList(snapshot, limit);
+  const safeLimit = Math.min(Math.max(limit, 1), 200);
+  let query = db.collection(name).orderBy(FieldPath.documentId()).limit(safeLimit + 1);
+  if (pageToken) {
+    const cursor = await db.collection(name).doc(pageToken).get();
+    if (!cursor.exists) throw new HttpsError("invalid-argument", "El cursor de paginación ya no existe. Actualizá el listado.");
+    query = query.startAfter(cursor);
+  }
+  const snapshot = await query.get();
+  const hasMore = snapshot.docs.length > safeLimit;
+  const page = snapshot.docs.slice(0, safeLimit);
+  return {
+    items: page.map((doc) => ({ id: doc.id, ...clean(doc.data()) as object })),
+    nextPageToken: hasMore ? page[page.length - 1]?.id ?? "" : "",
+    hasMore
+  };
 }
 
 async function handleAction(actor: AdminContext, action: string, data: Record<string, unknown>) {
@@ -145,7 +158,7 @@ async function handleAction(actor: AdminContext, action: string, data: Record<st
       return dashboard();
     case "list": {
       const collection = String(data.collection ?? "");
-      return { items: await listCollection(collection, Number(data.limit) || 100) };
+      return await listCollection(collection, Number(data.limit) || 100, String(data.pageToken ?? ""));
     }
     case "getConfig": {
       const snap = await db.collection("adminConfig").doc("global").get();
