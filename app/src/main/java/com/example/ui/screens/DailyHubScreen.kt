@@ -192,6 +192,7 @@ fun DailyHubScreen(
             icon = Icons.Default.Favorite,
             accentColor = Color(0xFFFF5C9A),
             onClick = {
+                viewModel.clearStoreTypeFilter()
                 viewModel.setScheduleFilter(StoreScheduleFilter.FARMACIAS_TURNO)
                 viewModel.navigateTo(Screen.StoresList)
             }
@@ -666,6 +667,7 @@ fun DailyHubScreen(
                     fontWeight = FontWeight.Bold,
                     color = CyberGlowCyan,
                     modifier = Modifier.clickable {
+                        viewModel.clearStoreTypeFilter()
                         viewModel.navigateTo(Screen.StoresList)
                     }
                 )
