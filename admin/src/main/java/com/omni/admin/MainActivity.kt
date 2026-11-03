@@ -270,17 +270,22 @@ private fun AdminHome(
 @Composable
 private fun DashboardContent(payload: JSONObject) {
   val counts = payload.optJSONObject("counts") ?: JSONObject()
+  val analytics = payload.optJSONObject("analytics") ?: JSONObject()
   val cards = listOf(
-    "Usuarios" to counts.optInt("users"),
-    "Usuarios activos · 7 días" to payload.optInt("activeUsers7d"),
-    "Billeteras" to counts.optInt("walletAccounts"),
-    "Operaciones" to counts.optInt("walletOperations"),
-    "Comercios" to counts.optInt("merchantProfiles"),
-    "Pedidos" to counts.optInt("storeOrders"),
-    "Eventos" to counts.optInt("omniEvents"),
-    "Comentarios" to counts.optInt("appFeedback"),
-    "Uso registrado" to counts.optInt("usageEvents"),
-    "Módulos" to counts.optInt("moduleRegistry")
+    "Usuarios" to counts.optInt("users").toString(),
+    "Usuarios activos · 7 días" to payload.optInt("activeUsers7d").toString(),
+    "Sesiones · 7 días" to analytics.optInt("sessions7d").toString(),
+    "Pantallas vistas · 7 días" to analytics.optInt("screenViews7d").toString(),
+    "Acciones · 7 días" to analytics.optInt("actions7d").toString(),
+    "Promedio por sesión" to analytics.optInt("averageSessionSeconds").let { if (it > 0) "${it}s" else "—" },
+    "Billeteras" to counts.optInt("walletAccounts").toString(),
+    "Operaciones" to counts.optInt("walletOperations").toString(),
+    "Comercios" to counts.optInt("merchantProfiles").toString(),
+    "Pedidos" to counts.optInt("storeOrders").toString(),
+    "Eventos" to counts.optInt("omniEvents").toString(),
+    "Comentarios" to counts.optInt("appFeedback").toString(),
+    "Uso registrado" to counts.optInt("usageEvents").toString(),
+    "Módulos" to counts.optInt("moduleRegistry").toString()
   )
   val activity = listOf(
     "Operaciones" to counts.optInt("walletOperations"),
@@ -364,6 +369,32 @@ private fun DashboardContent(payload: JSONObject) {
                   }
                   Text(value.toString(), color = White, fontSize = 11.sp, modifier = Modifier.width(24.dp))
                 }
+              }
+            }
+          }
+        }
+      }
+      item {
+        val topScreens = jsonArrayToList(analytics.optJSONArray("topScreens"))
+        val moduleUsage = jsonArrayToList(analytics.optJSONArray("moduleUsage"))
+        Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(20.dp)) {
+          Column(Modifier.fillMaxWidth().padding(17.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            Text("Comportamiento de usuarios", color = White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Text("Permanencia media por pantalla: " + analytics.optInt("averageScreenSeconds") + " s", color = Muted, fontSize = 11.sp)
+            Text("Pantallas más visitadas", color = White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            if (topScreens.isEmpty()) Text("Se mostrará cuando haya navegación registrada.", color = Muted, fontSize = 12.sp)
+            topScreens.forEach { row ->
+              Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(row["name"]?.toString().orEmpty(), color = White, fontSize = 12.sp)
+                Text(row["count"]?.toString().orEmpty(), color = Mint, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+              }
+            }
+            Text("Módulos con más interacciones", color = White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            if (moduleUsage.isEmpty()) Text("Las acciones aparecerán a medida que se utilicen las funciones.", color = Muted, fontSize = 12.sp)
+            moduleUsage.forEach { row ->
+              Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(row["name"]?.toString().orEmpty(), color = White, fontSize = 12.sp)
+                Text(row["count"]?.toString().orEmpty(), color = Mint, fontSize = 12.sp, fontWeight = FontWeight.Bold)
               }
             }
           }
@@ -454,12 +485,16 @@ private val fieldLabels = mapOf(
   "fulfillmentType" to "Entrega", "action" to "Acción", "target" to "Destino",
   "message" to "Mensaje", "description" to "Descripción", "enabled" to "Habilitado",
   "event" to "Evento", "module" to "Módulo", "eventName" to "Evento", "screen" to "Pantalla", "appVersion" to "Versión",
-  "createdAt" to "Fecha de registro", "updatedAt" to "Última actualización", "lastSeenAt" to "Última actividad",
+  "createdAt" to "Fecha de registro", "updatedAt" to "Última actualización", "lastSeenAt" to "Última actividad", "userLabel" to "Usuario",
   "cvu" to "CVU"
 )
 private fun friendlyEnum(value: String): String = when (value.uppercase()) {
   "SESSION_START" -> "Inicio de sesión"
+  "SESSION_END" -> "Fin de sesión"
+  "APP_FOREGROUND" -> "Aplicación en primer plano"
+  "APP_BACKGROUND" -> "Aplicación en segundo plano"
   "SCREEN_VIEW" -> "Visita de pantalla"
+  "SCREEN_EXIT" -> "Salida de pantalla"
   "DEPOSIT" -> "Carga de saldo DEMO"
   "TRANSFER" -> "Transferencia"
   "QR_PAYMENT" -> "Pago con QR"
@@ -504,7 +539,7 @@ private fun RecordCard(item: Map<String, Any?>, type: String) {
     "merchantProfiles" -> listOf("description", "category", "address", "status", "createdAt")
     "storeOrders" -> listOf("total", "paymentStatus", "fulfillmentType", "createdAt")
     "appFeedback" -> listOf("message", "createdAt")
-    "usageEvents" -> listOf("module", "appVersion", "createdAt")
+    "usageEvents" -> listOf("userLabel", "module", "appVersion", "createdAt")
     else -> listOf("status", "createdAt", "updatedAt")
   }
   val visible = preferred.mapNotNull { key ->
