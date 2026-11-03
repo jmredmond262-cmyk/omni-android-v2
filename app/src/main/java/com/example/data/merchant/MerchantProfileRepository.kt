@@ -79,6 +79,7 @@ object MerchantProfileRepository {
                     "originalPrice" to product.originalPrice,
                     "inStock" to product.inStock,
                     "unitLabel" to product.unitLabel,
+                    "photoUri" to product.photoUri,
                     "barcode" to product.barcode,
                     "description" to product.description
                 )
@@ -126,7 +127,7 @@ object MerchantProfileRepository {
                 originalPrice = (map["originalPrice"] as? Number)?.toDouble(),
                 inStock = map["inStock"] as? Boolean ?: true,
                 unitLabel = map["unitLabel"] as? String ?: "unid.",
-                photoUri = null,
+                photoUri = map["photoUri"] as? String,
                 barcode = map["barcode"] as? String,
                 description = map["description"] as? String ?: ""
             )
