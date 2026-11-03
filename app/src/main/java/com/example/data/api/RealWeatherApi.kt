@@ -197,18 +197,31 @@ object RealWeatherApi {
             )
         }
 
-        // 3. Alerta de Vientos Fuertes / Tormenta / Lluvia Intensa
-        if (weather.windSpeedKmh >= 45.0 || weather.precipitationMm >= 5.0 || weather.weatherCode in listOf(95, 96, 99)) {
-            val severity = if (weather.windSpeedKmh >= 70.0 || weather.weatherCode in listOf(96, 99)) AlertSeverity.ROJO else AlertSeverity.NARANJA
+        // 3. Tormentas: solo emitir alerta de tormenta ante códigos meteorológicos explícitos.
+        // Lluvia acumulada o viento moderado por sí solos no significan tormenta.
+        if (weather.weatherCode in listOf(95, 96, 99)) {
+            val severity = if (weather.weatherCode in listOf(96, 99)) AlertSeverity.ROJO else AlertSeverity.NARANJA
             alerts.add(
                 WeatherAlert(
                     id = "alert_storm_$alertDate",
                     type = AlertType.TORMENTA,
                     severity = severity,
-                    title = "Alerta de Tormentas y Ráfagas (${weather.windSpeedKmh} km/h)",
-                    description = "Precipitaciones registradas de ${weather.precipitationMm} mm con actividad eléctrica o ráfagas fuertes.",
-                    instructions = "Asegurar objetos sueltos en balcones y no sacar la basura para evitar anegamientos.",
-                    validUntil = "Próximas 4 horas"
+                    title = if (weather.weatherCode in listOf(96, 99)) "Tormenta eléctrica con granizo" else "Tormenta eléctrica",
+                    description = "El pronóstico actual detecta actividad eléctrica en la ubicación consultada.",
+                    instructions = "Resguardate bajo techo, evitá árboles y estructuras expuestas y desconectá equipos sensibles.",
+                    validUntil = "Reevaluar en la próxima actualización meteorológica"
+                )
+            )
+        } else if (weather.windSpeedKmh >= 65.0) {
+            alerts.add(
+                WeatherAlert(
+                    id = "alert_wind_$alertDate",
+                    type = AlertType.HURACAN_TORNADO,
+                    severity = if (weather.windSpeedKmh >= 85.0) AlertSeverity.ROJO else AlertSeverity.NARANJA,
+                    title = "Aviso por vientos muy fuertes",
+                    description = "Se registran vientos de ${weather.windSpeedKmh.toInt()} km/h. No implica necesariamente tormenta.",
+                    instructions = "Asegurá objetos sueltos y evitá zonas arboladas o expuestas.",
+                    validUntil = "Reevaluar en la próxima actualización meteorológica"
                 )
             )
         }
