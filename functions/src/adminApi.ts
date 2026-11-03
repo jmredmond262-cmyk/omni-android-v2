@@ -132,51 +132,6 @@ async function dashboard() {
   };
 }
 
-
-async function financialOverview() {
-  const [wallets, operations, transactions] = await Promise.all([
-    db.collection("walletAccounts").limit(1000).get(),
-    db.collection("walletOperations").limit(5000).get(),
-    db.collectionGroup("transactions").limit(5000).get()
-  ]);
-  const operationRows = operations.docs.map((doc) => ({ id: doc.id, ...clean(doc.data()) as object })) as Array<Record<string, unknown>>;
-  const transactionRows = transactions.docs.map((doc) => ({
-    id: doc.id,
-    uid: doc.ref.parent.parent?.id ?? "",
-    ...clean(doc.data()) as object
-  })) as Array<Record<string, unknown>>;
-  const amountOf = (row: Record<string, unknown>) => Math.max(0, Number(row.amount) || 0);
-  const kindOf = (row: Record<string, unknown>) => String(row.kind ?? row.type ?? "").toUpperCase();
-  const initialCapital = transactionRows
-    .filter((row) => kindOf(row) === "CARGA_SALDO" &&
-      (String(row.id) === "welcome" || String(row.title ?? "").toLowerCase().includes("crédito inicial")))
-    .reduce((sum, row) => sum + amountOf(row), 0);
-  const deposits = operationRows.filter((row) => kindOf(row) === "DEPOSIT").reduce((sum, row) => sum + amountOf(row), 0);
-  const transfers = operationRows.filter((row) => kindOf(row) === "TRANSFER").reduce((sum, row) => sum + amountOf(row), 0);
-  const qrPayments = operationRows.filter((row) => kindOf(row) === "QR_PAYMENT").reduce((sum, row) => sum + amountOf(row), 0);
-  const currentBalance = wallets.docs.reduce((sum, doc) => sum + Math.max(0, Number(doc.get("balance")) || 0), 0);
-  const sortNewest = (a: Record<string, unknown>, b: Record<string, unknown>) =>
-    String(b.createdAt ?? "").localeCompare(String(a.createdAt ?? ""));
-  return {
-    summary: {
-      currentBalance,
-      initialCapital,
-      deposits,
-      totalCredits: initialCapital + deposits,
-      transferVolume: transfers,
-      qrVolume: qrPayments,
-      outflows: transfers + qrPayments,
-      accountCount: wallets.size,
-      operationCount: operationRows.length,
-      transactionCount: transactionRows.length
-    },
-    accounts: wallets.docs.map((doc) => ({ id: doc.id, ...clean(doc.data()) as object }))
-      .sort((a, b) => (Number((b as Record<string, unknown>).balance) || 0) - (Number((a as Record<string, unknown>).balance) || 0)),
-    transactions: transactionRows.sort(sortNewest).slice(0, 300),
-    operations: operationRows.sort(sortNewest).slice(0, 300)
-  };
-}
-
 async function listCollection(name: string, limit = 100, pageToken = "") {
   const allowed = new Set(["users", "walletAccounts", "walletOperations", "merchantProfiles", "storeOrders", "omniEvents", "appFeedback", "usageEvents", "moduleRegistry", "adminAuditLogs", "betaInvitations"]);
   if (!allowed.has(name)) throw new HttpsError("invalid-argument", "Colección no disponible.");
@@ -201,8 +156,6 @@ async function handleAction(actor: AdminContext, action: string, data: Record<st
   switch (action) {
     case "dashboard":
       return dashboard();
-    case "finance":
-      return financialOverview();
     case "list": {
       const collection = String(data.collection ?? "");
       return await listCollection(collection, Number(data.limit) || 100, String(data.pageToken ?? ""));
