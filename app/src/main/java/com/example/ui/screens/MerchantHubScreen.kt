@@ -142,6 +142,7 @@ fun MerchantHubScreen(
     var prodOriginalPrice by remember { mutableStateOf("") }
     var prodPhotoUri by remember { mutableStateOf<String?>(null) }
     var pendingCameraPhoto by remember { mutableStateOf<Uri?>(null) }
+    var pendingCameraPhotoFile by remember { mutableStateOf<File?>(null) }
     var prodBarcode by remember { mutableStateOf("") }
     var categoryExpanded by remember { mutableStateOf(false) }
 
@@ -193,9 +194,10 @@ fun MerchantHubScreen(
             prodPhotoUri = capturedUri.toString()
             analyzeProductPhoto(prodPhotoUri!!)
         } else if (capturedUri != null) {
-            runCatching { File(requireNotNull(capturedUri.path)).delete() }
+            pendingCameraPhotoFile?.delete()
         }
         pendingCameraPhoto = null
+        pendingCameraPhotoFile = null
     }
 
     fun launchProductCamera() {
@@ -203,6 +205,7 @@ fun MerchantHubScreen(
             val photoDir = File(context.filesDir, "product_photos").apply { mkdirs() }
             val photoFile = File(photoDir, "product_" + System.currentTimeMillis() + ".jpg")
             val outputUri = FileProvider.getUriForFile(context, context.packageName + ".fileprovider", photoFile)
+            pendingCameraPhotoFile = photoFile
             pendingCameraPhoto = outputUri
             cameraLauncher.launch(outputUri)
         }.onFailure { error ->
