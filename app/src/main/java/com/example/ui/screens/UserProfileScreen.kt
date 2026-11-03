@@ -88,6 +88,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.DietaryPreference
@@ -159,7 +160,7 @@ fun UserProfileScreen(
         modifier = modifier
             .fillMaxSize()
             .testTag("user_profile_screen"),
-        contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 100.dp),
+        contentPadding = PaddingValues(start = 14.dp, top = 12.dp, end = 14.dp, bottom = 100.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         // 1. Barra de Navegación Superior con Regreso y Título
@@ -179,13 +180,14 @@ fun UserProfileScreen(
                 Column {
                     Text(
                         text = "Mi Perfil & Ajustes Integrales",
-                        fontSize = 18.sp,
+                        fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
                         text = "Configuración social, pagos, mapas y rutinas en Omni",
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -200,7 +202,7 @@ fun UserProfileScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(14.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text("⭐ OMNI PUNTOS", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFFFD166))
@@ -245,7 +247,7 @@ fun UserProfileScreen(
                                 )
                             )
                         )
-                        .padding(20.dp)
+                        .padding(16.dp)
                 ) {
                     Column {
                         Row(
@@ -414,8 +416,9 @@ fun UserProfileScreen(
 
         // 3. Pestañas de Sub-Paneles
         item {
-            TabRow(
+            ScrollableTabRow(
                 selectedTabIndex = selectedTab,
+                edgePadding = 6.dp,
                 containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.primary,
                 indicator = { tabPositions ->
@@ -433,7 +436,10 @@ fun UserProfileScreen(
                         text = {
                             Text(
                                 text = title,
-                                fontSize = 12.sp,
+                                fontSize = 11.sp,
+                                lineHeight = 14.sp,
+                                maxLines = 2,
+                                textAlign = TextAlign.Center,
                                 fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
                             )
                         }
