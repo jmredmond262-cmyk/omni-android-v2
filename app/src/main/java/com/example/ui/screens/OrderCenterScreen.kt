@@ -67,6 +67,7 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
     val uid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
     val profile by viewModel.userProfile.collectAsState()
     val selectedStore by viewModel.selectedStore.collectAsState()
+    val availableStores by viewModel.stores.collectAsState()
     val managedStore by viewModel.managedStore.collectAsState()
     val store = if (merchantMode) managedStore else (selectedStore ?: managedStore)
     val db = remember { FirebaseFirestore.getInstance() }
@@ -112,6 +113,17 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
             qrNonce = doc.getString("qrNonce").orEmpty()
         )
     }.getOrNull()
+
+    LaunchedEffect(store.id) {
+        // El carrito pertenece a un único comercio: nunca mezclar artículos de locales distintos.
+        cart = emptyMap()
+        productSearch = ""
+        selectedProductCategory = null
+        deliveryAddress = ""
+        fulfillmentType = "RETIRO"
+        createdOrder = null
+        showOrderReview = false
+    }
 
     LaunchedEffect(merchantMode, store.id, uid) {
         if (merchantMode && uid.isNotBlank()) {
@@ -274,7 +286,19 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
             if (merchantError != null) Text(merchantError.orEmpty(), color = Color(0xFFFF9B8F), fontSize = 12.sp, modifier = Modifier.padding(8.dp))
             else if (!merchantReady) Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFF57DDF5)) }
         } else {
-            Text("Elegí productos y enviá tu pedido al comercio. El QR identifica el pedido; no acredita un pago.", color = Color(0xFF9AAAC2), fontSize = 11.sp)
+            Text("Elegí un comercio, seleccioná sus productos y enviá tu pedido. El QR identifica el pedido; no acredita un pago.", color = Color(0xFF9AAAC2), fontSize = 11.sp)
+            LazyRow(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
+                items(availableStores.filter { it.id != managedStore.id }, key = { it.id }) { candidate ->
+                    FilterChip(
+                        selected = candidate.id == store.id,
+                        onClick = { if (candidate.id != store.id) viewModel.selectStoreForOrders(candidate) },
+                        label = { Text(candidate.name.substringBefore(" - ").take(22), maxLines = 1) }
+                    )
+                }
+            }
             if (store.inventory.none { it.inStock }) Text("Este comercio todavía no publicó productos para pedidos.", color = Color(0xFFFFC978), fontSize = 12.sp)
             else {
                 OutlinedTextField(
