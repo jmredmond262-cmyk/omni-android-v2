@@ -78,9 +78,10 @@ data class Store(
 
 
 /** True only when the current local time falls inside hours explicitly published by the store. */
-fun Store.isOpenAtCurrentTime(): Boolean {
-    if (is24Hours || isOnDuty) return true
-    val now = java.util.Calendar.getInstance()
+fun Store.isOpenAtCurrentTime(now: java.util.Calendar = java.util.Calendar.getInstance()): Boolean {
+    // Estar marcada como farmacia de turno no significa estar abierta las 24 horas.
+    // Solo un horario explícito o una declaración 24 h permite afirmar que está abierta.
+    if (is24Hours) return true
     val day = now.get(java.util.Calendar.DAY_OF_WEEK)
     val minuteNow = now.get(java.util.Calendar.HOUR_OF_DAY) * 60 + now.get(java.util.Calendar.MINUTE)
 
