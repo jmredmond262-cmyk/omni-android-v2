@@ -344,26 +344,14 @@ private fun DashboardContent(payload: JSONObject) {
   val counts = payload.optJSONObject("counts") ?: JSONObject()
   val analytics = payload.optJSONObject("analytics") ?: JSONObject()
   val cards = listOf(
-    "Usuarios" to counts.optInt("users").toString(),
+    "Usuarios registrados" to counts.optInt("users").toString(),
     "Usuarios activos · 7 días" to payload.optInt("activeUsers7d").toString(),
     "Sesiones · 7 días" to analytics.optInt("sessions7d").toString(),
-    "Pantallas vistas · 7 días" to analytics.optInt("screenViews7d").toString(),
-    "Acciones · 7 días" to analytics.optInt("actions7d").toString(),
-    "Promedio por sesión" to analytics.optInt("averageSessionSeconds").let { if (it > 0) "${it}s" else "—" },
-    "Cámara IA · análisis" to analytics.optJSONObject("featureMetrics")?.optInt("aiCameraScans", 0).toString(),
-    "Interacciones en mapas" to analytics.optJSONObject("featureMetrics")?.optInt("mapsInteractions", 0).toString(),
-    "Bolsa de trabajo" to analytics.optJSONObject("featureMetrics")?.optInt("jobInteractions", 0).toString(),
-    "Eventos e interacciones" to analytics.optJSONObject("featureMetrics")?.optInt("eventInteractions", 0).toString(),
-    "Rutinas y clima" to analytics.optJSONObject("featureMetrics")?.optInt("routineWeatherInteractions", 0).toString(),
-    "Compartidos" to analytics.optJSONObject("featureMetrics")?.optInt("commerceShares", 0).toString(),
-    "Billeteras" to counts.optInt("walletAccounts").toString(),
-    "Operaciones" to counts.optInt("walletOperations").toString(),
     "Comercios" to counts.optInt("merchantProfiles").toString(),
     "Pedidos" to counts.optInt("storeOrders").toString(),
-    "Eventos" to counts.optInt("omniEvents").toString(),
-    "Comentarios" to counts.optInt("appFeedback").toString(),
-    "Uso registrado" to counts.optInt("usageEvents").toString(),
-    "Módulos" to counts.optInt("moduleRegistry").toString()
+    "Billeteras DEMO" to counts.optInt("walletAccounts").toString(),
+    "Operaciones" to counts.optInt("walletOperations").toString(),
+    "Eventos comunitarios" to counts.optInt("omniEvents").toString()
   )
   val activity = listOf(
     "Operaciones" to counts.optInt("walletOperations"),
@@ -559,10 +547,18 @@ private fun DashboardContent(payload: JSONObject) {
 @Composable
 private fun RecordsContent(selected: String, array: JSONArray, hasMore: Boolean, onLoadMore: () -> Unit) {
   val records = jsonArrayToList(array)
-  LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), contentPadding = PaddingValues(vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+  LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), contentPadding = PaddingValues(vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
     item {
-      Text(tabs.first { it.id == selected }.label, color = White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-      Text(records.size.toString() + (if (records.size == 1) " registro cargado" else " registros cargados") + " · historial paginado por cursor", color = Muted, fontSize = 12.sp)
+      Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))
+          .background(Brush.linearGradient(listOf(Color(0xFF12334B), Panel, Color(0xFF0A1423))))
+          .border(1.dp, Color(0xFF1A6078), RoundedCornerShape(22.dp)).padding(19.dp),
+        verticalArrangement = Arrangement.spacedBy(7.dp)
+      ) {
+        Text("GESTIÓN · OMNI ADMIN", color = Mint, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.8.sp)
+        Text(tabs.first { it.id == selected }.label, color = White, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
+        Text(records.size.toString() + (if (records.size == 1) " registro cargado" else " registros cargados") + " · historial paginado", color = Muted, fontSize = 12.sp)
+      }
     }
     if (records.isEmpty()) item { EmptyState("Todavía no hay registros para mostrar.") }
     items(records) { RecordCard(it, selected) }
@@ -654,8 +650,13 @@ private fun RecordCard(item: Map<String, Any?>, type: String) {
   }
   val protectedKeys = setOf("password", "token", "accessToken", "refreshToken", "secret", "apiKey", "qrNonce", "rawData", "authorization")
   val details = item.entries.filter { (key, value) -> key !in protectedKeys && value != null && displayValue(value).isNotBlank() }.sortedBy { it.key }
-  Card(Modifier.fillMaxWidth().border(1.dp, Color(0xFF163B54), RoundedCornerShape(16.dp)).clickable { expanded = !expanded }, colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)) {
-    Column(Modifier.fillMaxWidth().padding(15.dp)) {
+  Card(
+    Modifier.fillMaxWidth().border(1.dp, Color(0xFF1A5068), RoundedCornerShape(19.dp)).clickable { expanded = !expanded },
+    colors = CardDefaults.cardColors(containerColor = Panel),
+    shape = RoundedCornerShape(19.dp),
+    elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
+  ) {
+    Column(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF10243A), Panel))).padding(17.dp)) {
       Row(verticalAlignment = Alignment.CenterVertically) {
         Text(title.take(100), modifier = Modifier.weight(1f), color = White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 2)
         Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if (expanded) "Contraer detalle" else "Ver detalle", tint = Mint)
@@ -755,8 +756,15 @@ private fun InvitationContent(array: JSONArray, onInvite: (String) -> Unit) {
 
 @Composable
 private fun EmptyState(message: String) {
-  Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp)) {
-    Text(message, Modifier.fillMaxWidth().padding(20.dp), color = Muted, fontSize = 13.sp)
+  Card(
+    Modifier.fillMaxWidth().border(1.dp, Color(0xFF1A4058), RoundedCornerShape(18.dp)),
+    colors = CardDefaults.cardColors(containerColor = Panel),
+    shape = RoundedCornerShape(18.dp)
+  ) {
+    Row(Modifier.fillMaxWidth().padding(19.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+      Icon(Icons.Default.Info, contentDescription = null, tint = Mint)
+      Text(message, color = Muted, fontSize = 13.sp, lineHeight = 19.sp)
+    }
   }
 }
 
