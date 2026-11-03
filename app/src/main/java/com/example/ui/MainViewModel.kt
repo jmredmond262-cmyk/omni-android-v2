@@ -742,7 +742,7 @@ class MainViewModel : ViewModel() {
             } catch (e: Exception) {
                 if (requestId == directorySearchRequestId) {
                     val fallback = onlySelectedLocality(RealPlacesApi.fetchNearbyRealStores(latitude, longitude, radiusMeters, _currentCity.value, context))
-                    _stores.value = fallback
+                    publishStoreResults(fallback)
                     _omniDirectoryMessage.value = if (fallback.isEmpty()) "No encontramos comercios publicados en ${_currentCity.value}. Podés elegir otra localidad para ampliar la búsqueda." else "${fallback.size} comercios de ${_currentCity.value}."
                 }
             } finally {
