@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -63,7 +64,7 @@ private val tabs = listOf(
   AdminTab("wallets", "Billeteras", "walletAccounts"), AdminTab("operations", "Operaciones", "walletOperations"),
   AdminTab("stores", "Comercios", "merchantProfiles"), AdminTab("orders", "Pedidos", "storeOrders"),
   AdminTab("feedback", "Comentarios", "appFeedback"), AdminTab("activity", "Actividad", "usageEvents"), AdminTab("modules", "Módulos", "moduleRegistry"),
-  AdminTab("audit", "Auditoría", "adminAuditLogs"), AdminTab("settings", "Configuración")
+  AdminTab("audit", "Auditoría", "adminAuditLogs")
 )
 
 @Composable
@@ -258,9 +259,6 @@ private fun AdminHome(
       if (error.isNotBlank()) Text(error, Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), color = if (error.contains("correctamente") || error.contains("registrada") || error.contains("actualizado")) Mint else Danger, fontSize = 13.sp)
       when (selected) {
         "dashboard" -> DashboardContent(payload)
-        "settings" -> ConfigContent(payload.optJSONObject("config") ?: JSONObject(), onSaveConfig)
-        "modules" -> ModuleContent(payload.optJSONArray("items") ?: JSONArray(), onSaveModule)
-        "audit" -> InvitationContent(payload.optJSONArray("items") ?: JSONArray(), onInvite)
         else -> RecordsContent(selected, payload.optJSONArray("items") ?: JSONArray(), hasMore, onLoadMore)
       }
     }
@@ -537,6 +535,7 @@ private fun looksLikeTechnicalId(value: String): Boolean =
 
 @Composable
 private fun RecordCard(item: Map<String, Any?>, type: String) {
+  var expanded by remember(item["id"]) { mutableStateOf(false) }
   val title = when (type) {
     "users" -> firstPresentValue(item, "displayName", "fullName", "name", "email").ifBlank { "Usuario OMNI" }
     "walletAccounts" -> firstPresentValue(item, "alias").ifBlank { "Billetera OMNI Pay" }
@@ -564,22 +563,30 @@ private fun RecordCard(item: Map<String, Any?>, type: String) {
     if (rendered.isBlank() || looksLikeTechnicalId(rendered)) null
     else (fieldLabels[key] ?: key) + ": " + if (key == "kind" || key == "type" || key == "status" || key == "paymentStatus") friendlyEnum(rendered) else rendered
   }
-  val extraMessage = if (type == "appFeedback") item["message"]?.toString().orEmpty() else ""
-  Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp)) {
+  val protectedKeys = setOf("password", "token", "accessToken", "refreshToken", "secret", "apiKey", "qrNonce", "rawData", "authorization")
+  val details = item.entries.filter { (key, value) -> key !in protectedKeys && value != null && displayValue(value).isNotBlank() }.sortedBy { it.key }
+  Card(Modifier.fillMaxWidth().clickable { expanded = !expanded }, colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp)) {
     Column(Modifier.fillMaxWidth().padding(15.dp)) {
-      Text(title.take(100), color = White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 2)
-      visible.forEach { line ->
-        Spacer(Modifier.height(5.dp))
-        Text(line.take(140), color = Muted, fontSize = 12.sp, maxLines = 2)
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(title.take(100), modifier = Modifier.weight(1f), color = White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 2)
+        Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if (expanded) "Contraer detalle" else "Ver detalle", tint = Mint)
       }
-      if (extraMessage.isNotBlank() && extraMessage != title) {
-        Spacer(Modifier.height(5.dp))
-        Text(extraMessage.take(240), color = Muted, fontSize = 12.sp, maxLines = 4)
-      }
+      visible.forEach { line -> Spacer(Modifier.height(5.dp)); Text(line.take(180), color = Muted, fontSize = 12.sp, maxLines = 2) }
+      if (expanded) {
+        Spacer(Modifier.height(10.dp)); HorizontalDivider(color = PanelSoft)
+        Text("Detalle del registro", color = Mint, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 9.dp, bottom = 4.dp))
+        details.forEach { (key, value) ->
+          val rendered = displayValue(value)
+          val label = fieldLabels[key] ?: key.replace(Regex("([a-z])([A-Z])"), "$1 $2").replaceFirstChar { it.uppercase() }
+          Column(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+            Text(label, color = Muted, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+            Text(rendered.take(1200), color = White, fontSize = 12.sp)
+          }
+        }
+      } else Text("Tocá para ver todos los datos disponibles", color = Mint, fontSize = 10.sp, modifier = Modifier.padding(top = 7.dp))
     }
   }
 }
-
 @Composable
 private fun ConfigContent(config: JSONObject, onSave: (JSONObject) -> Unit) {
   var maintenance by remember(config.toString()) { mutableStateOf(config.optBoolean("maintenanceMode", false)) }
