@@ -310,13 +310,27 @@ private fun DashboardContent(payload: JSONObject) {
       verticalArrangement = Arrangement.spacedBy(13.dp)
     ) {
       item {
-        Text("Centro de control", color = White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-        Text("Una visión general de lo que sucede en OMNI", color = Muted, fontSize = 13.sp)
-        Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-          Box(Modifier.size(8.dp).background(Mint, RoundedCornerShape(50)))
-          Text("Datos consultados en tiempo real", color = Muted, fontSize = 11.sp)
+        Card(
+          Modifier.fillMaxWidth().border(1.dp, Color(0xFF12617B), RoundedCornerShape(22.dp)),
+          colors = CardDefaults.cardColors(containerColor = Panel),
+          shape = RoundedCornerShape(22.dp)
+        ) {
+          Box(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF102B45), Color(0xFF0B1729), Color(0xFF091321)))).padding(19.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+              Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.size(9.dp).background(Mint, RoundedCornerShape(50)))
+                Text("OMNI · CONTROL CENTER", color = Mint, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
+              }
+              Text("Centro de control", color = White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
+              Text("Una visión ejecutiva de usuarios, comercios, actividad y operaciones del ecosistema.", color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
+              Spacer(Modifier.height(2.dp))
+              Surface(color = Color(0xFF103B50), shape = RoundedCornerShape(30.dp)) {
+                Text("DATOS DEL SERVIDOR · SIN CIFRAS DECORATIVAS", Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = Mint, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+              }
+            }
+          }
         }
+        Spacer(Modifier.height(2.dp))
       }
       items(cards.chunked(columns)) { pair ->
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -324,11 +338,12 @@ private fun DashboardContent(payload: JSONObject) {
             Card(
               Modifier.weight(1f).border(1.dp, Color(0xFF17415A), RoundedCornerShape(18.dp)),
               colors = CardDefaults.cardColors(containerColor = Panel),
-              shape = RoundedCornerShape(18.dp), elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
+              shape = RoundedCornerShape(18.dp), elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
             ) {
-              Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                Text(entry.first, color = Muted, fontSize = 12.sp)
-                Text(entry.second.toString(), color = Mint, fontSize = 27.sp, fontWeight = FontWeight.Bold)
+              Column(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF10243A), Panel))).padding(15.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                Box(Modifier.width(30.dp).height(3.dp).background(Mint, RoundedCornerShape(4.dp)))
+                Text(entry.first, color = Muted, fontSize = 11.sp, minLines = 2, lineHeight = 14.sp)
+                Text(entry.second.toString(), color = Mint, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
               }
             }
           }
