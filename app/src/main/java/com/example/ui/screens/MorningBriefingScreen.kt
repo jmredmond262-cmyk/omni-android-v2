@@ -77,11 +77,20 @@ fun MorningBriefingScreen(
     var showMetrics by remember { mutableStateOf(preferences.getBoolean("show_metrics", true)) }
     var showQuote by remember { mutableStateOf(preferences.getBoolean("show_quote", true)) }
     var showYesterday by remember { mutableStateOf(preferences.getBoolean("show_yesterday", true)) }
-    val dailyQuote = remember { listOf("Lo importante no es correr, sino avanzar con dirección.", "Cada día trae una oportunidad para empezar mejor.", "Las pequeñas decisiones construyen grandes cambios.", "No hace falta tener todo resuelto para dar el próximo paso.", "La constancia convierte las ideas en resultados.", "Hacé espacio para lo que realmente importa.").random() }
-    val todayDateText = remember {
-        val raw = SimpleDateFormat("EEEE d 'de' MMMM", Locale("es", "AR")).format(Date())
-        raw.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("es", "AR")) else it.toString() } + " • Comienzo de día"
-    }
+    val todayKey = SimpleDateFormat("yyyyMMdd", Locale.US).format(Date())
+    val dailyQuotes = listOf(
+        "Lo importante no es correr, sino avanzar con dirección.",
+        "Cada día trae una oportunidad para empezar mejor.",
+        "Las pequeñas decisiones construyen grandes cambios.",
+        "No hace falta tener todo resuelto para dar el próximo paso.",
+        "La constancia convierte las ideas en resultados.",
+        "Hacé espacio para lo que realmente importa."
+    )
+    val dailyQuote = dailyQuotes[Math.floorMod(todayKey.hashCode(), dailyQuotes.size)]
+    val rawTodayDate = SimpleDateFormat("EEEE d 'de' MMMM", Locale("es", "AR")).format(Date())
+    val todayDateText = rawTodayDate.replaceFirstChar {
+        if (it.isLowerCase()) it.titlecase(Locale("es", "AR")) else it.toString()
+    } + " • Comienzo de día"
     val displayName = profile.fullName.trim()
         .takeUnless { it.isBlank() || it.equals("Usuario OMNI", ignoreCase = true) }
     val greeting = displayName?.let { "¡Buen día, $it! Esperamos que tengas una excelente jornada." }
