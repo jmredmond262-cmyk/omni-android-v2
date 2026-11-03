@@ -59,20 +59,76 @@ async function audit(actor: AdminContext, action: string, target: string, detail
 }
 
 async function dashboard() {
-  const collections = ["users", "walletAccounts", "walletOperations", "merchantProfiles", "storeOrders", "omniEvents", "appFeedback", "usageEvents"];
+  const collections = ["users", "walletAccounts", "walletOperations", "merchantProfiles", "storeOrders", "omniEvents", "appFeedback", "usageEvents", "moduleRegistry"];
   const counts = await Promise.all(collections.map(count));
-  const [wallets, users, operations] = await Promise.all([
+  const since = Timestamp.fromDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+  const [wallets, users, operations, usage, profiles] = await Promise.all([
     db.collection("walletAccounts").limit(1000).get(),
     db.collection("users").orderBy("createdAt", "desc").limit(8).get(),
-    db.collection("walletOperations").orderBy("createdAt", "desc").limit(8).get()
+    db.collection("walletOperations").orderBy("createdAt", "desc").limit(8).get(),
+    db.collection("usageEvents").where("createdAt", ">=", since).limit(5000).get(),
+    db.collection("users").limit(5000).get()
   ]);
   const balance = wallets.docs.reduce((sum, doc) => sum + (Number(doc.get("balance")) || 0), 0);
+  const events = usage.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  const valueOf = (event: Record<string, unknown>, keys: string[]) =>
+    keys.map((key) => event[key]).find((value) => value !== undefined && value !== null);
+  const eventName = (event: Record<string, unknown>) => String(valueOf(event, ["eventType", "type", "event", "name", "action"]) ?? "UNKNOWN");
+  const screenName = (event: Record<string, unknown>) => String(valueOf(event, ["screen", "screenName", "route"]) ?? "");
+  const moduleName = (event: Record<string, unknown>) => String(valueOf(event, ["module", "moduleId", "feature"]) ?? "");
+  const countBy = (values: string[]) => Object.entries(values.filter(Boolean).reduce<Record<string, number>>((acc, value) => {
+    acc[value] = (acc[value] ?? 0) + 1; return acc;
+  }, {})).map(([name, value]) => ({ name, count: value })).sort((a, b) => b.count - a.count);
+  const sessions = new Set(events.map((event) => String(valueOf(event, ["sessionId", "session_id"]) ?? "")).filter(Boolean));
+  const activeUsers = new Set(events.map((event) => String(valueOf(event, ["uid", "userId", "userUid"]) ?? "")).filter(Boolean));
+  const screenEvents = events.filter((event) => /screen|view|navigation/i.test(eventName(event)));
+  const actionEvents = events.filter((event) => !/screen|view|navigation/i.test(eventName(event)));
+  const dayCounts: Record<string, number> = {};
+  for (let offset = 6; offset >= 0; offset--) {
+    const day = new Date(); day.setHours(0, 0, 0, 0); day.setDate(day.getDate() - offset);
+    dayCounts[day.toISOString().slice(5, 10)] = 0;
+  }
+  for (const event of events) {
+    const raw = valueOf(event, ["createdAt", "timestamp", "serverTimestamp"]);
+    const date = raw instanceof Timestamp ? raw.toDate() : raw instanceof Date ? raw : null;
+    if (date) {
+      const key = date.toISOString().slice(5, 10);
+      if (key in dayCounts) dayCounts[key]++;
+    }
+  }
+  const diagnosticEventSeen = events.some((event) => /diagnostic|health.?check/i.test(eventName(event)));
   return {
     counts: Object.fromEntries(collections.map((name, index) => [name, counts[index]])),
+    activeUsers7d: activeUsers.size,
+    analytics: {
+      sessions7d: sessions.size,
+      screenViews7d: screenEvents.length,
+      actions7d: actionEvents.length,
+      averageSessionSeconds: 0,
+      averageScreenSeconds: 0,
+      featureMetrics: {
+        aiCameraScans: events.filter((event) => /camera|scan|image.?analysis/i.test(eventName(event))).length,
+        mapsInteractions: events.filter((event) => /map|route|place/i.test(eventName(event) + " " + moduleName(event))).length,
+        jobInteractions: events.filter((event) => /job|work|employment/i.test(eventName(event) + " " + moduleName(event))).length,
+        eventInteractions: events.filter((event) => /event/i.test(eventName(event) + " " + moduleName(event))).length,
+        routineWeatherInteractions: events.filter((event) => /routine|weather|forecast/i.test(eventName(event) + " " + moduleName(event))).length,
+        commerceShares: events.filter((event) => /share|whatsapp/i.test(eventName(event))).length
+      },
+      topScreens: countBy(screenEvents.map(screenName)).slice(0, 8),
+      moduleUsage: countBy(events.map(moduleName)).slice(0, 10),
+      eventBreakdown: countBy(events.map(eventName)).slice(0, 12)
+    },
+    usageTrend: Object.entries(dayCounts).map(([date, value]) => ({ date, count: value })),
+    diagnostics: {
+      usageEventsVisibleLast7Days: usage.size,
+      diagnosticEventSeen,
+      userProfilesVisible: profiles.size
+    },
     walletBalanceSample: balance,
     walletSampleSize: wallets.size,
     recentUsers: docList(users, 8),
-    recentOperations: docList(operations, 8)
+    recentOperations: docList(operations, 8),
+    recentUsageEvents: docList(usage, 20)
   };
 }
 
