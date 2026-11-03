@@ -965,7 +965,7 @@ class MainViewModel : ViewModel() {
 
     fun selectStoreAndOpenDetail(store: Store) {
         _selectedStore.value = store
-        _currentScreen.value = Screen.StoreDetail
+        setTrackedScreen(Screen.StoreDetail)
     }
 
     fun selectStoreAndOpenRoute(store: Store) {
