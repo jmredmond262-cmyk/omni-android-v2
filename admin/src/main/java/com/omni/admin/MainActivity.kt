@@ -562,6 +562,15 @@ private fun DashboardContent(payload: JSONObject) {
 @Composable
 private fun RecordsContent(selected: String, array: JSONArray, hasMore: Boolean, onLoadMore: () -> Unit) {
   val records = jsonArrayToList(array)
+  var search by remember(selected) { mutableStateOf("") }
+  val filtered = remember(records, search) {
+    if (search.isBlank()) records else records.filter { record ->
+      record.entries.any { (key, value) ->
+        key !in setOf("password", "token", "accessToken", "refreshToken", "secret", "apiKey", "rawData", "authorization") &&
+          displayValue(value).contains(search.trim(), ignoreCase = true)
+      }
+    }
+  }
   LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), contentPadding = PaddingValues(vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
     item {
       Column(
@@ -572,12 +581,23 @@ private fun RecordsContent(selected: String, array: JSONArray, hasMore: Boolean,
       ) {
         Text("GESTIÓN · OMNI ADMIN", color = Mint, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.8.sp)
         Text(tabs.first { it.id == selected }.label, color = White, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
-        Text(records.size.toString() + (if (records.size == 1) " registro cargado" else " registros cargados") + " · historial paginado", color = Muted, fontSize = 12.sp)
+        Text("${filtered.size} de ${records.size} registros cargados · historial paginado", color = Muted, fontSize = 12.sp)
       }
     }
-    if (records.isEmpty()) item { EmptyState("Todavía no hay registros para mostrar.") }
-    items(records) { RecordCard(it, selected) }
-    if (hasMore) item {
+    item {
+      OutlinedTextField(
+        value = search, onValueChange = { search = it },
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text("Buscar en ${tabs.first { it.id == selected }.label.lowercase()}") },
+        placeholder = { Text("Nombre, correo, estado o referencia") },
+        singleLine = true,
+        leadingIcon = { Icon(Icons.Default.Search, null, tint = Mint) },
+        trailingIcon = { if (search.isNotBlank()) IconButton(onClick = { search = "" }) { Icon(Icons.Default.Close, "Limpiar", tint = Muted) } }
+      )
+    }
+    if (filtered.isEmpty()) item { EmptyState(if (records.isEmpty()) "Todavía no hay registros para mostrar." else "No hay coincidencias con esa búsqueda.") }
+    items(filtered) { RecordCard(it, selected) }
+    if (hasMore && search.isBlank()) item {
       Button(onClick = onLoadMore, modifier = Modifier.fillMaxWidth()) { Text("Cargar más registros") }
     }
   }
