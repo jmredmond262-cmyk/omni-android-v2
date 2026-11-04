@@ -674,7 +674,7 @@ fun OmniApp(viewModel: MainViewModel) {
                     )
                     Screen.SmartList -> SmartListScreen(viewModel = viewModel)
                     Screen.MyPurchases -> MyPurchasesScreen(viewModel = viewModel, onBack = { viewModel.navigateTo(Screen.DailyHub) })
-                    Screen.DemoMarketplace -> DemoMarketplaceScreen(onBack = { viewModel.navigateTo(Screen.MyPurchases) })
+                    Screen.DemoMarketplace -> DemoMarketplaceScreen(\n                        onBack = { viewModel.navigateTo(Screen.MyPurchases) },\n                        onOpenOrders = { viewModel.openOrderCenter(Screen.DemoMarketplace) }\n                    )
                     Screen.OffersBenefits -> OffersBenefitsScreen(onBack = { viewModel.navigateTo(Screen.DailyHub) })
                     Screen.StoresList -> StoresListScreen(viewModel = viewModel)
                     Screen.Comparison -> ComparisonScreen(viewModel = viewModel)
