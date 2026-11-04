@@ -763,6 +763,33 @@ private fun friendlyModule(value: String): String = when (value.trim().lowercase
 private fun looksLikeTechnicalId(value: String): Boolean =
   value.length >= 22 && value.all { it.isLetterOrDigit() || it == '-' || it == '_' }
 
+private fun activityCategory(item: Map<String, Any?>): String {
+  val data = item["data"] as? Map<*, *> ?: emptyMap<Any, Any>()
+  val sources = listOf(
+    item["category"], item["module"], item["screenName"], item["screen"],
+    item["source"], data["category"], data["screenName"], data["source"],
+    data["surface"], data["flow"]
+  ).mapNotNull { it?.toString()?.takeIf(String::isNotBlank) }
+    .joinToString(" ").lowercase()
+  val event = firstPresentValue(item, "event", "eventName", "action", "type").uppercase()
+  return when {
+    listOf("wallet", "billetera", "saldo", "qr_pay", "qr_payment", "transfer", "deposit").any(sources::contains) ||
+      event.contains("QR_PAYMENT") || event.contains("TRANSFER") || event.contains("DEPOSIT") -> "Billetera"
+    listOf("order", "pedido", "market", "carrito", "checkout").any(sources::contains) -> "Pedidos y Mercado"
+    listOf("event", "evento").any(sources::contains) -> "Eventos"
+    listOf("job", "trabajo", "empleo", "cv").any(sources::contains) -> "Bolsa de Trabajo"
+    listOf("merchant", "comercio", "store", "negocio").any(sources::contains) -> "Comercios"
+    listOf("user", "usuario", "profile", "perfil", "contact").any(sources::contains) -> "Usuarios"
+    listOf("navigation", "map", "mapa", "route", "ruta", "location", "ubicacion").any(sources::contains) -> "Navegación"
+    listOf("tourism", "turismo", "experience", "experiencia").any(sources::contains) -> "Turismo y experiencias"
+    listOf("routine", "rutina", "weather", "clima", "reminder", "recordatorio").any(sources::contains) -> "Rutinas y clima"
+    listOf("camera", "camara", "ai", "inteligencia").any(sources::contains) -> "Cámara e IA"
+    event.startsWith("SESSION_") || event.startsWith("APP_") || event.startsWith("SCREEN_") ||
+      sources.contains("app") || sources.contains("diagnostics") -> "Sistema"
+    else -> "Otros"
+  }
+}
+
 @Composable
 private fun RecordCard(item: Map<String, Any?>, type: String) {
   var expanded by remember(item["id"]) { mutableStateOf(false) }
@@ -773,7 +800,7 @@ private fun RecordCard(item: Map<String, Any?>, type: String) {
     "merchantProfiles" -> firstPresentValue(item, "storeName", "name").ifBlank { "Comercio OMNI" }
     "storeOrders" -> "Pedido " + firstPresentValue(item, "orderNumber", "status").ifBlank { "OMNI" }
     "appFeedback" -> "Comentario de usuario"
-    "activity", "usageEvents" -> friendlyEnum(firstPresentValue(item, "event", "eventName").ifBlank { "Evento de uso" })
+    "activity", "usageEvents" -> friendlyEnum(firstPresentValue(item, "event", "eventName", "action", "type").ifBlank { "Actividad registrada" })
     "walletTransactions" -> friendlyEnum(firstPresentValue(item, "type", "kind", "title").ifBlank { "Movimiento de billetera" })
     "omniEvents" -> firstPresentValue(item, "title", "name", "event", "eventName").ifBlank { "Evento OMNI" }
     "adminAuditLogs" -> friendlyEnum(firstPresentValue(item, "action").ifBlank { "Actividad administrativa" })
@@ -787,7 +814,7 @@ private fun RecordCard(item: Map<String, Any?>, type: String) {
     "merchantProfiles" -> listOf("description", "category", "address", "status", "createdAt")
     "storeOrders" -> listOf("total", "paymentStatus", "fulfillmentType", "createdAt")
     "appFeedback" -> listOf("message", "createdAt")
-    "activity", "usageEvents" -> listOf("module", "userLabel", "appVersion", "createdAt")
+    "activity", "usageEvents" -> listOf("userLabel", "appVersion", "createdAt")
     "omniEvents" -> listOf("description", "category", "status", "startAt", "createdAt")
     else -> listOf("status", "createdAt", "updatedAt")
   }
@@ -813,6 +840,11 @@ private fun RecordCard(item: Map<String, Any?>, type: String) {
       Row(verticalAlignment = Alignment.CenterVertically) {
         Text(title.take(100), modifier = Modifier.weight(1f), color = White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 2)
         Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if (expanded) "Contraer detalle" else "Ver detalle", tint = Mint)
+      }
+      if (type == "activity" || type == "usageEvents") {
+        Text("Categoría: ${activityCategory(item)}", color = Mint, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        val actionName = firstPresentValue(item, "event", "eventName", "action", "type").ifBlank { "Actividad registrada" }
+        Text("Acción: ${friendlyEnum(actionName)}", color = Muted, fontSize = 12.sp, maxLines = 2)
       }
       visible.forEach { line -> Spacer(Modifier.height(5.dp)); Text(line.take(180), color = Muted, fontSize = 12.sp, maxLines = 2) }
       if (expanded) {
