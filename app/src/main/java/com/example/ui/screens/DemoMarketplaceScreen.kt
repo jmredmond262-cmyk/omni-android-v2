@@ -59,36 +59,37 @@ fun DemoMarketplaceScreen(
 
         Card(
             colors = CardDefaults.cardColors(containerColor = DemoCard),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(14.dp),
             border = BorderStroke(1.dp, DemoCyan.copy(alpha = 0.28f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
-                Modifier.fillMaxWidth().padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(11.dp)
+                Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.QrCode2, contentDescription = null, tint = DemoCyan, modifier = Modifier.size(25.dp))
-                    Text("Pedidos y compras OMNI", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp,
-                        modifier = Modifier.padding(start = 9.dp))
+                    Icon(Icons.Default.QrCode2, contentDescription = null, tint = DemoCyan, modifier = Modifier.size(21.dp))
+                    Text("Pedidos y compras OMNI", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp,
+                        modifier = Modifier.padding(start = 8.dp))
                 }
                 Text(
-                    "Elegí un comercio habilitado, agregá sus productos y confirmá. OMNI guardará el pedido en Firestore y generará un QR que el comercio podrá leer desde otro teléfono.",
-                    color = DemoMuted, fontSize = 12.sp
-                )
-                Text(
-                    "El cliente podrá consultar el estado y pagar con OMNI Pay DEMO. El comerciante podrá aceptar, preparar y entregar el pedido. No se procesa dinero real.",
-                    color = DemoMuted, fontSize = 11.sp
+                    "Elegí un comercio externo, sumá varios productos al carrito y generá un pedido QR de prueba.",
+                    color = DemoMuted, fontSize = 11.sp, lineHeight = 15.sp
                 )
                 Button(
                     onClick = onOpenOrders,
                     modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(vertical = 9.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF087D98))
                 ) {
-                    Icon(Icons.Default.ShoppingCart, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Abrir comercios y realizar pedido")
+                    Icon(Icons.Default.ShoppingCart, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(7.dp))
+                    Text("Abrir comercios y realizar pedido", fontSize = 12.sp)
                 }
+                Text(
+                    "Solo DEMO · Sin cobros reales",
+                    color = DemoViolet, fontSize = 9.sp, fontWeight = FontWeight.Bold
+                )
             }
         }
 
