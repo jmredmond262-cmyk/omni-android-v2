@@ -238,14 +238,8 @@ class DemoWalletRepository(
         val operationId = if (orderId != null) "orderpay_$orderId" else UUID.randomUUID().toString()
         val operationRef = firestore.collection("walletOperations").document(operationId)
         val orderRef = orderId?.let { firestore.collection("storeOrders").document(it) }
-        firestore.runTransaction { tx ->
-            val existingOperation = tx.get(operationRef)
-            if (existingOperation.exists()) {
-                check(existingOperation.getString("orderId") == orderId && orderId != null) {
-                    "El identificador de operación ya está utilizado."
-                }
-                return@runTransaction "PEDIDO YA PAGADO · DEMO"
-            }
+        val executeAtomicTransfer: () -> Unit = {
+            firestore.runTransaction { tx ->
             val orderSnapshot = orderRef?.let { tx.get(it) }
             val sender = tx.get(senderRef)
             if (orderId != null) {
@@ -290,10 +284,25 @@ class DemoWalletRepository(
                 senderAlias, amount
             ))
             if (orderId != null) "PEDIDO PAGADO · OMNI PAY DEMO" else if (isQr) "PAGO QR APROBADO · DEMO" else "TRANSFERENCIA APROBADA · DEMO"
-        }.addOnSuccessListener {
-            UsageAnalyticsRepository.trackWalletOperation(senderUid, if (orderId != null) "DEMO_ORDER_PAYMENT" else if (isQr) "DEMO_QR_PAYMENT" else "DEMO_TRANSFER")
-            done(Result.success(it))
-        }.addOnFailureListener { done(Result.failure(it)) }
+            }.addOnSuccessListener {
+                UsageAnalyticsRepository.trackWalletOperation(senderUid, if (orderId != null) "DEMO_ORDER_PAYMENT" else if (isQr) "DEMO_QR_PAYMENT" else "DEMO_TRANSFER")
+                done(Result.success(it))
+            }.addOnFailureListener { done(Result.failure(it)) }
+        }
+        if (orderId != null) {
+            // La consulta respeta las reglas: solo lee operaciones enviadas por esta cuenta.
+            firestore.collection("walletOperations")
+                .whereEqualTo("senderUid", senderUid)
+                .whereEqualTo("orderId", orderId)
+                .limit(1).get()
+                .addOnSuccessListener { existing ->
+                    if (!existing.isEmpty) done(Result.success("PEDIDO YA PAGADO · DEMO"))
+                    else executeAtomicTransfer()
+                }
+                .addOnFailureListener { done(Result.failure(it)) }
+        } else {
+            executeAtomicTransfer()
+        }
     }
 
     private fun transactionData(
