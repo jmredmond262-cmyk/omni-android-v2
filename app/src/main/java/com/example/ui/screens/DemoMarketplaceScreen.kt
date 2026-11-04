@@ -185,8 +185,9 @@ fun DemoMarketplaceScreen(onBack: () -> Unit) {
         item {
             OutlinedButton(onClick = { scanDemoQr() }, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Default.QrCode2, null, modifier = Modifier.size(17.dp))
-                Text(" Escanear QR de producto o pedido")
+                Text(" Escanear QR de catálogo DEMO")
             }
+            Text("Este lector es solo para el catálogo local de muestra. Para pedidos entre dos teléfonos usá Pedidos OMNI y el botón «Escanear pedido QR» del comercio.", color = DemoMuted, fontSize = 10.sp)
         }
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
