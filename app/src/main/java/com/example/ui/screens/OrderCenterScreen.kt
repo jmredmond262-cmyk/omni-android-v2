@@ -183,20 +183,18 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
                         .filter { !merchantMode || it.storeId == store.id }
                         .sortedByDescending { it.id }
                     orders = loadedOrders
-                    if (!merchantMode) {
-                        loadedOrders.filter { it.paymentStatus == "PENDIENTE" }.forEach { pendingOrder ->
-                            db.collection("walletOperations")
-                                .whereEqualTo("senderUid", uid)
-                                .whereEqualTo("orderId", "orderpay_${pendingOrder.id}")
-                                .limit(1).get()
-                                .addOnSuccessListener { payment ->
-                                    if (!payment.isEmpty) {
-                                        orders = orders.map { current ->
-                                            if (current.id == pendingOrder.id) current.copy(paymentStatus = "PAGADA · DEMO") else current
-                                        }
+                    loadedOrders.filter { it.paymentStatus == "PENDIENTE" }.forEach { pendingOrder ->
+                        db.collection("walletOperations")
+                            .whereEqualTo(if (merchantMode) "recipientUid" else "senderUid", uid)
+                            .whereEqualTo("orderId", pendingOrder.id)
+                            .limit(1).get()
+                            .addOnSuccessListener { payment ->
+                                if (!payment.isEmpty) {
+                                    orders = orders.map { current ->
+                                        if (current.id == pendingOrder.id) current.copy(paymentStatus = "PAGADA · DEMO") else current
                                     }
                                 }
-                        }
+                            }
                     }
                 }
             }
@@ -284,7 +282,7 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
                                 UsageAnalyticsRepository.trackEvent(uid, "orders", "ORDER_QR_VERIFIED", mapOf("operationId" to order.id, "stage" to "QR_VALIDATION", "success" to true))
                                 db.collection("walletOperations")
                                     .whereEqualTo("recipientUid", uid)
-                                    .whereEqualTo("orderId", "orderpay_${order.id}")
+                                    .whereEqualTo("orderId", order.id)
                                     .limit(1).get()
                                     .addOnSuccessListener { payment ->
                                         selectedScannedOrder = order.copy(
