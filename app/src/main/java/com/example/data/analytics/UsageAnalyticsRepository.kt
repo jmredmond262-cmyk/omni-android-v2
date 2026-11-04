@@ -121,14 +121,14 @@ object UsageAnalyticsRepository {
         val cleanEvent = eventName.trim().uppercase().take(80)
         val event = hashMapOf<String, Any>(
             "eventId" to eventId, "uid" to uid, "module" to cleanModule,
-            "category" to analyticsCategory(cleanModule, cleanEvent, metadata),
             "event" to cleanEvent,
             "sessionId" to sessionId.ifBlank { UUID.randomUUID().toString() },
             "appVersion" to BuildConfig.VERSION_NAME, "platform" to "android",
             "schemaVersion" to 3, "createdAt" to FieldValue.serverTimestamp()
         )
-        val safe = safeMetadata(metadata)
-        if (safe.isNotEmpty()) event["data"] = safe
+        val safe = safeMetadata(metadata).toMutableMap()
+        safe["category"] = analyticsCategory(cleanModule, cleanEvent, metadata)
+        event["data"] = safe
         firestore.collection("usageEvents").document(eventId).set(event)
             .addOnSuccessListener { Log.d(TAG, "Evento registrado: $eventName / $module / $eventId") }
             .addOnFailureListener { error ->
