@@ -44,7 +44,6 @@ service cloud.firestore {
 
       allow update: if (
         signedIn()
-        && request.auth.uid == userId
         && request.resource.data.uid == resource.data.uid
         && request.resource.data.alias == resource.data.alias
         && request.resource.data.cvu == resource.data.cvu
@@ -54,6 +53,7 @@ service cloud.firestore {
         && (
           (
             getAfter(operationPath(request.resource.data.lastOperationId)).data.kind == "DEPOSIT"
+            && request.auth.uid == userId
             && getAfter(operationPath(request.resource.data.lastOperationId)).data.senderUid == userId
             && request.resource.data.balance == resource.data.balance
               + getAfter(operationPath(request.resource.data.lastOperationId)).data.amount
