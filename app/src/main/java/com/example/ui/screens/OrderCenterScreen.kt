@@ -10,6 +10,8 @@ import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -497,7 +499,7 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
             containerColor = Color(0xFF101B30),
             title = { Text("Pedido OMNI verificado", color = Color.White) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     Text("Cliente: ${scanned.customerName.ifBlank { "Cliente OMNI" }}", color = Color(0xFF57DDF5), fontWeight = FontWeight.Bold)
                     if (scanned.customerPhone.isNotBlank()) Text("Teléfono: ${scanned.customerPhone}", color = Color.White, fontSize = 11.sp)
                     Divider(color = Color(0xFF29415F))
@@ -606,7 +608,11 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
                     Text("Pago pendiente · se abona al retirar o recibir. Este QR no es un comprobante de pago.", color = Color(0xFFFFC978), fontSize = 10.sp)
                 }
             },
-            confirmButton = { TextButton(onClick = { createdOrder = null }) { Text("Cerrar") } }
+            confirmButton = {
+                Button(onClick = { createdOrder = null }) {
+                    Text("Ver pedido y opciones de pago")
+                }
+            }
         )
     }
 
@@ -677,9 +683,13 @@ private fun OrderStatusCard(
             )
             if (!merchantMode && onPay != null && order.paymentStatus == "PENDIENTE" &&
                 order.status !in listOf("ENTREGADO", "RECHAZADO", "CANCELADO")) {
-                Button(onClick = onPay, enabled = !paying, modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF087EAB))) {
-                    Text(if (paying) "Procesando pago DEMO…" else "Pagar con OMNI Pay DEMO", fontSize = 10.sp)
+                if (order.total <= 50000.0) {
+                    Button(onClick = onPay, enabled = !paying, modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF087EAB))) {
+                        Text(if (paying) "Procesando pago DEMO…" else "Pagar con OMNI Pay DEMO", fontSize = 10.sp)
+                    }
+                } else {
+                    Text("El total supera el límite de OMNI Pay DEMO (OM$ 50.000). Podés pagar al retirar o recibir.", color = Color(0xFFFFC978), fontSize = 9.sp)
                 }
             }
             if (merchantMode && order.customerPhone.isNotBlank()) {
