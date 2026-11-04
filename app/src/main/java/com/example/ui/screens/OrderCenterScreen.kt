@@ -128,6 +128,14 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
         showOrderReview = false
     }
 
+    LaunchedEffect(merchantMode, merchantReady, uid) {
+        if (merchantMode && merchantReady && uid.isNotBlank()) {
+            walletRepository.ensureWallet { result ->
+                result.onFailure { feedback = "No se pudo preparar OMNI Pay DEMO para cobrar: ${it.localizedMessage ?: "error"}" }
+            }
+        }
+    }
+
     LaunchedEffect(merchantMode, store.id, uid) {
         if (merchantMode && uid.isNotBlank()) {
             merchantReady = false
@@ -295,17 +303,27 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
             return
         }
         payingOrderId = order.id
-        walletRepository.payStoreOrderDemo(order.id, order.merchantUid, order.total) { result ->
-            payingOrderId = null
-            result.fold(
+        walletRepository.ensureWallet { walletResult ->
+            walletResult.fold(
                 onSuccess = {
-                    orders = orders.map { current ->
-                        if (current.id == order.id) current.copy(paymentStatus = "PAGADA · DEMO") else current
+                    walletRepository.payStoreOrderDemo(order.id, order.merchantUid, order.total) { result ->
+                        payingOrderId = null
+                        result.fold(
+                            onSuccess = {
+                                orders = orders.map { current ->
+                                    if (current.id == order.id) current.copy(paymentStatus = "PAGADA · DEMO") else current
+                                }
+                                feedback = "$it. Se registró el movimiento ficticio en las dos billeteras. No se movió dinero real."
+                            },
+                            onFailure = { error ->
+                                feedback = error.localizedMessage ?: "No se pudo completar el pago OMNI Pay DEMO."
+                            }
+                        )
                     }
-                    feedback = "$it. Se registró el movimiento ficticio en las dos billeteras. No se movió dinero real."
                 },
                 onFailure = { error ->
-                    feedback = error.localizedMessage ?: "No se pudo completar el pago OMNI Pay DEMO."
+                    payingOrderId = null
+                    feedback = error.localizedMessage ?: "No se pudo preparar tu billetera OMNI Pay DEMO."
                 }
             )
         }
@@ -317,6 +335,7 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
         ).addOnSuccessListener {
             UsageAnalyticsRepository.trackEvent(uid, "orders", "ORDER_STATUS_$next", mapOf("operationId" to order.id, "stage" to "STATUS_UPDATE_CONFIRMED", "success" to true))
             orders = orders.map { current -> if (current.id == order.id) current.copy(status = next) else current }
+            if (selectedScannedOrder?.id == order.id) selectedScannedOrder = selectedScannedOrder?.copy(status = next)
         }.addOnFailureListener { feedback = it.localizedMessage ?: "No se pudo actualizar el estado." }
     }
 
@@ -503,7 +522,6 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
                 }
                 if (next.isNotBlank()) Button(onClick = {
                     advanceOrder(scanned, next)
-                    selectedScannedOrder = scanned.copy(status = next)
                 }) { Text(when(next) {
                     "ACEPTADO" -> "Aceptar pedido"
                     "EN_PREPARACION" -> "Preparar pedido"
@@ -625,7 +643,7 @@ private fun OrderStatusCard(
         "RECIBIDO" -> "ACEPTADO"
         "ACEPTADO" -> "EN_PREPARACION"
         "EN_PREPARACION" -> "LISTO"
-        "LISTO" -> "EN_CAMINO"
+        "LISTO" -> if (order.fulfillmentType == "DELIVERY") "EN_CAMINO" else "ENTREGADO"
         "EN_CAMINO" -> "ENTREGADO"
         else -> ""
     }
