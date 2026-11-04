@@ -118,7 +118,7 @@ jobs:
       - name: Build OMNI Principal 1.4
         working-directory: source
         env:
-          OMNI_VERSION_CODE: ${{ github.run_number }}
+          OMNI_VERSION_CODE: "513"
         run: gradle :app:assembleDebug
 
       - name: Verify OMNI Principal package, version and signature
@@ -126,7 +126,7 @@ jobs:
         run: |
           set -euo pipefail
           APK="app/build/outputs/apk/debug/app-debug.apk"
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.aistudio.omnihub.qtzmvd' versionCode='$GITHUB_RUN_NUMBER' versionName='1.4.0'"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.aistudio.omnihub.qtzmvd' versionCode='513' versionName='1.4.0'"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$APK" > /tmp/omni-principal-certs.txt
           APK_SHA256="$(awk -F': ' '/certificate SHA-256 digest:/{print $2; exit}' /tmp/omni-principal-certs.txt | tr -d ':' | tr '[:lower:]' '[:upper:]')"
           EXPECTED_SHA256="486513DCA524F8C09134DB97A7D5650A2F2461E4306DB181B7C2DFE2D40E495B"
@@ -144,7 +144,7 @@ jobs:
       - name: Build OMNI Admin 1.4
         working-directory: source
         env:
-          OMNI_ADMIN_VERSION_CODE: ${{ github.run_number }}
+          OMNI_ADMIN_VERSION_CODE: "69"
         run: gradle :admin:assembleDebug
 
       - name: Verify OMNI Admin package, version and signature
@@ -152,7 +152,7 @@ jobs:
         run: |
           set -euo pipefail
           APK="admin/build/outputs/apk/debug/admin-debug.apk"
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.omni.adminpanel' versionCode='$GITHUB_RUN_NUMBER' versionName='1.4.0'"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.omni.adminpanel' versionCode='69' versionName='1.4.0'"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$APK" > /tmp/omni-admin-certs.txt
           APK_SHA256="$(awk -F': ' '/certificate SHA-256 digest:/{print $2; exit}' /tmp/omni-admin-certs.txt | tr -d ':' | tr '[:lower:]' '[:upper:]')"
           EXPECTED_SHA256="486513DCA524F8C09134DB97A7D5650A2F2461E4306DB181B7C2DFE2D40E495B"
