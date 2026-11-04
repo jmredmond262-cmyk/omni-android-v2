@@ -767,7 +767,7 @@ private fun activityCategory(item: Map<String, Any?>): String {
   val data = item["data"] as? Map<*, *> ?: emptyMap<Any, Any>()
   val sources = listOf(
     item["category"], item["module"], item["screenName"], item["screen"],
-    item["source"], data["category"], data["screenName"], data["source"],
+    item["source"], item["event"], item["eventName"], item["action"], data["category"], data["screenName"], data["source"],
     data["surface"], data["flow"]
   ).mapNotNull { it?.toString()?.takeIf(String::isNotBlank) }
     .joinToString(" ").lowercase()
