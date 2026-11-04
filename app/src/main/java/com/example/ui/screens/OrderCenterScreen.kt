@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.Store
+import com.example.data.wallet.DemoWalletRepository
 import com.example.model.StoreProduct
 import com.example.model.ProductCategory
 import com.example.ui.MainViewModel
@@ -71,6 +72,7 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
     val managedStore by viewModel.managedStore.collectAsState()
     val store = if (merchantMode) managedStore else (selectedStore ?: managedStore)
     val db = remember { FirebaseFirestore.getInstance() }
+    val walletRepository = remember { DemoWalletRepository() }
 
     var merchantReady by remember { mutableStateOf(false) }
     var merchantError by remember { mutableStateOf<String?>(null) }
@@ -84,7 +86,8 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
     var feedback by remember { mutableStateOf<String?>(null) }
     var createdOrder by remember { mutableStateOf<OmniStoreOrder?>(null) }
     var showOrderReview by remember { mutableStateOf(false) }
-    var scannedOrderId by remember { mutableStateOf<String?>(null) }
+    var selectedScannedOrder by remember { mutableStateOf<OmniStoreOrder?>(null) }
+    var payingOrderId by remember { mutableStateOf<String?>(null) }
 
     fun decodeOrder(doc: com.google.firebase.firestore.DocumentSnapshot): OmniStoreOrder? = runCatching {
         val lines = (doc.get("items") as? List<*>)?.mapNotNull { raw ->
@@ -166,9 +169,25 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
                 if (error != null) {
                     feedback = error.localizedMessage ?: "No se pudieron sincronizar los pedidos."
                 } else {
-                    orders = snapshot?.documents.orEmpty().mapNotNull(::decodeOrder)
+                    val loadedOrders = snapshot?.documents.orEmpty().mapNotNull(::decodeOrder)
                         .filter { !merchantMode || it.storeId == store.id }
                         .sortedByDescending { it.id }
+                    orders = loadedOrders
+                    if (!merchantMode) {
+                        loadedOrders.filter { it.paymentStatus == "PENDIENTE" }.forEach { pendingOrder ->
+                            db.collection("walletOperations")
+                                .whereEqualTo("senderUid", uid)
+                                .whereEqualTo("orderId", "orderpay_${pendingOrder.id}")
+                                .limit(1).get()
+                                .addOnSuccessListener { payment ->
+                                    if (!payment.isEmpty) {
+                                        orders = orders.map { current ->
+                                            if (current.id == pendingOrder.id) current.copy(paymentStatus = "PAGADA · DEMO") else current
+                                        }
+                                    }
+                                }
+                        }
+                    }
                 }
             }
         }
@@ -241,8 +260,8 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
         GmsBarcodeScanning.getClient(context).startScan()
             .addOnSuccessListener { barcode ->
                 val parts = barcode.rawValue.orEmpty().split("|")
-                if (parts.size != 3 || parts[0] != "OMNI-ORDER") {
-                    feedback = "El código no corresponde a un pedido OMNI."
+                if (parts.size != 3 || parts[0] != "OMNI-ORDER" || parts[1].isBlank() || parts[2].isBlank()) {
+                    feedback = "Este QR no es un pedido OMNI de comercio. Abrí el lector desde Pedidos OMNI y escaneá el QR generado al confirmar la compra."
                 } else {
                     db.collection("storeOrders").document(parts[1]).get()
                         .addOnSuccessListener { doc ->
@@ -252,13 +271,44 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
                             if (order == null || order.storeId != store.id || order.merchantUid != uid || order.qrNonce != parts[2] || expired || order.status in listOf("ENTREGADO", "RECHAZADO", "CANCELADO")) {
                                 feedback = "QR inválido, vencido, ya cerrado o no corresponde a este comercio."
                             } else {
-                                scannedOrderId = order.id
                                 UsageAnalyticsRepository.trackEvent(uid, "orders", "ORDER_QR_VERIFIED", mapOf("operationId" to order.id, "stage" to "QR_VALIDATION", "success" to true))
-                                feedback = "Pedido verificado: ${order.id.take(8)} · ${order.status}"
+                                db.collection("walletOperations")
+                                    .whereEqualTo("recipientUid", uid)
+                                    .whereEqualTo("orderId", "orderpay_${order.id}")
+                                    .limit(1).get()
+                                    .addOnSuccessListener { payment ->
+                                        selectedScannedOrder = order.copy(
+                                            paymentStatus = if (payment.isEmpty) "PENDIENTE" else "PAGADA · DEMO"
+                                        )
+                                    }
+                                    .addOnFailureListener { selectedScannedOrder = order }
                             }
                         }.addOnFailureListener { feedback = "No se pudo verificar el pedido en Firestore." }
                 }
             }.addOnFailureListener { feedback = "No se pudo abrir el lector QR." }
+    }
+
+    fun payOrderDemo(order: OmniStoreOrder) {
+        if (payingOrderId != null) return
+        if (order.customerUid != uid || order.paymentStatus != "PENDIENTE") {
+            feedback = "Este pedido no está pendiente de pago en tu cuenta."
+            return
+        }
+        payingOrderId = order.id
+        walletRepository.payStoreOrderDemo(order.id, order.merchantUid, order.total) { result ->
+            payingOrderId = null
+            result.fold(
+                onSuccess = {
+                    orders = orders.map { current ->
+                        if (current.id == order.id) current.copy(paymentStatus = "PAGADA · DEMO") else current
+                    }
+                    feedback = "$it. Se registró el movimiento ficticio en las dos billeteras. No se movió dinero real."
+                },
+                onFailure = { error ->
+                    feedback = error.localizedMessage ?: "No se pudo completar el pago OMNI Pay DEMO."
+                }
+            )
+        }
     }
 
     fun advanceOrder(order: OmniStoreOrder, next: String) {
@@ -266,6 +316,7 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
             mapOf("status" to next, "updatedAt" to FieldValue.serverTimestamp())
         ).addOnSuccessListener {
             UsageAnalyticsRepository.trackEvent(uid, "orders", "ORDER_STATUS_$next", mapOf("operationId" to order.id, "stage" to "STATUS_UPDATE_CONFIRMED", "success" to true))
+            orders = orders.map { current -> if (current.id == order.id) current.copy(status = next) else current }
         }.addOnFailureListener { feedback = it.localizedMessage ?: "No se pudo actualizar el estado." }
     }
 
@@ -289,13 +340,18 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
                 Text(if (merchantMode) "PANEL DE PEDIDOS" else "PEDIDOS OMNI", color = Color(0xFF57DDF5), fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
                 Text(if (merchantMode) store.name else "Pedido QR · ${store.name}", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
-            if (merchantMode) {
-                IconButton(onClick = { scanOrder() }) { Icon(Icons.Default.QrCodeScanner, "Verificar QR de pedido", tint = Color(0xFF57DDF5)) }
-            }
         }
 
         if (merchantMode) {
             Text("Pedidos recibidos y seguimiento de preparación / entrega.", color = Color(0xFF9AAAC2), fontSize = 11.sp)
+            if (merchantReady && merchantError == null) {
+                Button(onClick = { scanOrder() }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF087EAB))) {
+                    Icon(Icons.Default.QrCodeScanner, contentDescription = null)
+                    Spacer(Modifier.width(7.dp))
+                    Text("Escanear pedido QR")
+                }
+            }
             if (merchantError != null) Text(merchantError.orEmpty(), color = Color(0xFFFF9B8F), fontSize = 12.sp, modifier = Modifier.padding(8.dp))
             else if (!merchantReady) Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFF57DDF5)) }
         } else {
@@ -404,11 +460,69 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
                 Text("MIS PEDIDOS", color = Color(0xFF57DDF5), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(top = 6.dp, bottom = 80.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(ownOrders, key = { it.id }) { order ->
-                        OrderStatusCard(order, merchantMode = false, onAdvance = { next -> if (next == "CANCELADO") cancelCustomerOrder(order) })
+                        OrderStatusCard(
+                            order, merchantMode = false,
+                            onAdvance = { next -> if (next == "CANCELADO") cancelCustomerOrder(order) },
+                            onPay = { payOrderDemo(order) },
+                            paying = payingOrderId == order.id
+                        )
                     }
                 }
             }
         }
+    }
+
+    selectedScannedOrder?.let { scanned ->
+        AlertDialog(
+            onDismissRequest = { selectedScannedOrder = null },
+            containerColor = Color(0xFF101B30),
+            title = { Text("Pedido OMNI verificado", color = Color.White) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text("Cliente: ${scanned.customerName.ifBlank { "Cliente OMNI" }}", color = Color(0xFF57DDF5), fontWeight = FontWeight.Bold)
+                    if (scanned.customerPhone.isNotBlank()) Text("Teléfono: ${scanned.customerPhone}", color = Color.White, fontSize = 11.sp)
+                    Divider(color = Color(0xFF29415F))
+                    scanned.items.forEach { line ->
+                        Text("${line.quantity} × ${line.name} · OM$ ${String.format("%,.2f", line.price * line.quantity)}", color = Color.White, fontSize = 11.sp)
+                    }
+                    Text("Total: OM$ ${String.format("%,.2f", scanned.total)}", color = Color.White, fontWeight = FontWeight.ExtraBold)
+                    Text(if (scanned.fulfillmentType == "DELIVERY") "Delivery: ${scanned.deliveryAddress}" else "Modalidad: Retiro en comercio", color = Color(0xFFB8C8D9), fontSize = 11.sp)
+                    Text("Estado: ${scanned.status.replace("_", " ")}", color = Color(0xFF57DDF5), fontSize = 11.sp)
+                    Text("Pago: ${scanned.paymentStatus}", color = if (scanned.paymentStatus.startsWith("PAGADA")) Color(0xFF65E6A5) else Color(0xFFFFC978), fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    if (scanned.paymentStatus == "PENDIENTE") Text("El cliente puede pagar desde Mis pedidos con su OMNI Pay DEMO, o abonar al retirar/recibir.", color = Color(0xFFFFC978), fontSize = 10.sp)
+                }
+            },
+            confirmButton = {
+                val next = when (scanned.status) {
+                    "RECIBIDO" -> "ACEPTADO"
+                    "ACEPTADO" -> "EN_PREPARACION"
+                    "EN_PREPARACION" -> "LISTO"
+                    "LISTO" -> if (scanned.fulfillmentType == "DELIVERY") "EN_CAMINO" else "ENTREGADO"
+                    "EN_CAMINO" -> "ENTREGADO"
+                    else -> ""
+                }
+                if (next.isNotBlank()) Button(onClick = {
+                    advanceOrder(scanned, next)
+                    selectedScannedOrder = scanned.copy(status = next)
+                }) { Text(when(next) {
+                    "ACEPTADO" -> "Aceptar pedido"
+                    "EN_PREPARACION" -> "Preparar pedido"
+                    "LISTO" -> "Marcar listo"
+                    "EN_CAMINO" -> "Enviar delivery"
+                    else -> "Marcar entregado"
+                }) }
+                else TextButton(onClick = { selectedScannedOrder = null }) { Text("Cerrar") }
+            },
+            dismissButton = {
+                Row {
+                    if (scanned.status == "RECIBIDO") TextButton(onClick = {
+                        advanceOrder(scanned, "RECHAZADO")
+                        selectedScannedOrder = null
+                    }) { Text("Rechazar") }
+                    TextButton(onClick = { selectedScannedOrder = null }) { Text("Cerrar") }
+                }
+            }
+        )
     }
 
     if (showOrderReview) {
@@ -499,7 +613,13 @@ private fun OrderProductRow(product: StoreProduct, quantity: Int, onAdd: () -> U
 }
 
 @Composable
-private fun OrderStatusCard(order: OmniStoreOrder, merchantMode: Boolean, onAdvance: (String) -> Unit) {
+private fun OrderStatusCard(
+    order: OmniStoreOrder,
+    merchantMode: Boolean,
+    onAdvance: (String) -> Unit,
+    onPay: (() -> Unit)? = null,
+    paying: Boolean = false
+) {
     val context = LocalContext.current
     val next = when (order.status) {
         "RECIBIDO" -> "ACEPTADO"
@@ -531,7 +651,19 @@ private fun OrderStatusCard(order: OmniStoreOrder, merchantMode: Boolean, onAdva
             }
             order.items.forEach { Text("${it.quantity} × ${it.name}", color = Color(0xFFB8C8D9), fontSize = 10.sp) }
             Text(if (order.fulfillmentType == "DELIVERY") "Delivery · ${order.deliveryAddress}" else "Retiro en el comercio", color = Color(0xFFB8C8D9), fontSize = 9.sp)
-            Text("Pago: pendiente · efectivo al retirar/recibir", color = Color(0xFFFFC978), fontSize = 9.sp)
+            Text(
+                if (order.paymentStatus.startsWith("PAGADA")) "Pago: acreditado · DEMO"
+                else "Pago: pendiente · OMNI Pay DEMO o al retirar/recibir",
+                color = if (order.paymentStatus.startsWith("PAGADA")) Color(0xFF65E6A5) else Color(0xFFFFC978),
+                fontSize = 9.sp
+            )
+            if (!merchantMode && onPay != null && order.paymentStatus == "PENDIENTE" &&
+                order.status !in listOf("ENTREGADO", "RECHAZADO", "CANCELADO")) {
+                Button(onClick = onPay, enabled = !paying, modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF087EAB))) {
+                    Text(if (paying) "Procesando pago DEMO…" else "Pagar con OMNI Pay DEMO", fontSize = 10.sp)
+                }
+            }
             if (merchantMode && order.customerPhone.isNotBlank()) {
                 TextButton(onClick = {
                     val phoneNumber = order.customerPhone.filter { it.isDigit() }
