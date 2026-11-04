@@ -773,7 +773,7 @@ private fun activityCategory(item: Map<String, Any?>): String {
     .joinToString(" ").lowercase()
   val event = firstPresentValue(item, "event", "eventName", "action", "type").uppercase()
   return when {
-    listOf("wallet", "billetera", "saldo", "qr_pay", "qr_payment", "transfer", "deposit").any(sources::contains) ||
+    listOf("wallet", "billetera", "saldo", "qr_pay", "qr_payment", "wallet_qr", "omni_pay", "transfer", "deposit").any(sources::contains) ||
       event.contains("QR_PAYMENT") || event.contains("TRANSFER") || event.contains("DEPOSIT") -> "Billetera"
     listOf("order", "pedido", "market", "carrito", "checkout").any(sources::contains) -> "Pedidos y Mercado"
     listOf("event", "evento").any(sources::contains) -> "Eventos"
