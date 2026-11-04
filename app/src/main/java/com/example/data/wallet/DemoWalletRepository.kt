@@ -170,6 +170,18 @@ class DemoWalletRepository(
         executeTransfer(parts[1], amount, true, done)
     }
 
+    /**
+     * Cobra un pedido usando únicamente saldo ficticio OMNI Pay.
+     * El identificador estable evita un segundo débito si el usuario reintenta.
+     */
+    fun payStoreOrderDemo(orderId: String, merchantUid: String, amount: Double, done: (Result<String>) -> Unit) {
+        if (orderId.isBlank() || merchantUid.isBlank() || !validAmount(amount)) {
+            done(Result.failure(IllegalArgumentException("No se pudo validar el pedido o el importe DEMO.")))
+            return
+        }
+        executeTransfer(merchantUid, amount, true, done, orderId)
+    }
+
     fun topUpDemo(amount: Double, done: (Result<String>) -> Unit) {
         val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
         if (uid.isNullOrBlank() || !validAmount(amount)) {
@@ -209,7 +221,8 @@ class DemoWalletRepository(
         recipientUid: String,
         amount: Double,
         isQr: Boolean,
-        done: (Result<String>) -> Unit
+        done: (Result<String>) -> Unit,
+        orderId: String? = null
     ) {
         val senderUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
         if (senderUid.isNullOrBlank()) {
@@ -222,14 +235,36 @@ class DemoWalletRepository(
         }
         val senderRef = firestore.collection("walletAccounts").document(senderUid)
         val recipientRef = firestore.collection("walletAccounts").document(recipientUid)
-        val operationId = UUID.randomUUID().toString()
+        val operationId = if (orderId != null) "orderpay_$orderId" else UUID.randomUUID().toString()
         val operationRef = firestore.collection("walletOperations").document(operationId)
+        val orderRef = orderId?.let { firestore.collection("storeOrders").document(it) }
         firestore.runTransaction { tx ->
+            val existingOperation = tx.get(operationRef)
+            if (existingOperation.exists()) {
+                check(existingOperation.getString("orderId") == orderId && orderId != null) {
+                    "El identificador de operación ya está utilizado."
+                }
+                return@runTransaction "PEDIDO YA PAGADO · DEMO"
+            }
+            val orderSnapshot = orderRef?.let { tx.get(it) }
             val sender = tx.get(senderRef)
+            val recipient = tx.get(recipientRef)
+            if (orderId != null) {
+                check(orderSnapshot?.exists() == true) { "El pedido ya no está disponible." }
+                check(orderSnapshot?.getString("customerUid") == senderUid) { "Solo quien creó el pedido puede pagarlo." }
+                check(orderSnapshot?.getString("merchantUid") == recipientUid) { "El comercio del pedido no coincide." }
+                val orderTotal = (orderSnapshot?.get("total") as? Number)?.toDouble() ?: 0.0
+                check(kotlin.math.abs(orderTotal - amount) < 0.005) { "El importe del pedido cambió. Volvé a revisar el total." }
+                check(orderSnapshot?.getString("paymentStatus") == "PENDIENTE") { "El pedido ya figura pagado." }
+                check(orderSnapshot?.getString("status") !in listOf("ENTREGADO", "RECHAZADO", "CANCELADO")) {
+                    "El pedido está cerrado y no admite pagos."
+                }
+            }
             check(sender.exists()) { "Tu billetera DEMO no está disponible." }
+            check(recipient.exists()) { "El comercio debe abrir OMNI Pay DEMO una vez para habilitar cobros." }
             val senderBalance = (sender.get("balance") as? Number)?.toDouble() ?: 0.0
             check(senderBalance >= amount) { "Saldo insuficiente para completar la operación." }
-            val recipientAlias = "Cuenta OMNI Pay"
+            val recipientAlias = recipient.getString("alias").orEmpty().ifBlank { "Comercio OMNI" }
             val senderAlias = sender.getString("alias").orEmpty()
             val senderType = if (isQr) TransactionType.QR_PAGO else TransactionType.TRANSFERENCIA_ENVIADA
             val recipientType = if (isQr) TransactionType.QR_COBRO else TransactionType.TRANSFERENCIA_RECIBIDA
@@ -241,22 +276,24 @@ class DemoWalletRepository(
                 "balance" to FieldValue.increment(amount), "lastOperationId" to operationId,
                 "updatedAt" to FieldValue.serverTimestamp()
             ))
-            tx.set(operationRef, mapOf(
+            val operationData = mutableMapOf<String, Any>(
                 "operationId" to operationId, "kind" to if (isQr) "QR_PAYMENT" else "TRANSFER",
                 "senderUid" to senderUid, "recipientUid" to recipientUid,
                 "amount" to amount, "createdAt" to FieldValue.serverTimestamp()
-            ))
+            )
+            if (orderId != null) operationData["orderId"] = orderId
+            tx.set(operationRef, operationData)
             tx.set(senderRef.collection("transactions").document(operationId), transactionData(
-                operationId, senderType, if (isQr) "Pago con QR" else "Transferencia enviada",
+                operationId, senderType, if (orderId != null) "Pago de pedido OMNI" else if (isQr) "Pago con QR" else "Transferencia enviada",
                 recipientAlias, amount
             ))
             tx.set(recipientRef.collection("transactions").document(operationId), transactionData(
-                operationId, recipientType, if (isQr) "Cobro con QR" else "Transferencia recibida",
+                operationId, recipientType, if (orderId != null) "Cobro de pedido OMNI" else if (isQr) "Cobro con QR" else "Transferencia recibida",
                 senderAlias, amount
             ))
-            if (isQr) "PAGO QR APROBADO · DEMO" else "TRANSFERENCIA APROBADA · DEMO"
+            if (orderId != null) "PEDIDO PAGADO · OMNI PAY DEMO" else if (isQr) "PAGO QR APROBADO · DEMO" else "TRANSFERENCIA APROBADA · DEMO"
         }.addOnSuccessListener {
-            UsageAnalyticsRepository.trackWalletOperation(senderUid, if (isQr) "DEMO_QR_PAYMENT" else "DEMO_TRANSFER")
+            UsageAnalyticsRepository.trackWalletOperation(senderUid, if (orderId != null) "DEMO_ORDER_PAYMENT" else if (isQr) "DEMO_QR_PAYMENT" else "DEMO_TRANSFER")
             done(Result.success(it))
         }.addOnFailureListener { done(Result.failure(it)) }
     }
