@@ -746,6 +746,20 @@ private fun friendlyEnum(value: String): String = when (value.uppercase()) {
   "RECHAZADO" -> "Rechazado"
   else -> value.replace('_', ' ').lowercase().replaceFirstChar { it.uppercase() }
 }
+private fun friendlyModule(value: String): String = when (value.trim().lowercase()) {
+  "wallet", "wallet_qr" -> "Billetera"
+  "orders", "store_orders", "marketplace" -> "Pedidos y Mercado"
+  "events" -> "Eventos"
+  "jobs" -> "Bolsa de Trabajo"
+  "merchant", "merchants", "commerce" -> "Comercios"
+  "users", "profile" -> "Usuarios"
+  "navigation", "maps", "maps_locations" -> "Navegación y mapas"
+  "tourism" -> "Turismo"
+  "routine_weather" -> "Rutinas y clima"
+  "ai_camera" -> "Cámara e inteligencia artificial"
+  "app", "diagnostics" -> "Sistema"
+  else -> value.replace('_', ' ').replaceFirstChar { it.uppercase() }
+}
 private fun looksLikeTechnicalId(value: String): Boolean =
   value.length >= 22 && value.all { it.isLetterOrDigit() || it == '-' || it == '_' }
 
@@ -759,7 +773,7 @@ private fun RecordCard(item: Map<String, Any?>, type: String) {
     "merchantProfiles" -> firstPresentValue(item, "storeName", "name").ifBlank { "Comercio OMNI" }
     "storeOrders" -> "Pedido " + firstPresentValue(item, "orderNumber", "status").ifBlank { "OMNI" }
     "appFeedback" -> "Comentario de usuario"
-    "usageEvents" -> friendlyEnum(firstPresentValue(item, "event", "eventName").ifBlank { "Evento de uso" })
+    "activity", "usageEvents" -> friendlyEnum(firstPresentValue(item, "event", "eventName").ifBlank { "Evento de uso" })
     "walletTransactions" -> friendlyEnum(firstPresentValue(item, "type", "kind", "title").ifBlank { "Movimiento de billetera" })
     "omniEvents" -> firstPresentValue(item, "title", "name", "event", "eventName").ifBlank { "Evento OMNI" }
     "adminAuditLogs" -> friendlyEnum(firstPresentValue(item, "action").ifBlank { "Actividad administrativa" })
@@ -773,7 +787,7 @@ private fun RecordCard(item: Map<String, Any?>, type: String) {
     "merchantProfiles" -> listOf("description", "category", "address", "status", "createdAt")
     "storeOrders" -> listOf("total", "paymentStatus", "fulfillmentType", "createdAt")
     "appFeedback" -> listOf("message", "createdAt")
-    "usageEvents" -> listOf("userLabel", "module", "appVersion", "createdAt")
+    "activity", "usageEvents" -> listOf("module", "userLabel", "appVersion", "createdAt")
     "omniEvents" -> listOf("description", "category", "status", "startAt", "createdAt")
     else -> listOf("status", "createdAt", "updatedAt")
   }
@@ -781,7 +795,11 @@ private fun RecordCard(item: Map<String, Any?>, type: String) {
     val value = item[key] ?: return@mapNotNull null
     val rendered = displayValue(value)
     if (rendered.isBlank() || looksLikeTechnicalId(rendered)) null
-    else (fieldLabels[key] ?: key) + ": " + if (key == "kind" || key == "type" || key == "status" || key == "paymentStatus") friendlyEnum(rendered) else rendered
+    else (if (key == "module" && (type == "activity" || type == "usageEvents")) "Categoría" else fieldLabels[key] ?: key) + ": " + when {
+      key == "module" && (type == "activity" || type == "usageEvents") -> friendlyModule(rendered)
+      key == "kind" || key == "type" || key == "status" || key == "paymentStatus" -> friendlyEnum(rendered)
+      else -> rendered
+    }
   }
   val protectedKeys = setOf("password", "token", "accessToken", "refreshToken", "secret", "apiKey", "qrNonce", "rawData", "authorization")
   val details = item.entries.filter { (key, value) -> key !in protectedKeys && value != null && displayValue(value).isNotBlank() }.sortedBy { it.key }
