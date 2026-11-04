@@ -248,7 +248,6 @@ class DemoWalletRepository(
             }
             val orderSnapshot = orderRef?.let { tx.get(it) }
             val sender = tx.get(senderRef)
-            val recipient = tx.get(recipientRef)
             if (orderId != null) {
                 check(orderSnapshot?.exists() == true) { "El pedido ya no está disponible." }
                 check(orderSnapshot?.getString("customerUid") == senderUid) { "Solo quien creó el pedido puede pagarlo." }
@@ -261,10 +260,9 @@ class DemoWalletRepository(
                 }
             }
             check(sender.exists()) { "Tu billetera DEMO no está disponible." }
-            check(recipient.exists()) { "El comercio debe abrir OMNI Pay DEMO una vez para habilitar cobros." }
             val senderBalance = (sender.get("balance") as? Number)?.toDouble() ?: 0.0
             check(senderBalance >= amount) { "Saldo insuficiente para completar la operación." }
-            val recipientAlias = recipient.getString("alias").orEmpty().ifBlank { "Comercio OMNI" }
+            val recipientAlias = "Cuenta OMNI Pay"
             val senderAlias = sender.getString("alias").orEmpty()
             val senderType = if (isQr) TransactionType.QR_PAGO else TransactionType.TRANSFERENCIA_ENVIADA
             val recipientType = if (isQr) TransactionType.QR_COBRO else TransactionType.TRANSFERENCIA_RECIBIDA
