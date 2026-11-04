@@ -4,6 +4,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,7 +20,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -34,10 +38,10 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.charset.StandardCharsets
 
-private val Navy = Color(0xFF0B1220)
-private val Panel = Color(0xFF151F31)
-private val PanelSoft = Color(0xFF1D2A40)
-private val Mint = Color(0xFF55E0B8)
+private val Navy = Color(0xFF060B16)
+private val Panel = Color(0xFF0D1729)
+private val PanelSoft = Color(0xFF14243B)
+private val Mint = Color(0xFF00E5FF)
 private val Muted = Color(0xFF9EADC3)
 private val White = Color(0xFFF4F7FC)
 private val Danger = Color(0xFFFF8585)
@@ -46,8 +50,8 @@ private const val ADMIN_API_URL = "https://omni-admin-api.jmredmond262.workers.d
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    window.statusBarColor = android.graphics.Color.rgb(11, 18, 32)
-    window.navigationBarColor = android.graphics.Color.rgb(11, 18, 32)
+    window.statusBarColor = android.graphics.Color.rgb(6, 11, 22)
+    window.navigationBarColor = android.graphics.Color.rgb(6, 11, 22)
     setContent {
       MaterialTheme(colorScheme = darkColorScheme(
         primary = Mint, onPrimary = Navy, background = Navy, surface = Panel,
@@ -60,10 +64,17 @@ class MainActivity : ComponentActivity() {
 private data class AdminTab(val id: String, val label: String, val collection: String? = null)
 private val tabs = listOf(
   AdminTab("dashboard", "Resumen"), AdminTab("users", "Usuarios", "users"),
-  AdminTab("wallets", "Billeteras", "walletAccounts"), AdminTab("operations", "Operaciones", "walletOperations"),
-  AdminTab("stores", "Comercios", "merchantProfiles"), AdminTab("orders", "Pedidos", "storeOrders"),
+  AdminTab("wallets", "Billeteras", "walletAccounts"), AdminTab("operations", "Operaciones", "walletOperations"), AdminTab("finance", "Finanzas"),
+  AdminTab("stores", "Comercios", "merchantProfiles"), AdminTab("orders", "Pedidos", "storeOrders"), AdminTab("events", "Eventos", "omniEvents"),
   AdminTab("feedback", "Comentarios", "appFeedback"), AdminTab("activity", "Actividad", "usageEvents"), AdminTab("modules", "Módulos", "moduleRegistry"),
-  AdminTab("audit", "Auditoría", "adminAuditLogs"), AdminTab("settings", "Configuración")
+  AdminTab("audit", "Auditoría", "adminAuditLogs"), AdminTab("invitations", "Invitaciones", "betaInvitations"), AdminTab("settings", "Configuración")
+)
+private data class AdminNavGroup(val id: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val tabIds: List<String>)
+private val navGroups = listOf(
+  AdminNavGroup("overview", "Inicio", Icons.Default.Dashboard, listOf("dashboard")),
+  AdminNavGroup("people", "Personas", Icons.Default.PeopleAlt, listOf("users", "feedback")),
+  AdminNavGroup("commerce", "Comercio", Icons.Default.Storefront, listOf("stores", "orders", "wallets", "operations", "finance")),
+  AdminNavGroup("system", "Sistema", Icons.Default.Settings, listOf("activity", "events", "modules", "audit", "invitations", "settings"))
 )
 
 @Composable
@@ -90,6 +101,7 @@ private fun OmniAdminRoot() {
         nextPageToken = ""; nextOffset = 0; hasMore = false
         payload = when (selected) {
           "dashboard" -> AdminApi.call(token, "dashboard")
+          "finance" -> AdminApi.call(token, "finance")
           "settings" -> AdminApi.call(token, "getConfig")
           else -> AdminApi.call(token, "list", JSONObject().put("collection", tab.collection).put("limit", 100))
         }
@@ -110,7 +122,7 @@ private fun OmniAdminRoot() {
         val token = current.getIdToken(true).await().token ?: throw IllegalStateException("No se pudo renovar la sesión.")
         val tab = tabs.first { it.id == selected }
         val data = JSONObject().put("collection", tab.collection).put("limit", 100)
-        if (selected == "activity") data.put("offset", nextOffset) else if (nextPageToken.isNotBlank()) data.put("pageToken", nextPageToken)
+        if (nextPageToken.isNotBlank()) data.put("pageToken", nextPageToken)
         val page = AdminApi.call(token, "list", data)
         val merged = JSONArray()
         val previous = payload.optJSONArray("items") ?: JSONArray()
@@ -197,13 +209,13 @@ private fun AdminLogin(onLogin: (String, String) -> Unit, onReset: (String) -> U
   var email by remember { mutableStateOf("") }
   var password by remember { mutableStateOf("") }
   var resetMode by remember { mutableStateOf(false) }
-  Box(Modifier.fillMaxSize().background(Navy).padding(24.dp), contentAlignment = Alignment.Center) {
+  Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF071426), Navy, Color(0xFF030711)))).padding(24.dp), contentAlignment = Alignment.Center) {
     Column(Modifier.fillMaxWidth().widthIn(max = 440.dp)) {
-      Text("OMNI", color = White, fontSize = 18.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp)
-      Text("ADMIN", color = Mint, fontSize = 42.sp, fontWeight = FontWeight.Black)
-      Text("Centro de control y administración", color = Muted, fontSize = 15.sp)
+      Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) { Box(Modifier.size(46.dp).clip(RoundedCornerShape(15.dp)).background(Brush.linearGradient(listOf(Color(0xFF00E5FF), Color(0xFF1268D8)))), contentAlignment = Alignment.Center) { Text("O", color = Navy, fontSize = 30.sp, fontWeight = FontWeight.Black) }; Column { Text("OMNI", color = White, fontSize = 18.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp); Text("ADMIN CONTROL", color = Mint, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp) } }
+      Text("Tu ecosistema, bajo control", color = White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+      Text("Centro de control y administración", color = Muted, fontSize = 13.sp)
       Spacer(Modifier.height(30.dp))
-      Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(24.dp)) {
+      Card(modifier = Modifier.border(1.dp, Color(0xFF164B68), RoundedCornerShape(24.dp)), colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(24.dp), elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)) {
         Column(Modifier.fillMaxWidth().padding(22.dp)) {
           Text(if (resetMode) "Recuperar acceso" else "Acceso administrativo", color = White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
           Spacer(Modifier.height(18.dp))
@@ -234,33 +246,98 @@ private fun AdminHome(
   onSaveConfig: (JSONObject) -> Unit, onSaveModule: (String, String, String, Boolean) -> Unit,
   onInvite: (String) -> Unit
 ) {
-  Scaffold(containerColor = Navy, topBar = {
-    Column(Modifier.fillMaxWidth().background(Panel).padding(horizontal = 16.dp, vertical = 12.dp)) {
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-          Text("OMNI ADMIN", color = Mint, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-          Text(email, color = White, fontSize = 13.sp, maxLines = 1)
+  val activeGroup = navGroups.firstOrNull { selected in it.tabIds } ?: navGroups.first()
+  val activeTab = tabs.firstOrNull { it.id == selected }
+  Scaffold(
+    containerColor = Navy,
+    topBar = {
+      Column(
+        Modifier.fillMaxWidth()
+          .background(Brush.verticalGradient(listOf(Color(0xFF10243A), Color(0xFF091321))))
+          .border(width = 1.dp, color = Color(0xFF12364D))
+          .padding(horizontal = 16.dp, vertical = 12.dp)
+      ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Box(
+            Modifier.size(38.dp).clip(RoundedCornerShape(13.dp))
+              .background(Brush.linearGradient(listOf(Mint, Color(0xFF1268D8)))),
+            contentAlignment = Alignment.Center
+          ) { Text("O", color = Navy, fontSize = 25.sp, fontWeight = FontWeight.Black) }
+          Spacer(Modifier.width(10.dp))
+          Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text("OMNI ADMIN", color = White, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
+            Text(activeTab?.label ?: "Centro de control", color = Mint, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+          }
+          IconButton(onClick = onRefresh) { Icon(Icons.Default.Refresh, "Actualizar datos", tint = Mint) }
+          IconButton(onClick = onSignOut) { Icon(Icons.Default.Logout, "Cerrar sesión", tint = Muted) }
         }
-        IconButton(onClick = onRefresh) { Icon(Icons.Default.Refresh, "Actualizar", tint = White) }
-        IconButton(onClick = onSignOut) { Icon(Icons.Default.Logout, "Cerrar sesión", tint = White) }
+        Spacer(Modifier.height(9.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Box(Modifier.size(7.dp).background(Mint, RoundedCornerShape(50)))
+          Spacer(Modifier.width(7.dp))
+          Text(email, color = Muted, fontSize = 11.sp, maxLines = 1)
+          Spacer(Modifier.weight(1f))
+          Text("PANEL PRIVADO", color = Mint, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        }
+        val groupTabs = tabs.filter { it.id in activeGroup.tabIds }
+        if (groupTabs.size > 1) {
+          Spacer(Modifier.height(12.dp))
+          Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            groupTabs.forEach { tab ->
+              FilterChip(
+                selected = selected == tab.id,
+                onClick = { onSelect(tab.id) },
+                label = { Text(tab.label, maxLines = 1, fontSize = 11.sp) },
+                colors = FilterChipDefaults.filterChipColors(
+                  selectedContainerColor = Mint,
+                  selectedLabelColor = Navy,
+                  labelColor = Muted,
+                  containerColor = PanelSoft
+                ),
+                border = FilterChipDefaults.filterChipBorder(
+                  enabled = true, selected = selected == tab.id,
+                  borderColor = Color(0xFF21445D), selectedBorderColor = Mint
+                )
+              )
+            }
+          }
+        }
       }
-      Spacer(Modifier.height(10.dp))
-      Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        tabs.forEach { tab ->
-          FilterChip(selected == tab.id, { onSelect(tab.id) }, label = { Text(tab.label, maxLines = 1) },
-            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Mint, selectedLabelColor = Navy, labelColor = Muted))
+    },
+    bottomBar = {
+      NavigationBar(containerColor = Color(0xFF0A1423), contentColor = Mint, tonalElevation = 0.dp) {
+        navGroups.forEach { group ->
+          NavigationBarItem(
+            selected = activeGroup.id == group.id,
+            onClick = { onSelect(group.tabIds.first()) },
+            icon = { Icon(group.icon, contentDescription = group.label) },
+            label = { Text(group.label, fontSize = 10.sp, maxLines = 1) },
+            colors = NavigationBarItemDefaults.colors(
+              selectedIconColor = Mint,
+              selectedTextColor = Mint,
+              indicatorColor = Color(0xFF12384C),
+              unselectedIconColor = Muted,
+              unselectedTextColor = Muted
+            )
+          )
         }
       }
     }
-  }) { padding ->
+  ) { padding ->
     Column(Modifier.fillMaxSize().padding(padding)) {
       if (loading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Mint, trackColor = Panel)
-      if (error.isNotBlank()) Text(error, Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), color = if (error.contains("correctamente") || error.contains("registrada") || error.contains("actualizado")) Mint else Danger, fontSize = 13.sp)
+      if (error.isNotBlank()) Text(
+        error,
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        color = if (error.contains("correctamente") || error.contains("registrada") || error.contains("actualizado")) Mint else Danger,
+        fontSize = 13.sp
+      )
       when (selected) {
-        "dashboard" -> DashboardContent(payload)
-        "settings" -> ConfigContent(payload.optJSONObject("config") ?: JSONObject(), onSaveConfig)
+        "dashboard" -> DashboardContent(payload, onSelect)
+        "finance" -> FinanceContent(payload)
         "modules" -> ModuleContent(payload.optJSONArray("items") ?: JSONArray(), onSaveModule)
-        "audit" -> InvitationContent(payload.optJSONArray("items") ?: JSONArray(), onInvite)
+        "settings" -> ConfigContent(payload.optJSONObject("config") ?: JSONObject(), onSaveConfig)
+        "invitations" -> InvitationContent(payload.optJSONArray("items") ?: JSONArray(), onInvite)
         else -> RecordsContent(selected, payload.optJSONArray("items") ?: JSONArray(), hasMore, onLoadMore)
       }
     }
@@ -268,203 +345,310 @@ private fun AdminHome(
 }
 
 @Composable
-private fun DashboardContent(payload: JSONObject) {
+private fun DashboardContent(payload: JSONObject, onSelect: (String) -> Unit) {
   val counts = payload.optJSONObject("counts") ?: JSONObject()
   val analytics = payload.optJSONObject("analytics") ?: JSONObject()
-  val cards = listOf(
-    "Usuarios" to counts.optInt("users").toString(),
-    "Usuarios activos · 7 días" to payload.optInt("activeUsers7d").toString(),
-    "Sesiones · 7 días" to analytics.optInt("sessions7d").toString(),
-    "Pantallas vistas · 7 días" to analytics.optInt("screenViews7d").toString(),
-    "Acciones · 7 días" to analytics.optInt("actions7d").toString(),
-    "Promedio por sesión" to analytics.optInt("averageSessionSeconds").let { if (it > 0) "${it}s" else "—" },
-    "Cámara IA · análisis" to analytics.optJSONObject("featureMetrics")?.optInt("aiCameraScans", 0).toString(),
-    "Interacciones en mapas" to analytics.optJSONObject("featureMetrics")?.optInt("mapsInteractions", 0).toString(),
-    "Bolsa de trabajo" to analytics.optJSONObject("featureMetrics")?.optInt("jobInteractions", 0).toString(),
-    "Eventos e interacciones" to analytics.optJSONObject("featureMetrics")?.optInt("eventInteractions", 0).toString(),
-    "Rutinas y clima" to analytics.optJSONObject("featureMetrics")?.optInt("routineWeatherInteractions", 0).toString(),
-    "Compartidos" to analytics.optJSONObject("featureMetrics")?.optInt("commerceShares", 0).toString(),
-    "Billeteras" to counts.optInt("walletAccounts").toString(),
-    "Operaciones" to counts.optInt("walletOperations").toString(),
-    "Comercios" to counts.optInt("merchantProfiles").toString(),
-    "Pedidos" to counts.optInt("storeOrders").toString(),
-    "Eventos" to counts.optInt("omniEvents").toString(),
-    "Comentarios" to counts.optInt("appFeedback").toString(),
-    "Uso registrado" to counts.optInt("usageEvents").toString(),
-    "Módulos" to counts.optInt("moduleRegistry").toString()
+  val diagnostics = payload.optJSONObject("diagnostics") ?: JSONObject()
+  val metrics = listOf(
+    Triple("Usuarios", counts.optInt("users").toString(), Icons.Default.PeopleAlt),
+    Triple("Comercios", counts.optInt("merchantProfiles").toString(), Icons.Default.Storefront),
+    Triple("Pedidos", counts.optInt("storeOrders").toString(), Icons.Default.ShoppingCart),
+    Triple("Billeteras DEMO", counts.optInt("walletAccounts").toString(), Icons.Default.AccountBalanceWallet),
+    Triple("Capital virtual", "OM$ " + String.format("%.0f", payload.optDouble("walletBalanceSample")), Icons.Default.AccountBalance),
+    Triple("Activos · 7 días", payload.optInt("activeUsers7d").toString(), Icons.Default.Person),
+    Triple("Sesiones · 7 días", analytics.optInt("sessions7d").toString(), Icons.Default.QueryStats),
+    Triple("Operaciones", counts.optInt("walletOperations").toString(), Icons.Default.SwapHoriz),
+    Triple("Eventos", counts.optInt("omniEvents").toString(), Icons.Default.Event)
   )
-  val activity = listOf(
-    "Operaciones" to counts.optInt("walletOperations"),
-    "Pedidos" to counts.optInt("storeOrders"),
-    "Eventos comunitarios" to counts.optInt("omniEvents"),
-    "Actividad de usuarios" to counts.optInt("usageEvents"),
-    "Comentarios" to counts.optInt("appFeedback")
-  )
-  val activityMax = (activity.maxOfOrNull { it.second } ?: 0).coerceAtLeast(1)
-  BoxWithConstraints(Modifier.fillMaxSize()) {
-    val columns = if (maxWidth >= 600.dp) 2 else 1
+  val trend = jsonArrayToList(payload.optJSONArray("usageTrend"))
+  val recentUsers = jsonArrayToList(payload.optJSONArray("recentUsers"))
+  val recentActivity = jsonArrayToList(payload.optJSONArray("recentUsageEvents"))
+  val recentOperations = jsonArrayToList(payload.optJSONArray("recentOperations"))
+  val eventCount = diagnostics.optInt("usageEventsVisibleLast7Days")
+  val testSeen = diagnostics.optBoolean("diagnosticEventSeen")
+  BoxWithConstraints(Modifier.fillMaxSize().background(Navy)) {
+    val columns = if (maxWidth >= 900.dp) 4 else if (maxWidth >= 560.dp) 4 else 2
+    val tabletLayout = maxWidth >= 560.dp
+    val wideLayout = maxWidth >= 700.dp
     LazyColumn(
-      Modifier.fillMaxSize().padding(horizontal = 16.dp),
-      contentPadding = PaddingValues(top = 18.dp, bottom = 28.dp),
-      verticalArrangement = Arrangement.spacedBy(13.dp)
+      Modifier.fillMaxSize().padding(horizontal = if (wideLayout) 22.dp else 14.dp),
+      contentPadding = PaddingValues(top = 16.dp, bottom = 28.dp),
+      verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
       item {
-        Text("Centro de control", color = White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-        Text("Una visión general de lo que sucede en OMNI", color = Muted, fontSize = 13.sp)
-        Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-          Box(Modifier.size(8.dp).background(Mint, RoundedCornerShape(50)))
-          Text("Datos consultados en tiempo real", color = Muted, fontSize = 11.sp)
+        Row(
+          Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))
+            .background(Brush.linearGradient(listOf(Color(0xFF123A5D), Color(0xFF101B35), Color(0xFF0A1426))))
+            .border(1.dp, Color(0xFF1679A6), RoundedCornerShape(22.dp)).padding(18.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Box(
+            Modifier.size(58.dp).clip(RoundedCornerShape(50))
+              .background(Brush.radialGradient(listOf(Color(0xFF27DFFF), Color(0xFF07538E)))),
+            contentAlignment = Alignment.Center
+          ) { Icon(Icons.Default.AdminPanelSettings, null, tint = White, modifier = Modifier.size(31.dp)) }
+          Spacer(Modifier.width(14.dp))
+          Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("OMNI · CONTROL CENTER", color = Mint, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.7.sp)
+            Text("Bienvenido, Administrador", color = White, fontSize = if (tabletLayout) 23.sp else 19.sp, fontWeight = FontWeight.ExtraBold)
+            Text("Panel ejecutivo del ecosistema OMNI", color = Muted, fontSize = 12.sp)
+          }
+          if (tabletLayout) {
+            Column(horizontalAlignment = Alignment.End) {
+              Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(Modifier.size(8.dp).background(if (testSeen) Color(0xFF39F59A) else Color(0xFFFFB84D), RoundedCornerShape(50)))
+                Text(if (testSeen) "Conectividad verificada" else "Datos en observación", color = if (testSeen) Color(0xFF39F59A) else Color(0xFFFFB84D), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+              }
+              Text("OMNI ADMIN", color = Muted, fontSize = 9.sp, letterSpacing = 1.sp)
+            }
+          }
         }
       }
-      items(cards.chunked(columns)) { pair ->
+      items(metrics.chunked(columns)) { rowMetrics ->
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+          rowMetrics.forEachIndexed { index, metric ->
+            val accents = listOf(Color(0xFF16CFFF), Color(0xFF32E7A0), Color(0xFFBD70FF), Color(0xFFFFB52E))
+            val accent = accents[(metrics.indexOf(metric) % accents.size)]
+            val destination = when (metric.first) {
+              "Usuarios", "Activos · 7 días" -> "users"
+              "Comercios" -> "stores"
+              "Pedidos" -> "orders"
+              "Billeteras DEMO" -> "wallets"
+              "Capital virtual" -> "finance"
+              "Sesiones · 7 días" -> "activity"
+              "Operaciones" -> "operations"
+              "Eventos" -> "events"
+              else -> "dashboard"
+            }
+            Card(
+              Modifier.weight(1f).heightIn(min = 118.dp)
+                .clickable { onSelect(destination) }
+                .border(1.dp, accent.copy(alpha = 0.72f), RoundedCornerShape(18.dp)),
+              colors = CardDefaults.cardColors(containerColor = Color(0xFF0B1830)),
+              shape = RoundedCornerShape(18.dp),
+              elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
+            ) {
+              Column(
+                Modifier.fillMaxSize().background(Brush.linearGradient(listOf(accent.copy(alpha = 0.16f), Color(0xFF0B1830), Color(0xFF091426))))
+                  .padding(13.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
+              ) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                  Icon(metric.third, null, tint = accent, modifier = Modifier.size(23.dp))
+                  Spacer(Modifier.weight(1f))
+                  Icon(Icons.Default.ArrowOutward, contentDescription = "Abrir ${metric.first}", tint = accent, modifier = Modifier.size(16.dp))
+                }
+                Text(metric.second, color = White, fontSize = if (tabletLayout) 27.sp else 24.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                Text(metric.first, color = Muted, fontSize = 10.sp, maxLines = 2, lineHeight = 13.sp)
+              }
+            }
+          }
+          repeat((columns - rowMetrics.size).coerceAtLeast(0)) { Spacer(Modifier.weight(1f)) }
+        }
+      }
+      item {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-          pair.forEach { entry ->
+          Card(
+            Modifier.weight(if (wideLayout) 1.7f else 1f),
+            colors = CardDefaults.cardColors(containerColor = Panel),
+            shape = RoundedCornerShape(20.dp)
+          ) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.ShowChart, null, tint = Mint)
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f)) {
+                  Text("Evolución de OMNI", color = White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                  Text("Actividad registrada · últimos 7 días", color = Muted, fontSize = 10.sp)
+                }
+                Text("7 DÍAS", color = Mint, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+              }
+              if (trend.isEmpty()) {
+                Box(Modifier.fillMaxWidth().height(142.dp), contentAlignment = Alignment.Center) {
+                  Text("La evolución aparecerá cuando haya actividad registrada.", color = Muted, fontSize = 12.sp)
+                }
+              } else {
+                val maxValue = (trend.maxOfOrNull { (it["count"] as? Number)?.toFloat() ?: 0f } ?: 0f).coerceAtLeast(1f)
+                Row(Modifier.fillMaxWidth().height(142.dp), horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.Bottom) {
+                  trend.takeLast(7).forEach { point ->
+                    val value = (point["count"] as? Number)?.toFloat() ?: 0f
+                    Column(Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Bottom) {
+                      Text(value.toInt().toString(), color = White, fontSize = 9.sp)
+                      Spacer(Modifier.height(4.dp))
+                      Box(
+                        Modifier.fillMaxWidth().fillMaxHeight((value / maxValue).coerceIn(0.06f, 1f))
+                          .clip(RoundedCornerShape(topStart = 5.dp, topEnd = 5.dp))
+                          .background(Brush.verticalGradient(listOf(Mint, Color(0xFF0876B5))))
+                      )
+                      Spacer(Modifier.height(5.dp))
+                      Text(point["date"]?.toString()?.takeLast(5) ?: "—", color = Muted, fontSize = 8.sp, maxLines = 1)
+                    }
+                  }
+                }
+              }
+            }
+          }
+          if (wideLayout) {
             Card(
               Modifier.weight(1f),
               colors = CardDefaults.cardColors(containerColor = Panel),
-              shape = RoundedCornerShape(18.dp)
+              shape = RoundedCornerShape(20.dp)
             ) {
-              Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                Text(entry.first, color = Muted, fontSize = 12.sp)
-                Text(entry.second.toString(), color = Mint, fontSize = 27.sp, fontWeight = FontWeight.Bold)
+              Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                  Icon(Icons.Default.MonitorHeart, null, tint = Mint)
+                  Spacer(Modifier.width(7.dp))
+                  Text("Estado del sistema", color = White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                }
+                Box(Modifier.size(62.dp).border(2.dp, if (testSeen) Color(0xFF36F39A) else Color(0xFFFFB84D), RoundedCornerShape(50)), contentAlignment = Alignment.Center) {
+                  Icon(if (testSeen) Icons.Default.Check else Icons.Default.Info, null, tint = if (testSeen) Color(0xFF36F39A) else Color(0xFFFFB84D), modifier = Modifier.size(32.dp))
+                }
+                Text(if (testSeen) "Conexión verificada" else "En observación", color = if (testSeen) Color(0xFF36F39A) else Color(0xFFFFB84D), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text("Eventos visibles (7 días): $eventCount", color = Muted, fontSize = 10.sp)
+                Text("Perfiles visibles: " + diagnostics.optInt("userProfilesVisible"), color = Muted, fontSize = 10.sp)
               }
             }
           }
         }
       }
-      item {
-        Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(20.dp)) {
-          Column(Modifier.fillMaxWidth().padding(17.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Actividad de la plataforma", color = White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-            Text("Volumen acumulado por tipo de registro", color = Muted, fontSize = 11.sp)
-            activity.forEach { (label, value) ->
-              Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                  Text(label, Modifier.weight(1f), color = White, fontSize = 12.sp)
-                  Text(value.toString(), color = Mint, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-                Box(Modifier.fillMaxWidth().height(8.dp).background(PanelSoft, RoundedCornerShape(8.dp))) {
-                  Box(
-                    Modifier.fillMaxWidth((value.toFloat() / activityMax.toFloat()).coerceIn(0f, 1f))
-                      .fillMaxHeight().background(Mint, RoundedCornerShape(8.dp))
-                  )
-                }
+      if (maxWidth < 700.dp) {
+        item {
+          Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(18.dp)) {
+            Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+              Icon(Icons.Default.MonitorHeart, null, tint = if (testSeen) Color(0xFF36F39A) else Color(0xFFFFB84D), modifier = Modifier.size(26.dp))
+              Spacer(Modifier.width(10.dp))
+              Column(Modifier.weight(1f)) {
+                Text("Estado del sistema", color = White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text(if (testSeen) "Conectividad verificada" else "Evento de diagnóstico aún no visible", color = Muted, fontSize = 10.sp)
               }
+              Text("$eventCount", color = Mint, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
-            Text("El gráfico refleja registros existentes; no inventa actividad histórica que OMNI todavía no haya guardado.", color = Muted, fontSize = 10.sp)
           }
         }
       }
       item {
-        val trend = jsonArrayToList(payload.optJSONArray("usageTrend"))
-        val trendMax = (trend.maxOfOrNull { (it["count"] as? Number)?.toInt() ?: 0 } ?: 0).coerceAtLeast(1)
-        Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(20.dp)) {
-          Column(Modifier.fillMaxWidth().padding(17.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Uso de OMNI · últimos 7 días", color = White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-            Text("Sesiones y pantallas registradas", color = Muted, fontSize = 11.sp)
-            if (trend.isEmpty()) {
-              Text("Todavía no hay historial suficiente para mostrar la evolución.", color = Muted, fontSize = 12.sp)
-            } else {
-              trend.forEach { point ->
-                val value = (point["count"] as? Number)?.toInt() ?: 0
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                  Text(point["date"]?.toString().orEmpty(), color = Muted, fontSize = 10.sp, modifier = Modifier.width(38.dp))
-                  Box(Modifier.weight(1f).height(9.dp).background(PanelSoft, RoundedCornerShape(8.dp))) {
-                    Box(Modifier.fillMaxWidth((value.toFloat() / trendMax.toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(Mint, RoundedCornerShape(8.dp)))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Icon(Icons.Default.History, null, tint = Mint)
+          Spacer(Modifier.width(8.dp))
+          Text("Actividad reciente", color = White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+          Spacer(Modifier.weight(1f))
+          Text("REGISTROS REALES", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        }
+      }
+      item {
+        val combined = (recentActivity + recentOperations).take(5)
+        if (combined.isEmpty()) {
+          EmptyState("Todavía no hay actividad reciente disponible.")
+        } else {
+          Card(Modifier.fillMaxWidth().border(1.dp, Color(0xFF174B69), RoundedCornerShape(18.dp)), colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(18.dp)) {
+            Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+              combined.forEachIndexed { index, record ->
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                  Box(Modifier.size(34.dp).clip(RoundedCornerShape(11.dp)).background(if (index % 2 == 0) Color(0xFF103B58) else Color(0xFF17314A)), contentAlignment = Alignment.Center) {
+                    Icon(if (index % 2 == 0) Icons.Default.Bolt else Icons.Default.ReceiptLong, null, tint = if (index % 2 == 0) Mint else Color(0xFFB77CFF), modifier = Modifier.size(19.dp))
                   }
-                  Text(value.toString(), color = White, fontSize = 11.sp, modifier = Modifier.width(24.dp))
+                  Column(Modifier.weight(1f)) {
+                    Text(firstPresentValue(record, "event", "eventName", "kind", "type", "action").ifBlank { "Actividad registrada" }.let { friendlyEnum(it) }, color = White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    Text(firstPresentValue(record, "userLabel", "storeName", "email", "module").ifBlank { "Ecosistema OMNI" }, color = Muted, fontSize = 10.sp, maxLines = 1)
+                  }
+                  Text(firstPresentValue(record, "createdAt", "timestamp").take(16), color = Muted, fontSize = 9.sp, maxLines = 1)
                 }
+                if (index < combined.lastIndex) HorizontalDivider(color = Color(0xFF1A2E49))
               }
             }
           }
         }
       }
       item {
-        val topScreens = jsonArrayToList(analytics.optJSONArray("topScreens"))
-        val moduleUsage = jsonArrayToList(analytics.optJSONArray("moduleUsage"))
-        Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(20.dp)) {
-          Column(Modifier.fillMaxWidth().padding(17.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-            Text("Comportamiento de usuarios", color = White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-            Text("Permanencia media por pantalla: " + analytics.optInt("averageScreenSeconds") + " s", color = Muted, fontSize = 11.sp)
-            Text("Pantallas más visitadas", color = White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            if (topScreens.isEmpty()) Text("Se mostrará cuando haya navegación registrada.", color = Muted, fontSize = 12.sp)
-            topScreens.forEach { row ->
-              Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(row["name"]?.toString().orEmpty(), color = White, fontSize = 12.sp)
-                Text(row["count"]?.toString().orEmpty(), color = Mint, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-              }
-            }
-            Text("Módulos con más interacciones", color = White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            if (moduleUsage.isEmpty()) Text("Las acciones aparecerán a medida que se utilicen las funciones.", color = Muted, fontSize = 12.sp)
-            moduleUsage.forEach { row ->
-              Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(row["name"]?.toString().orEmpty(), color = White, fontSize = 12.sp)
-                Text(row["count"]?.toString().orEmpty(), color = Mint, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-              }
-            }
-            val eventBreakdown = jsonArrayToList(analytics.optJSONArray("eventBreakdown"))
-            Text("Acciones más frecuentes", color = White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            if (eventBreakdown.isEmpty()) Text("Las acciones aparecerán cuando se utilicen los módulos.", color = Muted, fontSize = 12.sp)
-            eventBreakdown.take(8).forEach { row ->
-              Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(friendlyEnum(row["name"]?.toString().orEmpty()), color = White, fontSize = 11.sp, modifier = Modifier.weight(1f))
-                Text(row["count"]?.toString().orEmpty(), color = Mint, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-              }
-            }
-          }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Icon(Icons.Default.PeopleAlt, null, tint = Mint)
+          Spacer(Modifier.width(8.dp))
+          Text("Usuarios recientes", color = White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
         }
       }
+      if (recentUsers.isEmpty()) item { EmptyState("Todavía no hay perfiles recientes disponibles.") }
+      else items(recentUsers.take(3)) { RecordCard(it, "users") }
       item {
-        val diagnostics = payload.optJSONObject("diagnostics") ?: JSONObject()
-        Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(18.dp)) {
-          Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-            Text("Diagnóstico de conexión", color = White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            val visible = diagnostics.optInt("usageEventsVisibleLast7Days")
-            val testSeen = diagnostics.optBoolean("diagnosticEventSeen")
-            Text(
-              if (testSeen) "Escritura y lectura de analíticas: verificadas"
-              else "Evento de prueba: todavía no visible en el servidor",
-              color = if (testSeen) Mint else Danger, fontSize = 12.sp, fontWeight = FontWeight.SemiBold
-            )
-            Text("Eventos visibles (7 días): $visible", color = Muted, fontSize = 12.sp)
-            Text("Perfiles de usuario visibles: " + diagnostics.optInt("userProfilesVisible"), color = Muted, fontSize = 12.sp)
-            Text(
-              "Este control ayuda a distinguir un fallo de escritura desde OMNI de un problema de lectura del panel. Actualizá OMNI y luego este resumen.",
-              color = Muted, fontSize = 10.sp
-            )
-          }
+        Text("OMNI ADMIN  ·  CONTROL CENTRALIZADO", Modifier.fillMaxWidth().padding(top = 8.dp), color = Color(0xFF4F7998), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+      }
+    }
+  }
+}
+
+@Composable
+private fun FinanceContent(payload: JSONObject) {
+  val summary = payload.optJSONObject("summary") ?: JSONObject()
+  val accounts = jsonArrayToList(payload.optJSONArray("accounts"))
+  val transactions = jsonArrayToList(payload.optJSONArray("transactions"))
+  val operations = jsonArrayToList(payload.optJSONArray("operations"))
+  fun money(key: String): String = "OM$ " + String.format("%.2f", summary.optDouble(key))
+  LazyColumn(
+    Modifier.fillMaxSize().background(Navy).padding(horizontal = 15.dp),
+    contentPadding = PaddingValues(vertical = 18.dp),
+    verticalArrangement = Arrangement.spacedBy(12.dp)
+  ) {
+    item {
+      Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))
+          .background(Brush.linearGradient(listOf(Color(0xFF123A5D), Color(0xFF101B35), Color(0xFF0A1426))))
+          .border(1.dp, Color(0xFF1679A6), RoundedCornerShape(22.dp)).padding(18.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+      ) {
+        Text("OMNI PAY · CONTROL FINANCIERO DEMO", color = Mint, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp)
+        Text(money("currentBalance"), color = White, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
+        Text("Capital virtual actualmente distribuido entre las billeteras", color = Muted, fontSize = 12.sp)
+        Text("${summary.optInt("accountCount")} cuentas · ${summary.optInt("transactionCount")} movimientos individuales", color = Mint, fontSize = 11.sp)
+      }
+    }
+    item { Text("Capital y circulación", color = White, fontSize = 17.sp, fontWeight = FontWeight.Bold) }
+    item {
+      Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+        FinanceMetric("Capital inicial asignado", money("initialCapital"), Icons.Default.Savings, Modifier.weight(1f))
+        FinanceMetric("Recargas", money("deposits"), Icons.Default.AddCard, Modifier.weight(1f))
+      }
+    }
+    item {
+      Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+        FinanceMetric("Transferencias", money("transferVolume"), Icons.Default.SwapHoriz, Modifier.weight(1f))
+        FinanceMetric("Pagos QR", money("qrVolume"), Icons.Default.QrCode2, Modifier.weight(1f))
+      }
+    }
+    item {
+      Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+        FinanceMetric("Transferencias recibidas", money("transferIn"), Icons.Default.CallReceived, Modifier.weight(1f))
+        FinanceMetric("Cobros QR", money("qrCollections"), Icons.Default.QrCode2, Modifier.weight(1f))
+      }
+    }
+    item {
+      Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth().border(1.dp, Color(0xFF1A5068), RoundedCornerShape(16.dp))) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+          Text("Lectura correcta del capital", color = Mint, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+          Text("Créditos totales: ${money("totalCredits")}", color = White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+          Text("Salidas registradas: ${money("outflows")}", color = White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+          Text("Las transferencias internas y los pagos QR representan circulación del saldo, no capital nuevo. No se suman a las recargas.", color = Muted, fontSize = 11.sp, lineHeight = 15.sp)
+          Text("Datos de prueba. No representan dinero real ni fondos bancarios.", color = Color(0xFFFFC66D), fontSize = 10.sp)
         }
       }
-      item {
-        val balance = payload.optDouble("walletBalanceSample", 0.0)
-        val sample = payload.optInt("walletSampleSize")
-        Card(colors = CardDefaults.cardColors(containerColor = PanelSoft), shape = RoundedCornerShape(18.dp)) {
-          Column(Modifier.fillMaxWidth().padding(17.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text("Saldo DEMO observado", color = Muted, fontSize = 12.sp)
-            Text("OM$ " + "%,.2f".format(java.util.Locale("es", "AR"), balance), color = White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-            Text("Muestra de hasta 1.000 billeteras ($sample). No representa fondos reales.", color = Muted, fontSize = 11.sp)
-          }
-        }
-      }
-      item { Text("Usuarios recientes", color = White, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
-      if (jsonArrayToList(payload.optJSONArray("recentUsers")).isEmpty()) {
-        item { EmptyState("Todavía no hay perfiles recientes disponibles en la colección de usuarios.") }
-      } else {
-        items(jsonArrayToList(payload.optJSONArray("recentUsers"))) { RecordCard(it, "users") }
-      }
-      item { Text("Actividad reciente en OMNI", color = White, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
-      if (jsonArrayToList(payload.optJSONArray("recentUsageEvents")).isEmpty()) {
-        item { EmptyState("La medición de actividad comienza con las próximas sesiones de la aplicación OMNI.") }
-      } else {
-        items(jsonArrayToList(payload.optJSONArray("recentUsageEvents"))) { RecordCard(it, "usageEvents") }
-      }
-      item { Text("Últimas operaciones", color = White, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
-      if (jsonArrayToList(payload.optJSONArray("recentOperations")).isEmpty()) {
-        item { EmptyState("Todavía no hay operaciones para mostrar.") }
-      } else {
-        items(jsonArrayToList(payload.optJSONArray("recentOperations"))) { RecordCard(it, "walletOperations") }
-      }
+    }
+    item { Text("Cuentas y saldos", color = White, fontSize = 17.sp, fontWeight = FontWeight.Bold) }
+    if (accounts.isEmpty()) item { EmptyState("Todavía no hay billeteras registradas.") }
+    else items(accounts, key = { it["id"]?.toString() ?: it.hashCode().toString() }) { RecordCard(it, "walletAccounts") }
+    item { Text("Historial de movimientos", color = White, fontSize = 17.sp, fontWeight = FontWeight.Bold) }
+    if (transactions.isEmpty()) item { EmptyState("Todavía no hay movimientos individuales registrados.") }
+    else items(transactions, key = { it["id"]?.toString() ?: it.hashCode().toString() }) { RecordCard(it, "walletTransactions") }
+    item { Text("Operaciones globales", color = White, fontSize = 17.sp, fontWeight = FontWeight.Bold) }
+    if (operations.isEmpty()) item { EmptyState("Las operaciones se reflejan en el historial individual de cada billetera. La colección global todavía no contiene registros.") }
+    else items(operations.take(100), key = { it["id"]?.toString() ?: it.hashCode().toString() }) { RecordCard(it, "walletOperations") }
+  }
+}
+
+@Composable
+private fun FinanceMetric(label: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier) {
+  Card(modifier, colors = CardDefaults.cardColors(containerColor = Color(0xFF0B1830)), shape = RoundedCornerShape(15.dp)) {
+    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+      Icon(icon, null, tint = Mint, modifier = Modifier.size(20.dp))
+      Text(value, color = White, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+      Text(label, color = Muted, fontSize = 10.sp, maxLines = 2)
     }
   }
 }
@@ -472,14 +656,42 @@ private fun DashboardContent(payload: JSONObject) {
 @Composable
 private fun RecordsContent(selected: String, array: JSONArray, hasMore: Boolean, onLoadMore: () -> Unit) {
   val records = jsonArrayToList(array)
-  LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), contentPadding = PaddingValues(vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-    item {
-      Text(tabs.first { it.id == selected }.label, color = White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-      Text(records.size.toString() + (if (records.size == 1) " registro cargado" else " registros cargados") + if (selected == "activity") " · orden cronológico" else " · historial paginado", color = Muted, fontSize = 12.sp)
+  var search by remember(selected) { mutableStateOf("") }
+  val filtered = remember(records, search) {
+    if (search.isBlank()) records else records.filter { record ->
+      record.entries.any { (key, value) ->
+        key !in setOf("password", "token", "accessToken", "refreshToken", "secret", "apiKey", "rawData", "authorization") &&
+          displayValue(value).contains(search.trim(), ignoreCase = true)
+      }
     }
-    if (records.isEmpty()) item { EmptyState("Todavía no hay registros para mostrar.") }
-    items(records) { RecordCard(it, selected) }
-    if (hasMore) item {
+  }
+  LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), contentPadding = PaddingValues(vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    item {
+      Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))
+          .background(Brush.linearGradient(listOf(Color(0xFF12334B), Panel, Color(0xFF0A1423))))
+          .border(1.dp, Color(0xFF1A6078), RoundedCornerShape(22.dp)).padding(19.dp),
+        verticalArrangement = Arrangement.spacedBy(7.dp)
+      ) {
+        Text("GESTIÓN · OMNI ADMIN", color = Mint, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.8.sp)
+        Text(tabs.first { it.id == selected }.label, color = White, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
+        Text("${filtered.size} de ${records.size} registros cargados · historial paginado", color = Muted, fontSize = 12.sp)
+      }
+    }
+    item {
+      OutlinedTextField(
+        value = search, onValueChange = { search = it },
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text("Buscar en ${tabs.first { it.id == selected }.label.lowercase()}") },
+        placeholder = { Text("Nombre, correo, estado o referencia") },
+        singleLine = true,
+        leadingIcon = { Icon(Icons.Default.Search, null, tint = Mint) },
+        trailingIcon = { if (search.isNotBlank()) IconButton(onClick = { search = "" }) { Icon(Icons.Default.Close, "Limpiar", tint = Muted) } }
+      )
+    }
+    if (filtered.isEmpty()) item { EmptyState(if (records.isEmpty()) "Todavía no hay registros para mostrar." else "No hay coincidencias con esa búsqueda.") }
+    items(filtered) { RecordCard(it, selected) }
+    if (hasMore && search.isBlank()) item {
       Button(onClick = onLoadMore, modifier = Modifier.fillMaxWidth()) { Text("Cargar más registros") }
     }
   }
@@ -494,12 +706,13 @@ private val fieldLabels = mapOf(
   "displayName" to "Nombre", "fullName" to "Nombre", "name" to "Nombre",
   "email" to "Correo", "phoneNumber" to "Teléfono", "phone" to "Teléfono",
   "alias" to "Alias", "balance" to "Saldo", "cashbackTotal" to "Cashback acumulado",
-  "amount" to "Importe", "kind" to "Tipo", "type" to "Tipo", "status" to "Estado",
+  "amount" to "Importe", "peerName" to "Contraparte", "title" to "Concepto", "senderUid" to "Cuenta de origen", "recipientUid" to "Cuenta de destino", "kind" to "Tipo", "type" to "Tipo", "status" to "Estado",
   "storeName" to "Comercio", "orderNumber" to "Pedido", "total" to "Total",
   "paymentStatus" to "Estado del pago", "paymentMethod" to "Medio de pago",
   "fulfillmentType" to "Entrega", "action" to "Acción", "target" to "Destino",
   "message" to "Mensaje", "description" to "Descripción", "enabled" to "Habilitado",
   "event" to "Evento", "module" to "Módulo", "eventName" to "Evento", "screen" to "Pantalla", "appVersion" to "Versión",
+  "category" to "Categoría", "startAt" to "Inicio", "endAt" to "Finalización",
   "createdAt" to "Fecha de registro", "updatedAt" to "Última actualización", "lastSeenAt" to "Última actividad", "userLabel" to "Usuario",
   "data" to "Detalles de acción", "screenName" to "Pantalla", "eventId" to "Identificador de evento",
   "cvu" to "CVU"
@@ -511,7 +724,8 @@ private fun friendlyEnum(value: String): String = when (value.uppercase()) {
   "APP_BACKGROUND" -> "Aplicación en segundo plano"
   "SCREEN_VIEW" -> "Visita de pantalla"
   "SCREEN_EXIT" -> "Salida de pantalla"
-  "DEPOSIT" -> "Carga de saldo DEMO"
+  "DEPOSIT" -> "Recarga virtual DEMO"
+  "CARGA_SALDO" -> "Crédito de saldo DEMO"
   "TRANSFER" -> "Transferencia"
   "QR_PAYMENT" -> "Pago con QR"
   "COMPRA_LOCAL" -> "Compra en comercio"
@@ -537,6 +751,7 @@ private fun looksLikeTechnicalId(value: String): Boolean =
 
 @Composable
 private fun RecordCard(item: Map<String, Any?>, type: String) {
+  var expanded by remember(item["id"]) { mutableStateOf(false) }
   val title = when (type) {
     "users" -> firstPresentValue(item, "displayName", "fullName", "name", "email").ifBlank { "Usuario OMNI" }
     "walletAccounts" -> firstPresentValue(item, "alias").ifBlank { "Billetera OMNI Pay" }
@@ -544,18 +759,22 @@ private fun RecordCard(item: Map<String, Any?>, type: String) {
     "merchantProfiles" -> firstPresentValue(item, "storeName", "name").ifBlank { "Comercio OMNI" }
     "storeOrders" -> "Pedido " + firstPresentValue(item, "orderNumber", "status").ifBlank { "OMNI" }
     "appFeedback" -> "Comentario de usuario"
-    "usageEvents" -> friendlyEnum(firstPresentValue(item, "event", "eventName").ifBlank { "Actividad OMNI" })
+    "usageEvents" -> friendlyEnum(firstPresentValue(item, "event", "eventName").ifBlank { "Evento de uso" })
+    "walletTransactions" -> friendlyEnum(firstPresentValue(item, "type", "kind", "title").ifBlank { "Movimiento de billetera" })
+    "omniEvents" -> firstPresentValue(item, "title", "name", "event", "eventName").ifBlank { "Evento OMNI" }
     "adminAuditLogs" -> friendlyEnum(firstPresentValue(item, "action").ifBlank { "Actividad administrativa" })
-    else -> firstPresentValue(item, "title", "name", "action").ifBlank { "Registro OMNI" }
+    else -> firstPresentValue(item, "title", "name", "action").ifBlank { "Actividad sin categoría" }
   }
   val preferred = when (type) {
     "users" -> listOf("email", "phoneNumber", "phone", "createdAt", "lastSeenAt")
     "walletAccounts" -> listOf("balance", "cashbackTotal", "createdAt")
     "walletOperations" -> listOf("amount", "status", "createdAt")
+    "walletTransactions" -> listOf("amount", "status", "peerName", "createdAt")
     "merchantProfiles" -> listOf("description", "category", "address", "status", "createdAt")
     "storeOrders" -> listOf("total", "paymentStatus", "fulfillmentType", "createdAt")
     "appFeedback" -> listOf("message", "createdAt")
     "usageEvents" -> listOf("userLabel", "module", "appVersion", "createdAt")
+    "omniEvents" -> listOf("description", "category", "status", "startAt", "createdAt")
     else -> listOf("status", "createdAt", "updatedAt")
   }
   val visible = preferred.mapNotNull { key ->
@@ -564,22 +783,35 @@ private fun RecordCard(item: Map<String, Any?>, type: String) {
     if (rendered.isBlank() || looksLikeTechnicalId(rendered)) null
     else (fieldLabels[key] ?: key) + ": " + if (key == "kind" || key == "type" || key == "status" || key == "paymentStatus") friendlyEnum(rendered) else rendered
   }
-  val extraMessage = if (type == "appFeedback") item["message"]?.toString().orEmpty() else ""
-  Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp)) {
-    Column(Modifier.fillMaxWidth().padding(15.dp)) {
-      Text(title.take(100), color = White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 2)
-      visible.forEach { line ->
-        Spacer(Modifier.height(5.dp))
-        Text(line.take(140), color = Muted, fontSize = 12.sp, maxLines = 2)
+  val protectedKeys = setOf("password", "token", "accessToken", "refreshToken", "secret", "apiKey", "qrNonce", "rawData", "authorization")
+  val details = item.entries.filter { (key, value) -> key !in protectedKeys && value != null && displayValue(value).isNotBlank() }.sortedBy { it.key }
+  Card(
+    Modifier.fillMaxWidth().border(1.dp, Color(0xFF1A5068), RoundedCornerShape(19.dp)).clickable { expanded = !expanded },
+    colors = CardDefaults.cardColors(containerColor = Panel),
+    shape = RoundedCornerShape(19.dp),
+    elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
+  ) {
+    Column(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF10243A), Panel))).padding(17.dp)) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(title.take(100), modifier = Modifier.weight(1f), color = White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 2)
+        Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if (expanded) "Contraer detalle" else "Ver detalle", tint = Mint)
       }
-      if (extraMessage.isNotBlank() && extraMessage != title) {
-        Spacer(Modifier.height(5.dp))
-        Text(extraMessage.take(240), color = Muted, fontSize = 12.sp, maxLines = 4)
-      }
+      visible.forEach { line -> Spacer(Modifier.height(5.dp)); Text(line.take(180), color = Muted, fontSize = 12.sp, maxLines = 2) }
+      if (expanded) {
+        Spacer(Modifier.height(10.dp)); HorizontalDivider(color = PanelSoft)
+        Text("Detalle del registro", color = Mint, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 9.dp, bottom = 4.dp))
+        details.forEach { (key, value) ->
+          val rendered = displayValue(value)
+          val label = fieldLabels[key] ?: key.replace(Regex("([a-z])([A-Z])"), "$1 $2").replaceFirstChar { it.uppercase() }
+          Column(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+            Text(label, color = Muted, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+            Text(rendered.take(1200), color = White, fontSize = 12.sp)
+          }
+        }
+      } else Text("Tocá para ver todos los datos disponibles", color = Mint, fontSize = 10.sp, modifier = Modifier.padding(top = 7.dp))
     }
   }
 }
-
 @Composable
 private fun ConfigContent(config: JSONObject, onSave: (JSONObject) -> Unit) {
   var maintenance by remember(config.toString()) { mutableStateOf(config.optBoolean("maintenanceMode", false)) }
@@ -612,24 +844,55 @@ private fun ConfigContent(config: JSONObject, onSave: (JSONObject) -> Unit) {
 }
 
 @Composable
+private fun ModuleSummary(label: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier) {
+  Card(modifier, colors = CardDefaults.cardColors(containerColor = Color(0xFF10243A)), shape = RoundedCornerShape(13.dp)) {
+    Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+      Icon(icon, null, tint = Mint, modifier = Modifier.size(17.dp))
+      Text(value, color = White, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+      Text(label, color = Muted, fontSize = 9.sp, maxLines = 1)
+    }
+  }
+}
+
+@Composable
 private fun ModuleContent(array: JSONArray, onSave: (String, String, String, Boolean) -> Unit) {
   val records = jsonArrayToList(array)
-  LazyColumn(Modifier.fillMaxSize().padding(16.dp), contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-    item { Text("Módulos de OMNI", color = White, fontSize = 25.sp, fontWeight = FontWeight.Bold); Text("Activá o desactivá módulos registrados.", color = Muted, fontSize = 12.sp) }
-    if (records.isEmpty()) item { EmptyState("No hay módulos registrados todavía.") }
+  val enabledCount = records.count { it["enabled"] == true }
+  LazyColumn(Modifier.fillMaxSize().padding(16.dp), contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+    item {
+      Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Brush.linearGradient(listOf(Color(0xFF123A5D), Panel, Color(0xFF0A1426)))).border(1.dp, Color(0xFF1679A6), RoundedCornerShape(22.dp)).padding(19.dp)) {
+        Text("CENTRO DE FUNCIONES", color = Mint, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.6.sp)
+        Text("Módulos de OMNI", color = White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+        Text("Supervisión del catálogo registrado. Los cambios quedan auditados.", color = Muted, fontSize = 12.sp)
+        Spacer(Modifier.height(14.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+          ModuleSummary("Registrados", records.size.toString(), Icons.Default.Apps, Modifier.weight(1f))
+          ModuleSummary("Habilitados", enabledCount.toString(), Icons.Default.CheckCircle, Modifier.weight(1f))
+          ModuleSummary("Pausados", (records.size - enabledCount).toString(), Icons.Default.PauseCircle, Modifier.weight(1f))
+        }
+      }
+    }
+    if (records.isEmpty()) item { EmptyState("No hay módulos registrados en moduleRegistry. No se muestran módulos inventados.") }
     items(records) { item ->
       val id = item["id"]?.toString() ?: return@items
       var enabled by remember(id, item["enabled"]) { mutableStateOf(item["enabled"] == true) }
       val title = item["title"]?.toString() ?: id
-      val description = item["description"]?.toString() ?: ""
-      Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp)) {
-        Column(Modifier.padding(15.dp)) {
+      val description = item["description"]?.toString() ?: "Sin descripción registrada."
+      Card(Modifier.fillMaxWidth().border(1.dp, if (enabled) Color(0xFF17647A) else Color(0xFF34445B), RoundedCornerShape(18.dp)), colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(18.dp)) {
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
           Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) { Text(title, color = White, fontWeight = FontWeight.SemiBold); Text(id, color = Muted, fontSize = 10.sp) }
-            Switch(enabled, { enabled = it })
+            Box(Modifier.size(42.dp).clip(RoundedCornerShape(13.dp)).background(if (enabled) Color(0xFF103B4B) else PanelSoft), contentAlignment = Alignment.Center) { Icon(Icons.Default.Extension, null, tint = if (enabled) Mint else Muted) }
+            Spacer(Modifier.width(11.dp))
+            Column(Modifier.weight(1f)) { Text(title, color = White, fontWeight = FontWeight.Bold, fontSize = 15.sp); Text(id, color = Muted, fontSize = 10.sp) }
+            Column(horizontalAlignment = Alignment.End) {
+              Text(if (enabled) "HABILITADO" else "PAUSADO", color = if (enabled) Mint else Muted, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
+              Switch(checked = enabled, onCheckedChange = { enabled = it })
+            }
           }
-          if (description.isNotBlank()) Text(description, color = Muted, fontSize = 12.sp)
-          TextButton(onClick = { onSave(id, title, description, enabled) }) { Text("Guardar estado", color = Mint) }
+          Text(description, color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
+          val updated = item["updatedAt"]?.toString().orEmpty()
+          if (updated.isNotBlank()) Text("Última modificación: ${updated.take(16).replace("T", " ")}", color = Color(0xFF7890AA), fontSize = 10.sp)
+          Button(onClick = { onSave(id, title, description, enabled) }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Save, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(7.dp)); Text("Guardar cambio") }
         }
       }
     }
@@ -659,8 +922,15 @@ private fun InvitationContent(array: JSONArray, onInvite: (String) -> Unit) {
 
 @Composable
 private fun EmptyState(message: String) {
-  Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp)) {
-    Text(message, Modifier.fillMaxWidth().padding(20.dp), color = Muted, fontSize = 13.sp)
+  Card(
+    Modifier.fillMaxWidth().border(1.dp, Color(0xFF1A4058), RoundedCornerShape(18.dp)),
+    colors = CardDefaults.cardColors(containerColor = Panel),
+    shape = RoundedCornerShape(18.dp)
+  ) {
+    Row(Modifier.fillMaxWidth().padding(19.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+      Icon(Icons.Default.Info, contentDescription = null, tint = Mint)
+      Text(message, color = Muted, fontSize = 13.sp, lineHeight = 19.sp)
+    }
   }
 }
 
