@@ -72,9 +72,35 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
     val selectedStore by viewModel.selectedStore.collectAsState()
     val availableStores by viewModel.stores.collectAsState()
     val managedStore by viewModel.managedStore.collectAsState()
-    val store = if (merchantMode) managedStore else (selectedStore ?: managedStore)
     val db = remember { FirebaseFirestore.getInstance() }
     val walletRepository = remember { DemoWalletRepository() }
+    var orderStores by remember { mutableStateOf<List<Store>>(emptyList()) }
+    var selectedOrderStoreId by remember { mutableStateOf("") }
+    val store = if (merchantMode) managedStore
+        else orderStores.firstOrNull { it.id == selectedOrderStoreId } ?: managedStore
+    val hasCustomerStoreSelected = merchantMode || orderStores.any { it.id == selectedOrderStoreId }
+
+    LaunchedEffect(merchantMode, uid, availableStores, managedStore.id) {
+        if (!merchantMode && uid.isNotBlank()) {
+            db.collection("merchantProfiles").get()
+                .addOnSuccessListener { snapshot ->
+                    val eligibleIds = snapshot.documents
+                        .filter { it.getString("ownerUid").orEmpty() != uid }
+                        .filter { doc ->
+                            val inventory = doc.get("inventory") as? List<*>
+                            inventory?.any { raw ->
+                                val item = raw as? Map<*, *>
+                                item?.get("inStock") != false
+                            } == true
+                        }
+                        .map { it.id }.toSet()
+                    orderStores = availableStores.filter { it.id in eligibleIds && it.id != managedStore.id }
+                }
+                .addOnFailureListener { orderStores = emptyList() }
+        } else if (!merchantMode) {
+            orderStores = emptyList()
+        }
+    }
 
     var merchantReady by remember { mutableStateOf(false) }
     var merchantError by remember { mutableStateOf<String?>(null) }
@@ -383,20 +409,35 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
         } else {
             Text("Elegí un comercio, seleccioná sus productos y enviá tu pedido. El QR identifica el pedido; no acredita un pago.", color = Color(0xFF9AAAC2), fontSize = 11.sp)
             Text("CATÁLOGO DE PRUEBA · Los precios y la disponibilidad deben confirmarse con el comercio. OMNI Pay no procesa dinero real en este flujo.", color = Color(0xFFFFC978), fontSize = 10.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 5.dp))
-            LazyRow(
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(7.dp)
-            ) {
-                items(availableStores.filter { it.id != managedStore.id }, key = { it.id }) { candidate ->
-                    FilterChip(
-                        selected = candidate.id == store.id,
-                        onClick = { if (candidate.id != store.id) viewModel.selectStoreForOrders(candidate) },
-                        label = { Text(candidate.name.substringBefore(" - ").take(22), maxLines = 1) }
-                    )
+            if (orderStores.isNotEmpty()) {
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
+                    items(orderStores, key = { it.id }) { candidate ->
+                        FilterChip(
+                            selected = candidate.id == selectedOrderStoreId,
+                            onClick = {
+                                if (candidate.id != selectedOrderStoreId) {
+                                    selectedOrderStoreId = candidate.id
+                                    viewModel.selectStoreForOrders(candidate)
+                                }
+                            },
+                            label = { Text(candidate.name.substringBefore(" - ").take(22), maxLines = 1) }
+                        )
+                    }
                 }
             }
-            if (store.inventory.none { it.inStock }) Text("Este comercio todavía no publicó productos para pedidos.", color = Color(0xFFFFC978), fontSize = 12.sp)
-            else {
+            if (!hasCustomerStoreSelected) {
+                Text(
+                    if (orderStores.isEmpty()) "Todavía no hay comercios externos con catálogo publicado y pedidos habilitados en tu directorio. Tu propio comercio no se ofrece como opción de compra."
+                    else "Elegí uno de los comercios disponibles para ver su catálogo.",
+                    color = Color(0xFFFFC978), fontSize = 12.sp,
+                    modifier = Modifier.padding(vertical = 18.dp)
+                )
+            } else if (store.inventory.none { it.inStock }) {
+                Text("Este comercio todavía no publicó productos disponibles para pedidos.", color = Color(0xFFFFC978), fontSize = 12.sp)
+            } else {
                 OutlinedTextField(
                     value = productSearch,
                     onValueChange = { productSearch = it },
@@ -452,19 +493,24 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
                 }
             }
             if (cartLines.isNotEmpty()) {
-                Surface(color = Color(0xFF101B30), shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Text("${cartLines.sumOf { it.quantity }} productos · Total estimado OM$ ${String.format("%,.2f", total)}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            FilterChip(selected = fulfillmentType == "RETIRO", onClick = { fulfillmentType = "RETIRO" }, label = { Text("Retirar") })
-                            FilterChip(selected = fulfillmentType == "DELIVERY", onClick = { fulfillmentType = "DELIVERY" }, label = { Text("Delivery") })
+                Surface(
+                    color = Color(0xFF101B30), shape = RoundedCornerShape(13.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("${cartLines.sumOf { it.quantity }} artículos", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Text("OM$ ${String.format("%,.2f", total)} · Carrito DEMO", color = Color(0xFF57DDF5), fontSize = 10.sp)
                         }
-                        if (fulfillmentType == "DELIVERY") {
-                            OutlinedTextField(deliveryAddress, { deliveryAddress = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Dirección de entrega") }, singleLine = true)
-                        }
-                        Button(onClick = { showOrderReview = true }, enabled = !sending, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF087EAB))) {
-                            Text("Revisar y confirmar pedido")
-                        }
+                        Button(
+                            onClick = { showOrderReview = true }, enabled = !sending,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF087EAB)),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 9.dp)
+                        ) { Text("Ver carrito", fontSize = 12.sp) }
                     }
                 }
             }
@@ -556,18 +602,40 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
             containerColor = Color(0xFF101B30),
             title = { Text("Confirmar pedido", color = Color.White) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Column(
+                    Modifier.fillMaxWidth().heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
                     Text(store.name, color = Color(0xFF57DDF5), fontWeight = FontWeight.Bold)
                     cartLines.forEach { line ->
-                        Text("${line.quantity} × ${line.name} · OM$ ${String.format("%,.2f", line.price * line.quantity)}", color = Color.White, fontSize = 11.sp)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Column(Modifier.weight(1f)) {
+                                Text(line.name, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                Text("OM$ ${String.format("%,.2f", line.price * line.quantity)}", color = Color(0xFFB8C8D9), fontSize = 10.sp)
+                            }
+                            TextButton(onClick = {
+                                val next = line.quantity - 1
+                                cart = if (next <= 0) cart - line.productId else cart + (line.productId to next)
+                            }, enabled = !sending) { Text("−") }
+                            Text(line.quantity.toString(), color = Color.White, fontWeight = FontWeight.Bold)
+                            TextButton(onClick = {
+                                cart = cart + (line.productId to (line.quantity + 1))
+                            }, enabled = !sending) { Text("+") }
+                        }
                     }
                     Text("Total: OM$ ${String.format("%,.2f", total)}", color = Color.White, fontWeight = FontWeight.Bold)
-                    Text(if (fulfillmentType == "DELIVERY") "Entrega: ${deliveryAddress.trim()}" else "Modalidad: Retiro en el comercio", color = Color(0xFFB8C8D9), fontSize = 11.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FilterChip(selected = fulfillmentType == "RETIRO", onClick = { fulfillmentType = "RETIRO" }, label = { Text("Retirar") }, enabled = !sending)
+                        FilterChip(selected = fulfillmentType == "DELIVERY", onClick = { fulfillmentType = "DELIVERY" }, label = { Text("Delivery") }, enabled = !sending)
+                    }
+                    if (fulfillmentType == "DELIVERY") {
+                        OutlinedTextField(deliveryAddress, { deliveryAddress = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Dirección de entrega") }, singleLine = true, enabled = !sending)
+                    }
                     Text("Pago pendiente. Se abona al retirar o recibir; el QR solo identifica el pedido.", color = Color(0xFFFFC978), fontSize = 10.sp)
                 }
             },
-            confirmButton = { Button(onClick = { showOrderReview = false; submitOrder() }, enabled = !sending) { Text("Confirmar y generar QR") } },
-            dismissButton = { TextButton(onClick = { showOrderReview = false }, enabled = !sending) { Text("Volver al carrito") } }
+            confirmButton = { Button(onClick = { showOrderReview = false; submitOrder() }, enabled = !sending && cartLines.isNotEmpty()) { Text("Confirmar y generar QR") } },
+            dismissButton = { TextButton(onClick = { showOrderReview = false }, enabled = !sending) { Text("Seguir comprando") } }
         )
     }
     createdOrder?.let { order ->
