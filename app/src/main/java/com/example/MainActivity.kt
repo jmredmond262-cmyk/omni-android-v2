@@ -294,7 +294,8 @@ fun OmniApp(viewModel: MainViewModel) {
                     android.Manifest.permission.ACCESS_COARSE_LOCATION
                 )
             )
-        } else if (!restoredSession) {
+        } else {
+            // Actualizar GPS también cuando hay una ubicación guardada: la caché reciente hace esta consulta rápida.
             viewModel.refreshLiveGpsAndPlaces(context)
         }
     }
