@@ -267,9 +267,9 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
         UsageAnalyticsRepository.trackCurrentAction("orders", "ORDER_QR_SCAN_STARTED")
         GmsBarcodeScanning.getClient(context).startScan()
             .addOnSuccessListener { barcode ->
-                val parts = barcode.rawValue.orEmpty().split("|")
+                val qrValue = barcode.rawValue.orEmpty().trim()\n                val parts = qrValue.split("|").map { it.trim() }
                 if (parts.size != 3 || parts[0] != "OMNI-ORDER" || parts[1].isBlank() || parts[2].isBlank()) {
-                    feedback = "Este QR no es un pedido OMNI de comercio. Abrí el lector desde Pedidos OMNI y escaneá el QR generado al confirmar la compra."
+                    feedback = "QR no compatible con gestión de pedidos. Para operar entre dos teléfonos, escaneá el QR que aparece al confirmar una compra en Pedidos OMNI; los QR de catálogo DEMO son referencias locales."
                 } else {
                     db.collection("storeOrders").document(parts[1]).get()
                         .addOnSuccessListener { doc ->
@@ -362,13 +362,13 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
         }
 
         if (merchantMode) {
-            Text("Pedidos recibidos y seguimiento de preparación / entrega.", color = Color(0xFF9AAAC2), fontSize = 11.sp)
+            Text("Acceso rápido para leer el QR del cliente, revisar el pedido y gestionar cobro DEMO, preparación y entrega.", color = Color(0xFF9AAAC2), fontSize = 11.sp)
             if (merchantReady && merchantError == null) {
                 Button(onClick = { scanOrder() }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF087EAB))) {
                     Icon(Icons.Default.QrCodeScanner, contentDescription = null)
                     Spacer(Modifier.width(7.dp))
-                    Text("Escanear pedido QR")
+                    Text("Escanear QR · Pedidos y cobros")
                 }
             }
             if (merchantError != null) Text(merchantError.orEmpty(), color = Color(0xFFFF9B8F), fontSize = 12.sp, modifier = Modifier.padding(8.dp))
