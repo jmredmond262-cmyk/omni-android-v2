@@ -117,12 +117,15 @@ object UsageAnalyticsRepository {
         val uid = FirebaseAuth.getInstance().currentUser?.uid?.takeIf { it.isNotBlank() }
             ?: requestedUid.takeIf { it.isNotBlank() } ?: return
         val eventId = UUID.randomUUID().toString()
+        val cleanModule = module.trim().take(80)
+        val cleanEvent = eventName.trim().uppercase().take(80)
         val event = hashMapOf<String, Any>(
-            "eventId" to eventId, "uid" to uid, "module" to module.trim().take(80),
-            "event" to eventName.trim().uppercase().take(80),
+            "eventId" to eventId, "uid" to uid, "module" to cleanModule,
+            "category" to analyticsCategory(cleanModule, cleanEvent, metadata),
+            "event" to cleanEvent,
             "sessionId" to sessionId.ifBlank { UUID.randomUUID().toString() },
             "appVersion" to BuildConfig.VERSION_NAME, "platform" to "android",
-            "schemaVersion" to 2, "createdAt" to FieldValue.serverTimestamp()
+            "schemaVersion" to 3, "createdAt" to FieldValue.serverTimestamp()
         )
         val safe = safeMetadata(metadata)
         if (safe.isNotEmpty()) event["data"] = safe
@@ -131,5 +134,30 @@ object UsageAnalyticsRepository {
             .addOnFailureListener { error ->
                 Log.e(TAG, "No se pudo registrar $eventName / $module: ${error.message}", error)
             }
+    }
+}
+
+
+/** Produces a readable category for every new usage event. */
+private fun analyticsCategory(module: String, event: String, metadata: Map<String, Any>): String {
+    val data = metadata.entries.associate { it.key.lowercase() to it.value.toString().lowercase() }
+    val source = listOf(module, data["category"].orEmpty(), data["screenname"].orEmpty(),
+        data["source"].orEmpty(), data["surface"].orEmpty(), data["flow"].orEmpty())
+        .joinToString(" ").lowercase()
+    return when {
+        listOf("wallet", "billetera", "saldo", "qr_pay", "qr_payment", "transfer", "deposit").any(source::contains) ||
+            event.contains("QR_PAYMENT") || event.contains("TRANSFER") || event.contains("DEPOSIT") -> "Billetera"
+        listOf("order", "pedido", "market", "carrito", "checkout").any(source::contains) -> "Pedidos y Mercado"
+        listOf("event", "evento", "agenda_event").any(source::contains) -> "Eventos"
+        listOf("job", "trabajo", "empleo", "cv").any(source::contains) -> "Bolsa de Trabajo"
+        listOf("merchant", "comercio", "store", "negocio").any(source::contains) -> "Comercios"
+        listOf("user", "usuario", "profile", "perfil", "contact").any(source::contains) -> "Usuarios"
+        listOf("navigation", "map", "mapa", "route", "ruta", "location", "ubicacion").any(source::contains) -> "Navegación"
+        listOf("tourism", "turismo", "experience", "experiencia").any(source::contains) -> "Turismo y experiencias"
+        listOf("routine", "rutina", "weather", "clima", "reminder", "recordatorio").any(source::contains) -> "Rutinas y clima"
+        listOf("camera", "camara", "ai", "inteligencia").any(source::contains) -> "Cámara e IA"
+        module.equals("app", true) || module.equals("diagnostics", true) ||
+            event.startsWith("SESSION_") || event.startsWith("APP_") || event.startsWith("SCREEN_") -> "Sistema"
+        else -> "Otros"
     }
 }
