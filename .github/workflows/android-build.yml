@@ -3,9 +3,9 @@ name: OMNI Android Build 1.4
 
 on:
   push:
-    branches: [ "main", "omni-resto-mejoras", "omni-admin-app", "omni-admin-rebuild", "omni-v1.3-release-candidate", "omni-v1.3-integral", "omni-v1.4-integral", "omni-v1.4-cyber-alias-qr-recovery", "omni-marketplace-order-flow-fix" ]
+    branches: [ "main", "omni-resto-mejoras", "omni-admin-app", "omni-admin-rebuild", "omni-v1.3-release-candidate", "omni-v1.3-integral", "omni-v1.4-integral", "omni-v1.4-cyber-alias-qr-recovery", "omni-marketplace-order-flow-fix", "omni-activity-marketplace-recovery" ]
   pull_request:
-    branches: [ "main", "omni-resto-mejoras", "omni-v1.3-release-candidate", "omni-v1.3-integral", "omni-v1.4-integral", "omni-v1.4-cyber-alias-qr-recovery" ]
+    branches: [ "main", "omni-resto-mejoras", "omni-v1.3-release-candidate", "omni-v1.3-integral", "omni-v1.4-integral", "omni-v1.4-cyber-alias-qr-recovery", "omni-activity-marketplace-recovery" ]
   workflow_dispatch:
 
 permissions:
