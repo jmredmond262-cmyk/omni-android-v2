@@ -619,6 +619,13 @@ fun OmniApp(viewModel: MainViewModel) {
                                     }
                                 )
                                 DropdownMenuItem(
+                                    text = { Text("📷 Modo comercio · Escanear pedido QR") },
+                                    onClick = {
+                                        viewModel.navigateTo(Screen.MerchantOrders)
+                                        overflowMenuExpanded = false
+                                    }
+                                )
+                                DropdownMenuItem(
                                     text = { Text("↪ Cerrar sesión") },
                                     onClick = {
                                         FirebaseAuth.getInstance().signOut()
