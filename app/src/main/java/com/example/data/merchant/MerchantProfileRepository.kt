@@ -162,7 +162,7 @@ object MerchantProfileRepository {
                 barcode = map["barcode"] as? String,
                 description = map["description"] as? String ?: ""
             )
-        }.takeIf { it.isNotEmpty() } ?: base.inventory
+        }?.takeIf { it.isNotEmpty() } ?: base.inventory
 
         val updated = base.copy(
             address = snapshot.getString("address") ?: base.address,
