@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.Store
 import com.example.data.SampleData
+import com.example.data.merchant.MerchantProfileRepository
 import com.example.data.wallet.DemoWalletRepository
 import com.example.model.StoreProduct
 import com.example.model.ProductCategory
@@ -109,7 +110,6 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
                 .addOnFailureListener {
                     orderStores = emptyList()
                     selectedOrderStoreId = ""
-                    feedback = "No se pudieron cargar los comercios demo: ${it.localizedMessage ?: "error de conexión"}"
                 }
         } else if (!merchantMode) {
             orderStores = emptyList()
