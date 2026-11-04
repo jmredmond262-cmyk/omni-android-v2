@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.SampleData
 import com.example.data.analytics.UsageAnalyticsRepository
+import com.example.data.analytics.OmniTracker
 import com.example.data.merchant.MerchantProfileRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.example.data.ArgentinaAttractions
@@ -1034,7 +1035,7 @@ class MainViewModel : ViewModel() {
 
     private fun trackUsageAction(action: String, module: String, metadata: Map<String, Any> = emptyMap()) {
         _userProfile.value.id.takeIf { it.isNotBlank() }?.let { uid ->
-            UsageAnalyticsRepository.trackEvent(uid, module, action, metadata)
+            OmniTracker.track(module, action, metadata)
         }
     }
 

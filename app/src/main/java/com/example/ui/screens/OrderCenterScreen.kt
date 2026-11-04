@@ -37,11 +37,11 @@ import com.example.model.StoreProduct
 import com.example.model.ProductCategory
 import com.example.ui.MainViewModel
 import com.example.data.analytics.UsageAnalyticsRepository
+import com.example.data.analytics.OmniTracker
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
-import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import java.util.UUID
@@ -263,38 +263,42 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
             }
     }
 
-    fun scanOrder() {
-        UsageAnalyticsRepository.trackCurrentAction("orders", "ORDER_QR_SCAN_STARTED")
-        GmsBarcodeScanning.getClient(context).startScan()
-            .addOnSuccessListener { barcode ->
-                val qrValue = barcode.rawValue.orEmpty().trim()
-                val parts = qrValue.split("|").map { it.trim() }
-                if (parts.size != 3 || parts[0] != "OMNI-ORDER" || parts[1].isBlank() || parts[2].isBlank()) {
-                    feedback = "QR no compatible con gestión de pedidos. Para operar entre dos teléfonos, escaneá el QR que aparece al confirmar una compra en Pedidos OMNI; los QR de catálogo DEMO son referencias locales."
+    fun handleScannedOrder(payload: OrderQRPayload) {
+        OmniTracker.track("orders", "ORDER_QR_SCAN_STARTED")
+        db.collection("storeOrders").document(payload.orderId).get()
+            .addOnSuccessListener { doc ->
+                val order = decodeOrder(doc)
+                val createdAt = doc.getTimestamp("createdAt")?.toDate()?.time ?: 0L
+                val expired = createdAt == 0L || System.currentTimeMillis() - createdAt > 24L * 60L * 60L * 1000L
+                val itemsMatch = order != null &&
+                    order.items.size == payload.items.size &&
+                    order.items.all { line ->
+                        payload.items.any { qrItem ->
+                            qrItem.productId == line.productId && qrItem.name == line.name &&
+                                kotlin.math.abs(qrItem.price - line.price) < 0.005 &&
+                                qrItem.quantity == line.quantity
+                        }
+                    }
+                if (order == null || order.storeId != store.id || order.merchantUid != uid ||
+                    order.qrNonce != payload.qrNonce || order.storeName != payload.merchantName ||
+                    kotlin.math.abs(order.total - payload.totalAmount) >= 0.005 || !itemsMatch ||
+                    expired || order.status in listOf("ENTREGADO", "RECHAZADO", "CANCELADO")) {
+                    feedback = "QR inválido, vencido, modificado o no corresponde a este comercio."
                 } else {
-                    db.collection("storeOrders").document(parts[1]).get()
-                        .addOnSuccessListener { doc ->
-                            val order = decodeOrder(doc)
-                            val createdAt = doc.getTimestamp("createdAt")?.toDate()?.time ?: 0L
-                            val expired = createdAt == 0L || System.currentTimeMillis() - createdAt > 24L * 60L * 60L * 1000L
-                            if (order == null || order.storeId != store.id || order.merchantUid != uid || order.qrNonce != parts[2] || expired || order.status in listOf("ENTREGADO", "RECHAZADO", "CANCELADO")) {
-                                feedback = "QR inválido, vencido, ya cerrado o no corresponde a este comercio."
-                            } else {
-                                UsageAnalyticsRepository.trackEvent(uid, "orders", "ORDER_QR_VERIFIED", mapOf("operationId" to order.id, "stage" to "QR_VALIDATION", "success" to true))
-                                db.collection("walletOperations")
-                                    .whereEqualTo("recipientUid", uid)
-                                    .whereEqualTo("orderId", order.id)
-                                    .limit(1).get()
-                                    .addOnSuccessListener { payment ->
-                                        selectedScannedOrder = order.copy(
-                                            paymentStatus = if (payment.isEmpty) "PENDIENTE" else "PAGADA · DEMO"
-                                        )
-                                    }
-                                    .addOnFailureListener { selectedScannedOrder = order }
-                            }
-                        }.addOnFailureListener { feedback = "No se pudo verificar el pedido en Firestore." }
+                    OmniTracker.track("orders", "ORDER_QR_VERIFIED", mapOf("operationId" to order.id, "stage" to "QR_VALIDATION", "success" to true))
+                    db.collection("walletOperations")
+                        .whereEqualTo("recipientUid", uid)
+                        .whereEqualTo("orderId", order.id)
+                        .limit(1).get()
+                        .addOnSuccessListener { payment ->
+                            selectedScannedOrder = order.copy(
+                                paymentStatus = if (payment.isEmpty) "PENDIENTE" else "PAGADA · DEMO"
+                            )
+                        }
+                        .addOnFailureListener { selectedScannedOrder = order }
                 }
-            }.addOnFailureListener { feedback = "No se pudo abrir el lector QR." }
+            }
+            .addOnFailureListener { feedback = "No se pudo verificar el pedido en Firestore." }
     }
 
     fun payOrderDemo(order: OmniStoreOrder) {
@@ -365,12 +369,14 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
         if (merchantMode) {
             Text("Acceso rápido para leer el QR del cliente, revisar el pedido y gestionar cobro DEMO, preparación y entrega.", color = Color(0xFF9AAAC2), fontSize = 11.sp)
             if (merchantReady && merchantError == null) {
-                Button(onClick = { scanOrder() }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF087EAB))) {
-                    Icon(Icons.Default.QrCodeScanner, contentDescription = null)
-                    Spacer(Modifier.width(7.dp))
-                    Text("Escanear QR · Pedidos y cobros")
-                }
+                OrderQRScanner(
+                    onOrderScanned = { handleScannedOrder(it) },
+                    onLegacyWalletQr = { feedback = "Este es un QR de cuenta, no un QR de pedido." },
+                    onError = { feedback = it },
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    buttonLabel = "Escanear QR · Pedidos y cobros",
+                    buttonColor = Color(0xFF087EAB)
+                )
             }
             if (merchantError != null) Text(merchantError.orEmpty(), color = Color(0xFFFF9B8F), fontSize = 12.sp, modifier = Modifier.padding(8.dp))
             else if (!merchantReady) Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFF57DDF5)) }
@@ -565,7 +571,11 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
         )
     }
     createdOrder?.let { order ->
-        val payload = "OMNI-ORDER|${order.id}|${order.qrNonce}"
+        val payload = OrderQRCodec.encode(
+            order.id, order.storeName, order.total,
+            order.items.map { OrderQRItem(it.productId, it.name, it.price, it.quantity) },
+            order.qrNonce
+        )
         val bitmap = remember(payload) {
             runCatching {
                 val matrix = QRCodeWriter().encode(payload, BarcodeFormat.QR_CODE, 480, 480)

@@ -35,6 +35,8 @@ data class DemoWalletSnapshot(
 class DemoWalletRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
+    private val walletAliasService = WalletAliasService(firestore)
+
     fun ensureWallet(done: (Result<DemoWalletAccount>) -> Unit) {
         val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
         if (uid.isNullOrBlank()) {
@@ -129,32 +131,12 @@ class DemoWalletRepository(
             done(Result.failure(IllegalArgumentException("El importe debe ser mayor que cero y no superar OM$ 50.000.")))
             return
         }
-        val input = identifier.trim().lowercase(Locale.ROOT)
-        if (input.isBlank()) {
-            done(Result.failure(IllegalArgumentException("Ingresá un alias o CVU.")))
-            return
+        walletAliasService.resolveRecipientUid(identifier) { resolved ->
+            resolved.fold(
+                onSuccess = { recipientUid -> executeTransfer(recipientUid, amount, false, done) },
+                onFailure = { error -> done(Result.failure(error)) }
+            )
         }
-        val directory = firestore.collection("walletDirectory")
-        val onResolved: (String?) -> Unit = { recipientUid ->
-            if (recipientUid.isNullOrBlank()) {
-                done(Result.failure(IllegalArgumentException("No encontramos una cuenta OMNI Pay con ese alias o CVU.")))
-            } else {
-                executeTransfer(recipientUid, amount, false, done)
-            }
-        }
-        // Resolve any registered alias first, not only aliases with the "omni-" prefix.
-        directory.document(input).get()
-            .addOnSuccessListener { aliasSnapshot ->
-                val aliasUid = aliasSnapshot.getString("uid")
-                if (!aliasUid.isNullOrBlank()) {
-                    onResolved(aliasUid)
-                } else {
-                    directory.whereEqualTo("cvu", input).limit(1).get()
-                        .addOnSuccessListener { onResolved(it.documents.firstOrNull()?.getString("uid")) }
-                        .addOnFailureListener { done(Result.failure(it)) }
-                }
-            }
-            .addOnFailureListener { done(Result.failure(it)) }
     }
 
     fun payDemoQr(payload: String, amount: Double, done: (Result<String>) -> Unit) {

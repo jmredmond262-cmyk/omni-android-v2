@@ -65,15 +65,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.wallet.DemoWalletRepository
+import com.example.data.analytics.OmniTracker
 import com.google.firebase.auth.FirebaseAuth
-import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.FirebaseFirestore
 import com.example.model.PaymentCard
 import com.example.model.TransactionType
 import com.example.model.WalletTransaction
 import com.example.ui.MainViewModel
+import com.example.ui.screens.OrderQRScanner
+import com.example.ui.screens.OrderQRPayload
+import com.example.ui.screens.OrderQRItem
 import com.example.ui.theme.AmberDeal
 import com.example.ui.theme.AmberDealContainer
 import com.example.ui.theme.EmeraldContainer
@@ -96,6 +100,9 @@ fun WalletScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     val currentUid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
     val walletRepository = remember { DemoWalletRepository() }
+    val orderDb = remember { FirebaseFirestore.getInstance() }
+    var pendingOrderQr by remember { mutableStateOf<PendingOrderQRPayment?>(null) }
+    var orderPaymentInProgress by remember { mutableStateOf(false) }
     var showMyQrDialog by remember { mutableStateOf(false) }
     var showQrPaymentDialog by remember { mutableStateOf(false) }
     var showAddFundsDialog by remember { mutableStateOf(false) }
@@ -258,33 +265,58 @@ fun WalletScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Button(
-                            onClick = {
-                                GmsBarcodeScanning.getClient(context).startScan()
-                                    .addOnSuccessListener { barcode ->
-                                        val scanned = barcode.rawValue.orEmpty()
-                                        if (scanned.startsWith("OMNI-DEMO|")) {
-                                            qrPaymentPayload = scanned
-                                            qrPaymentAmount = "1500"
-                                            showQrPaymentDialog = true
+                        OrderQRScanner(
+                            onOrderScanned = { payload ->
+                                UsageAnalyticsRepository.trackCurrentAction("orders", "ORDER_QR_PAYMENT_SCAN")
+                                orderDb.collection("storeOrders").document(payload.orderId).get()
+                                    .addOnSuccessListener { doc ->
+                                        val storedItems = doc.get("items") as? List<*>
+                                        val itemsMatch = storedItems != null &&
+                                            storedItems.size == payload.items.size &&
+                                            payload.items.all { qrItem ->
+                                                storedItems.any { raw ->
+                                                    val item = raw as? Map<*, *> ?: return@any false
+                                                    (item["productId"] as? String).orEmpty() == qrItem.productId &&
+                                                        (item["name"] as? String).orEmpty() == qrItem.name &&
+                                                        kotlin.math.abs(((item["price"] as? Number)?.toDouble() ?: -1.0) - qrItem.price) < 0.005 &&
+                                                        ((item["quantity"] as? Number)?.toInt() ?: 0) == qrItem.quantity
+                                                }
+                                            }
+                                        val total = (doc.get("total") as? Number)?.toDouble() ?: 0.0
+                                        val createdAt = doc.getTimestamp("createdAt")?.toDate()?.time ?: 0L
+                                        val expired = createdAt == 0L || System.currentTimeMillis() - createdAt > 24L * 60L * 60L * 1000L
+                                        val merchantUid = doc.getString("merchantUid").orEmpty()
+                                        val valid = doc.exists() &&
+                                            doc.getString("customerUid") == currentUid &&
+                                            doc.getString("storeName") == payload.merchantName &&
+                                            doc.getString("qrNonce") == payload.qrNonce &&
+                                            kotlin.math.abs(total - payload.totalAmount) < 0.005 &&
+                                            itemsMatch && merchantUid.isNotBlank() &&
+                                            doc.getString("paymentStatus") == "PENDIENTE" &&
+                                            doc.getString("status") !in listOf("ENTREGADO", "RECHAZADO", "CANCELADO") &&
+                                            !expired
+                                        if (valid) {
+                                            pendingOrderQr = PendingOrderQRPayment(payload.copy(totalAmount = total), merchantUid)
+                                            paymentSuccessMessage = null
+                                            OmniTracker.track("orders", "ORDER_QR_VALIDATED_FOR_PAYMENT", mapOf("operationId" to payload.orderId, "success" to true))
                                         } else {
-                                            paymentSuccessMessage = "El código escaneado no corresponde a una cuenta OMNI Pay DEMO."
+                                            paymentSuccessMessage = "El pedido no está pendiente, venció o los datos del QR no coinciden con Firestore."
                                         }
                                     }
-                                    .addOnFailureListener { error ->
-                                        paymentSuccessMessage = error.localizedMessage ?: "No se pudo leer el código QR."
+                                    .addOnFailureListener {
+                                        paymentSuccessMessage = "No se pudo verificar el pedido en Firestore."
                                     }
                             },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = CyberGlowCyan),
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("btn_pay_qr")
-                        ) {
-                            Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "Pagar QR", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        }
+                            onLegacyWalletQr = { scanned ->
+                                qrPaymentPayload = scanned
+                                qrPaymentAmount = "1500"
+                                showQrPaymentDialog = true
+                            },
+                            onError = { message -> paymentSuccessMessage = message },
+                            modifier = Modifier.weight(1f).testTag("btn_pay_qr"),
+                            buttonLabel = "Pagar QR",
+                            buttonColor = CyberGlowCyan
+                        )
 
                         Button(
                             onClick = { showAddFundsDialog = true },
@@ -556,6 +588,64 @@ fun WalletScreen(
                 }
             },
             confirmButton = { TextButton(onClick = { showMyQrDialog = false }) { Text("Cerrar") } }
+        )
+    }
+
+    pendingOrderQr?.let { pending ->
+        AlertDialog(
+            onDismissRequest = { if (!orderPaymentInProgress) pendingOrderQr = null },
+            title = { Text("Pagar pedido · OMNI Pay DEMO") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Comercio: ${pending.payload.merchantName}", fontWeight = FontWeight.Bold)
+                    pending.payload.items.forEach { item ->
+                        Text("${item.quantity} × ${item.name}", fontSize = 12.sp)
+                    }
+                    Text("Total confirmado: OM$ ${String.format("%,.2f", pending.payload.totalAmount)}", fontWeight = FontWeight.ExtraBold)
+                    Text("El importe se valida nuevamente en Firestore. No se mueve dinero real.", fontSize = 10.sp, color = Color.Gray)
+                    Text("Saldo disponible: OM$ ${String.format("%,.2f", wallet.balance)}", fontSize = 11.sp)
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = !orderPaymentInProgress,
+                    onClick = {
+                        if (!orderPaymentInProgress) {
+                            orderPaymentInProgress = true
+                            walletRepository.ensureWallet { walletResult ->
+                                walletResult.fold(
+                                    onSuccess = {
+                                        walletRepository.payStoreOrderDemo(
+                                            pending.payload.orderId,
+                                            pending.merchantUid,
+                                            pending.payload.totalAmount
+                                        ) { paymentResult ->
+                                            orderPaymentInProgress = false
+                                            paymentResult.fold(
+                                                onSuccess = { message ->
+                                                    OmniTracker.track("orders", "ORDER_QR_PAYMENT_CONFIRMED", mapOf("operationId" to pending.payload.orderId, "success" to true))
+                                                    pendingOrderQr = null
+                                                    paymentSuccessMessage = "$message. Operación ficticia; no se movió dinero real."
+                                                },
+                                                onFailure = { error ->
+                                                    paymentSuccessMessage = error.localizedMessage ?: "No se pudo completar el pago del pedido."
+                                                }
+                                            )
+                                        }
+                                    },
+                                    onFailure = { error ->
+                                        orderPaymentInProgress = false
+                                        paymentSuccessMessage = error.localizedMessage ?: "No se pudo preparar OMNI Pay DEMO."
+                                    }
+                                )
+                            }
+                        }
+                    }
+                ) { Text(if (orderPaymentInProgress) "Procesando…" else "Confirmar pago DEMO") }
+            },
+            dismissButton = {
+                TextButton(onClick = { if (!orderPaymentInProgress) pendingOrderQr = null }, enabled = !orderPaymentInProgress) { Text("Cancelar") }
+            }
         )
     }
 

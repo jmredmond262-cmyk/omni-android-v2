@@ -94,6 +94,7 @@ import androidx.compose.ui.unit.sp
 import com.example.model.DietaryPreference
 import com.example.model.SavedCard
 import com.example.ui.MainViewModel
+import com.example.data.wallet.WalletAliasService
 import com.example.ui.Screen
 import com.example.ui.theme.AmberDeal
 import com.example.ui.theme.AppThemeMode
@@ -129,6 +130,7 @@ fun UserProfileScreen(
     var editAlias by remember(profile.walletAlias) { mutableStateOf(profile.walletAlias) }
     var editCvu by remember(profile.cvuCbu) { mutableStateOf(profile.cvuCbu) }
     var editDni by remember(profile.nationalId) { mutableStateOf(profile.nationalId) }
+    var savingWalletData by remember { mutableStateOf(false) }
 
     // Estados de Emergencia
     var editEmergencyContact by remember(profile.emergencyContactName) { mutableStateOf(profile.emergencyContactName) }
@@ -153,10 +155,10 @@ fun UserProfileScreen(
                     language = prefs.getString("language", profile.preferredLanguage).orEmpty(),
                     privacy = prefs.getString("privacy", profile.privacyLevel).orEmpty()
                 )
-                if (prefs.contains("walletAlias")) {
+                if (prefs.contains("nationalId")) {
+                    // Alias y CVU se leen de la cuenta compartida, nunca de una copia local antigua.
                     viewModel.updateWalletAliasAndCvu(
-                        prefs.getString("walletAlias", "").orEmpty(),
-                        prefs.getString("cvuCbu", "").orEmpty(),
+                        profile.walletAlias, profile.cvuCbu,
                         prefs.getString("nationalId", "").orEmpty()
                     )
                 }
@@ -639,17 +641,34 @@ fun UserProfileScreen(
 
                             Button(
                                 onClick = {
-                                    viewModel.updateWalletAliasAndCvu(editAlias, editCvu, editDni)
-                                    profilePrefs.edit().putBoolean("customized", true)
-                                        .putString("walletAlias", editAlias).putString("cvuCbu", editCvu)
-                                        .putString("nationalId", editDni).apply()
-                                    Toast.makeText(context, "Datos de billetera guardados en este dispositivo", Toast.LENGTH_SHORT).show()
+                                    if (!savingWalletData) {
+                                        savingWalletData = true
+                                        WalletAliasService().updateAlias(editAlias) { result ->
+                                            savingWalletData = false
+                                            result.fold(
+                                                onSuccess = { saved ->
+                                                    editAlias = saved.alias
+                                                    editCvu = saved.cvu
+                                                    viewModel.updateWalletAliasAndCvu(saved.alias, saved.cvu, editDni)
+                                                    profilePrefs.edit().putBoolean("customized", true)
+                                                        .putString("walletAlias", saved.alias)
+                                                        .putString("cvuCbu", saved.cvu)
+                                                        .putString("nationalId", editDni).apply()
+                                                    Toast.makeText(context, "Alias actualizado y disponible para otras cuentas OMNI", Toast.LENGTH_SHORT).show()
+                                                },
+                                                onFailure = { error ->
+                                                    Toast.makeText(context, error.localizedMessage ?: "No se pudo actualizar el alias.", Toast.LENGTH_LONG).show()
+                                                }
+                                            )
+                                        }
+                                    }
                                 },
+                                enabled = !savingWalletData,
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                             ) {
-                                Text("Guardar Datos Financieros", fontWeight = FontWeight.Bold)
+                                Text(if (savingWalletData) "Actualizando alias…" else "Guardar Datos Financieros", fontWeight = FontWeight.Bold)
                             }
                         }
                     }
