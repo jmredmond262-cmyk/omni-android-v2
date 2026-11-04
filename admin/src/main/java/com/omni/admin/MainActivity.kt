@@ -800,7 +800,7 @@ private fun RecordCard(item: Map<String, Any?>, type: String) {
     "merchantProfiles" -> firstPresentValue(item, "storeName", "name").ifBlank { "Comercio OMNI" }
     "storeOrders" -> "Pedido " + firstPresentValue(item, "orderNumber", "status").ifBlank { "OMNI" }
     "appFeedback" -> "Comentario de usuario"
-    "activity", "usageEvents" -> friendlyEnum(firstPresentValue(item, "event", "eventName", "action", "type").ifBlank { "Actividad registrada" })
+    "activity", "usageEvents" -> { val category = activityCategory(item); val action = friendlyEnum(firstPresentValue(item, "event", "eventName", "action", "type").ifBlank { "Actividad registrada" }); if (category == "Otros") action else "$category · $action" }
     "walletTransactions" -> friendlyEnum(firstPresentValue(item, "type", "kind", "title").ifBlank { "Movimiento de billetera" })
     "omniEvents" -> firstPresentValue(item, "title", "name", "event", "eventName").ifBlank { "Evento OMNI" }
     "adminAuditLogs" -> friendlyEnum(firstPresentValue(item, "action").ifBlank { "Actividad administrativa" })
