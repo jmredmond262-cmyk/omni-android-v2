@@ -811,39 +811,51 @@ class MainViewModel : ViewModel() {
     fun refreshLiveGpsAndPlaces(context: Context) {
         viewModelScope.launch {
             _isLoadingLiveLocation.value = true
-            val hasPerm = RealLocationHelper.hasLocationPermission(context)
-            val loc = if (hasPerm) RealLocationHelper.getCurrentLocation(context) else null
-            val lat = loc?.latitude ?: _userProfile.value.currentLatitude
-            val lon = loc?.longitude ?: _userProfile.value.currentLongitude
+            try {
+                val hasPerm = RealLocationHelper.hasLocationPermission(context)
+                if (!hasPerm) {
+                    _currentCity.value = "Permiso de ubicación requerido"
+                    return@launch
+                }
+                val loc = RealLocationHelper.getCurrentLocation(context)
+                if (loc == null) {
+                    // No usar coordenadas antiguas como si fueran la ubicación actual.
+                    _currentCity.value = "GPS no disponible · intentá nuevamente"
+                    return@launch
+                }
+                val lat = loc.latitude
+                val lon = loc.longitude
+                if (!lat.isFinite() || !lon.isFinite() || lat !in -90.0..90.0 ||
+                    lon !in -180.0..180.0 || (lat == 0.0 && lon == 0.0)) {
+                    _currentCity.value = "No se pudo validar la ubicación GPS"
+                    return@launch
+                }
 
-            val details = RealPlacesApi.reverseGeocodeDetails(lat, lon)
-            val address = details.fullAddress
-            val city = details.city.ifBlank { "Romang" }
-            _currentCity.value = city
-            _touristAttractions.value = ArgentinaAttractions.nearby(lat, lon)
-            trackUsageAction("TOURISM_NEARBY_LOADED", "tourism", mapOf("resultCount" to _touristAttractions.value.size))
-            trackUsageAction("NEARBY_AREA_REFRESHED", "maps_locations")
-            saveLocation(context, city, lat, lon)
+                val details = RealPlacesApi.reverseGeocodeDetails(lat, lon)
+                val address = details.fullAddress
+                val city = details.city.ifBlank { _currentCity.value.takeIf { it.isNotBlank() } ?: "Ubicación actual" }
+                _currentCity.value = city
+                _touristAttractions.value = ArgentinaAttractions.nearby(lat, lon)
+                trackUsageAction("TOURISM_NEARBY_LOADED", "tourism", mapOf("resultCount" to _touristAttractions.value.size))
+                trackUsageAction("NEARBY_AREA_REFRESHED", "maps_locations")
+                saveLocation(context, city, lat, lon)
 
-            _userProfile.value = _userProfile.value.copy(
-                currentLatitude = lat,
-                currentLongitude = lon,
-                currentGpsAddress = address
-            )
-            _tripOrigin.value = address
+                _userProfile.value = _userProfile.value.copy(
+                    currentLatitude = lat,
+                    currentLongitude = lon,
+                    currentGpsAddress = address
+                )
+                _tripOrigin.value = address
+                fetchLiveWeatherAndAlerts(lat, lon, address)
 
-            // Actualizar clima real y alertas vivas
-            fetchLiveWeatherAndAlerts(lat, lon, address)
-
-            // Cargar comercios reales con Google Places API (New) y base local verificada
-            val localStores = RealPlacesApi.fetchNearbyRealStores(lat, lon, _searchRadiusMeters.value, city, context)
-            // Nunca conservar resultados de otra localidad ni dejar visibles comercios fuera de la zona elegida.
-            publishStoreResults(onlySelectedLocality(localStores))
-
-            // Actualizar viaje con origen real
-            searchTrip(address, _tripDestination.value)
-
-            _isLoadingLiveLocation.value = false
+                val localStores = RealPlacesApi.fetchNearbyRealStores(lat, lon, _searchRadiusMeters.value, city, context)
+                publishStoreResults(onlySelectedLocality(localStores))
+                searchTrip(address, _tripDestination.value)
+            } catch (error: Exception) {
+                _currentCity.value = "No se pudo actualizar GPS · intentá nuevamente"
+            } finally {
+                _isLoadingLiveLocation.value = false
+            }
         }
     }
 
