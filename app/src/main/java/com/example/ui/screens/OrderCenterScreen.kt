@@ -267,7 +267,8 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
         UsageAnalyticsRepository.trackCurrentAction("orders", "ORDER_QR_SCAN_STARTED")
         GmsBarcodeScanning.getClient(context).startScan()
             .addOnSuccessListener { barcode ->
-                val qrValue = barcode.rawValue.orEmpty().trim()\n                val parts = qrValue.split("|").map { it.trim() }
+                val qrValue = barcode.rawValue.orEmpty().trim()
+                val parts = qrValue.split("|").map { it.trim() }
                 if (parts.size != 3 || parts[0] != "OMNI-ORDER" || parts[1].isBlank() || parts[2].isBlank()) {
                     feedback = "QR no compatible con gestión de pedidos. Para operar entre dos teléfonos, escaneá el QR que aparece al confirmar una compra en Pedidos OMNI; los QR de catálogo DEMO son referencias locales."
                 } else {
