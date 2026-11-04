@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.Store
+import com.example.data.SampleData
 import com.example.data.wallet.DemoWalletRepository
 import com.example.model.StoreProduct
 import com.example.model.ProductCategory
@@ -80,25 +81,39 @@ fun OrderCenterScreen(viewModel: MainViewModel, merchantMode: Boolean, onBack: (
         else orderStores.firstOrNull { it.id == selectedOrderStoreId } ?: managedStore
     val hasCustomerStoreSelected = merchantMode || orderStores.any { it.id == selectedOrderStoreId }
 
-    LaunchedEffect(merchantMode, uid, availableStores, managedStore.id) {
+    LaunchedEffect(merchantMode, uid, managedStore.id) {
         if (!merchantMode && uid.isNotBlank()) {
             db.collection("merchantProfiles").get()
                 .addOnSuccessListener { snapshot ->
+                    // El catálogo demo vive en SampleData; no depende de que el buscador GPS
+                    // haya encontrado esos locales en la zona actual.
+                    val candidateStores = (SampleData.sampleStores + availableStores)
+                        .distinctBy { it.id }
+                        .filter { it.id != managedStore.id }
                     val eligibleIds = snapshot.documents
-                        .filter { it.getString("ownerUid").orEmpty() != uid }
                         .filter { doc ->
-                            val inventory = doc.get("inventory") as? List<*>
-                            inventory?.any { raw ->
-                                val item = raw as? Map<*, *>
-                                item?.get("inStock") != false
-                            } == true
+                            val ownerUid = doc.getString("ownerUid").orEmpty()
+                            ownerUid.isNotBlank() && ownerUid != uid
                         }
                         .map { it.id }.toSet()
-                    orderStores = availableStores.filter { it.id in eligibleIds && it.id != managedStore.id }
+                    val eligibleStores = candidateStores.filter { it.id in eligibleIds }
+                    MerchantProfileRepository.loadPublicCatalogs(eligibleStores) { enriched ->
+                        orderStores = enriched
+                            .filter { it.id != managedStore.id && it.inventory.any { product -> product.inStock } }
+                            .sortedBy { it.name.lowercase() }
+                        if (selectedOrderStoreId !in orderStores.map { it.id }) {
+                            selectedOrderStoreId = ""
+                        }
+                    }
                 }
-                .addOnFailureListener { orderStores = emptyList() }
+                .addOnFailureListener {
+                    orderStores = emptyList()
+                    selectedOrderStoreId = ""
+                    feedback = "No se pudieron cargar los comercios demo: ${it.localizedMessage ?: "error de conexión"}"
+                }
         } else if (!merchantMode) {
             orderStores = emptyList()
+            selectedOrderStoreId = ""
         }
     }
 
