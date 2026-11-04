@@ -89,6 +89,11 @@ import com.example.ui.theme.CyberDarkSurface
 import com.example.ui.theme.CyberDarkBg
 import com.example.ui.theme.SlateNavy
 
+private data class PendingOrderQRPayment(
+    val payload: OrderQRPayload,
+    val merchantUid: String
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WalletScreen(
@@ -267,7 +272,7 @@ fun WalletScreen(
                     ) {
                         OrderQRScanner(
                             onOrderScanned = { payload ->
-                                UsageAnalyticsRepository.trackCurrentAction("orders", "ORDER_QR_PAYMENT_SCAN")
+                                OmniTracker.track("orders", "ORDER_QR_PAYMENT_SCAN")
                                 orderDb.collection("storeOrders").document(payload.orderId).get()
                                     .addOnSuccessListener { doc ->
                                         val storedItems = doc.get("items") as? List<*>
