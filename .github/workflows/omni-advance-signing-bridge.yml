@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build:
-    name: Build OMNI Principal and Admin 1.4
+    name: Build OMNI Principal and Admin 1.4.1
     runs-on: ubuntu-latest
     steps:
       - name: Checkout OMNI Advance source
@@ -115,10 +115,10 @@ jobs:
           test "$ACTUAL_SHA256" = "$EXPECTED_SHA256" || { echo "::error::La firma no coincide con la identidad original. No se publicarán APK."; exit 1; }
           echo "Original signing identity validated."
 
-      - name: Build OMNI Principal 1.4
+      - name: Build OMNI Principal 1.4.1
         working-directory: source
         env:
-          OMNI_VERSION_CODE: "513"
+          OMNI_VERSION_CODE: "514"
         run: gradle :app:assembleDebug
 
       - name: Verify OMNI Principal package, version and signature
@@ -126,8 +126,9 @@ jobs:
         run: |
           set -euo pipefail
           APK="app/build/outputs/apk/debug/app-debug.apk"
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.aistudio.omnihub.qtzmvd' versionCode='513' versionName='1.4.0'"
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$APK" > /tmp/omni-principal-certs.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.aistudio.omnihub.qtzmvd' versionCode='514' versionName='1.4.1'"
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" > /tmp/omni-principal-certs.txt
           APK_SHA256="$(awk -F': ' '/certificate SHA-256 digest:/{print $2; exit}' /tmp/omni-principal-certs.txt | tr -d ':' | tr '[:lower:]' '[:upper:]')"
           EXPECTED_SHA256="486513DCA524F8C09134DB97A7D5650A2F2461E4306DB181B7C2DFE2D40E495B"
           test "$APK_SHA256" = "$EXPECTED_SHA256" || { echo "::error::La APK Principal no conserva la firma original."; exit 1; }
@@ -136,15 +137,15 @@ jobs:
       - name: Upload OMNI Principal APK
         uses: actions/upload-artifact@v4
         with:
-          name: omni-advance-principal-v1.4
+          name: omni-advance-principal-v1.4.1
           path: source/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 90
 
-      - name: Build OMNI Admin 1.4
+      - name: Build OMNI Admin 1.4.1
         working-directory: source
         env:
-          OMNI_ADMIN_VERSION_CODE: "69"
+          OMNI_ADMIN_VERSION_CODE: "70"
         run: gradle :admin:assembleDebug
 
       - name: Verify OMNI Admin package, version and signature
@@ -152,8 +153,9 @@ jobs:
         run: |
           set -euo pipefail
           APK="admin/build/outputs/apk/debug/admin-debug.apk"
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.omni.adminpanel' versionCode='69' versionName='1.4.0'"
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$APK" > /tmp/omni-admin-certs.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.omni.adminpanel' versionCode='70' versionName='1.4.1'"
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" > /tmp/omni-admin-certs.txt
           APK_SHA256="$(awk -F': ' '/certificate SHA-256 digest:/{print $2; exit}' /tmp/omni-admin-certs.txt | tr -d ':' | tr '[:lower:]' '[:upper:]')"
           EXPECTED_SHA256="486513DCA524F8C09134DB97A7D5650A2F2461E4306DB181B7C2DFE2D40E495B"
           test "$APK_SHA256" = "$EXPECTED_SHA256" || { echo "::error::La APK Admin no conserva la firma original."; exit 1; }
@@ -162,7 +164,7 @@ jobs:
       - name: Upload OMNI Admin APK
         uses: actions/upload-artifact@v4
         with:
-          name: omni-advance-admin-v1.4
+          name: omni-advance-admin-v1.4.1
           path: source/admin/build/outputs/apk/debug/admin-debug.apk
           if-no-files-found: error
           retention-days: 90
