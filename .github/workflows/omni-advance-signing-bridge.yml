@@ -1,4 +1,5 @@
 name: OMNI Advance 1.4.1 - Original Signing Bridge
+# Integrated source updates: holder identity and compact Daily Hub cards.
 
 on:
   push:
