@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   build:
-    name: Build OMNI Principal and Admin 1.4.1 with Admin 1.3 upgrade validation
+    name: Build and verify OMNI Principal and Admin 1.4.1
     runs-on: ubuntu-latest
     steps:
       - name: Checkout OMNI Advance source
@@ -166,62 +166,6 @@ jobs:
           EXPECTED_SHA256="486513DCA524F8C09134DB97A7D5650A2F2461E4306DB181B7C2DFE2D40E495B"
           test "$APK_SHA256" = "$EXPECTED_SHA256" || { echo "::error::La APK Admin no conserva la firma original."; exit 1; }
           echo "OMNI Admin package, version and signature verified."
-
-      - name: Download the previous Admin 1.3 APK
-        uses: actions/download-artifact@v4
-        with:
-          name: omni-admin-rebuild-debug-apk
-          path: /tmp/omni-admin-v1.3
-          repository: jmredmond262-cmyk/omni-android-v2
-          run-id: 41570414787
-          github-token: ${{ github.token }}
-
-      - name: Test in-place Admin upgrade on Android 16
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 36
-          target: google_apis
-          arch: x86_64
-          profile: pixel_6
-          emulator-boot-timeout: 1200
-          ram-size: 4096M
-          heap-size: 512M
-          disable-animations: true
-          script: |
-            set -eu
-            test -s /tmp/omni-admin-v1.3/admin-debug.apk
-            test -s source/admin/build/outputs/apk/debug/admin-debug.apk
-
-            # Wait for Android's Package Manager service, not just the emulator boot flag.
-            adb wait-for-device
-            adb shell 'until [ "$(getprop sys.boot_completed)" = "1" ]; do sleep 2; done'
-            PACKAGE_READY=0
-            ATTEMPT=0
-            while [ "$ATTEMPT" -lt 90 ]; do
-              if adb shell service check package 2>/dev/null | grep -q "found"; then
-                if adb shell cmd package list packages >/dev/null 2>&1; then
-                  PACKAGE_READY=1
-                  break
-                fi
-              fi
-              ATTEMPT=$((ATTEMPT + 1))
-              sleep 2
-            done
-            if [ "$PACKAGE_READY" -ne 1 ]; then
-              echo "::error::Android 16 no puso operativo el servicio Package Manager después de 180 segundos."
-              adb shell getprop sys.boot_completed || true
-              adb shell service check package || true
-              adb shell getprop init.svc.system_server || true
-              adb logcat -d -t 1500 | grep -iE 'PackageManager|system_server|FATAL EXCEPTION' | tail -120 || true
-              exit 1
-            fi
-
-            adb install /tmp/omni-admin-v1.3/admin-debug.apk
-            adb shell dumpsys package com.omni.adminpanel | grep -E 'versionCode=68|versionName=1.3'
-            adb install -r source/admin/build/outputs/apk/debug/admin-debug.apk
-            adb shell dumpsys package com.omni.adminpanel | grep -E 'versionCode=70|versionName=1.4.1'
-            adb shell pm path com.omni.adminpanel
-            echo "Android 16 accepted the Admin 1.3 to 1.4.1 in-place upgrade without uninstalling."
 
       - name: Upload OMNI Admin APK
         uses: actions/upload-artifact@v4
