@@ -82,10 +82,10 @@ jobs:
               values["default_web_client_id"] = web_client
           os.makedirs("admin/src/main/res/values", exist_ok=True)
           with open("admin/src/main/res/values/firebase_config.xml", "w", encoding="utf-8") as f:
-              f.write("<resources>\\n")
+              f.write("<resources>\n")
               for key, value in values.items():
-                  f.write(f'  <string name="{key}" translatable="false">{xml.escape(value)}</string>\\n')
-              f.write("</resources>\\n")
+                  f.write(f'  <string name="{key}" translatable="false">{xml.escape(value)}</string>\n')
+              f.write("</resources>\n")
           PY
           echo "OMNI Admin Firebase resources configured."
 
@@ -96,7 +96,7 @@ jobs:
           GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
         run: |
           GEMINI_VALUE="${GEMINI_API_KEY:-NOT_CONFIGURED}"
-          printf 'GEMINI_API_KEY=%s\\nGOOGLE_MAPS_API_KEY=%s\\n' "$GEMINI_VALUE" "$GOOGLE_MAPS_API_KEY" > .env
+          printf 'GEMINI_API_KEY=%s\nGOOGLE_MAPS_API_KEY=%s\n' "$GEMINI_VALUE" "$GOOGLE_MAPS_API_KEY" > .env
 
       - name: Configure and validate original OMNI signing identity
         working-directory: source
