@@ -1,4 +1,4 @@
-name: OMNI Admin 1.4.2 - Original Signing Bridge
+name: OMNI Admin 1.4.2 - Original Signing Bridge # verified versionName 1.4.2
 
 on:
   workflow_dispatch:
