@@ -1,5 +1,6 @@
 name: OMNI Advance 1.4.1 - Original Signing Bridge
 # Integrated source updates: holder identity and compact Daily Hub cards.
+# Latest source update: avoid duplicate weather summary on the home screen.
 
 on:
   push:
