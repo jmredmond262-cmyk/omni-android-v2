@@ -191,6 +191,31 @@ jobs:
             set -eu
             test -s /tmp/omni-admin-v1.3/admin-debug.apk
             test -s source/admin/build/outputs/apk/debug/admin-debug.apk
+
+            # Wait for Android's Package Manager service, not just the emulator boot flag.
+            adb wait-for-device
+            adb shell 'until [ "$(getprop sys.boot_completed)" = "1" ]; do sleep 2; done'
+            PACKAGE_READY=0
+            ATTEMPT=0
+            while [ "$ATTEMPT" -lt 90 ]; do
+              if adb shell service check package 2>/dev/null | grep -q "found"; then
+                if adb shell cmd package list packages >/dev/null 2>&1; then
+                  PACKAGE_READY=1
+                  break
+                fi
+              fi
+              ATTEMPT=$((ATTEMPT + 1))
+              sleep 2
+            done
+            if [ "$PACKAGE_READY" -ne 1 ]; then
+              echo "::error::Android 16 no puso operativo el servicio Package Manager después de 180 segundos."
+              adb shell getprop sys.boot_completed || true
+              adb shell service check package || true
+              adb shell getprop init.svc.system_server || true
+              adb logcat -d -t 1500 | grep -iE 'PackageManager|system_server|FATAL EXCEPTION' | tail -120 || true
+              exit 1
+            fi
+
             adb install /tmp/omni-admin-v1.3/admin-debug.apk
             adb shell dumpsys package com.omni.adminpanel | grep -E 'versionCode=68|versionName=1.3'
             adb install -r source/admin/build/outputs/apk/debug/admin-debug.apk
