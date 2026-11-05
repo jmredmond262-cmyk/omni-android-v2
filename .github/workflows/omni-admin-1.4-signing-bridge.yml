@@ -1,6 +1,6 @@
 name: OMNI Admin 1.4.5 - Original Signing Bridge # verified versionName 1.4.5
 # Audit trigger: rebuild only the Admin 1.4.5 source branch.
-# Map rendering compatibility rebuild: source contains CARTO and OpenStreetMap fallbacks.
+# Map rendering rebuild: Leaflet with direct OSM/Google embedded fallback.
 
 on:
   workflow_dispatch:
