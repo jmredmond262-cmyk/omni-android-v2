@@ -3,6 +3,7 @@ name: OMNI Advance 1.4.1 - Original Signing Bridge
 # Latest source update: avoid duplicate weather summary on the home screen.
 # Compile fixes: CONEX LazyRow import and Moments LazyColumn padding.
 # Home cleanup: remove duplicate Services shortcut to the Contacts dock item.
+# Latest compile fix: FLOW briefing Compose coroutine and button imports.
 
 on:
   push:
