@@ -1,4 +1,4 @@
-name: OMNI Admin 1.4.3 - Original Signing Bridge # verified versionName 1.4.3
+name: OMNI Admin 1.4.4 - Original Signing Bridge # verified versionName 1.4.4
 
 on:
   workflow_dispatch:
@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   build:
-    name: Build and verify OMNI Admin 1.4.3 only
+    name: Build and verify OMNI Admin 1.4.4 only
     runs-on: ubuntu-latest
     steps:
       - name: Checkout OMNI Advance source
@@ -115,10 +115,10 @@ jobs:
           test "$ACTUAL_SHA256" = "$EXPECTED_SHA256" || { echo "::error::La firma no coincide con la identidad original. No se publicará la APK."; exit 1; }
           echo "Original signing identity validated."
 
-      - name: Build OMNI Admin 1.4.3
+      - name: Build OMNI Admin 1.4.4
         working-directory: source
         env:
-          OMNI_ADMIN_VERSION_CODE: "73"
+          OMNI_ADMIN_VERSION_CODE: "74"
         run: gradle :admin:assembleDebug
 
       - name: Verify OMNI Admin package, version and signature
@@ -126,7 +126,7 @@ jobs:
         run: |
           set -euo pipefail
           APK="admin/build/outputs/apk/debug/admin-debug.apk"
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.omni.adminpanel' versionCode='73' versionName='1.4.3'"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.omni.adminpanel' versionCode='74' versionName='1.4.4'"
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" > /tmp/omni-admin-certs.txt
           APK_SHA256="$(awk -F': ' '/certificate SHA-256 digest:/{print $2; exit}' /tmp/omni-admin-certs.txt | tr -d ':' | tr '[:lower:]' '[:upper:]')"
@@ -137,7 +137,7 @@ jobs:
       - name: Upload OMNI Admin APK
         uses: actions/upload-artifact@v4
         with:
-          name: omni-admin-v1.4.3-original-signature
+          name: omni-admin-v1.4.4-original-signature
           path: source/admin/build/outputs/apk/debug/admin-debug.apk
           if-no-files-found: error
           retention-days: 90
