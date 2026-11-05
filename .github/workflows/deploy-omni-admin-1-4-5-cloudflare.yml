@@ -24,6 +24,7 @@ jobs:
           repository: jmredmond262-cmyk/omni-advance-plataform-import
           ref: omni-advance-1.4
           path: source
+          token: ${{ secrets.OMNI_ADVANCE_READ_TOKEN }}
 
       - name: Configure Node
         uses: actions/setup-node@v4
@@ -35,7 +36,9 @@ jobs:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.OMNI_PRIMARY_FIREBASE_SERVICE_ACCOUNT_BASE64 }}
+          SOURCE_READ_TOKEN: ${{ secrets.OMNI_ADVANCE_READ_TOKEN }}
         run: |
+          test -n "$SOURCE_READ_TOKEN" || { echo "::error::Falta OMNI_ADVANCE_READ_TOKEN"; exit 1; }
           test -n "$CF_TOKEN" || { echo "::error::Falta CLOUDFLARE_API_TOKEN"; exit 1; }
           test -n "$CF_ACCOUNT" || { echo "::error::Falta CLOUDFLARE_ACCOUNT_ID"; exit 1; }
           test -n "$FIREBASE_SERVICE_ACCOUNT" || { echo "::error::Falta OMNI_PRIMARY_FIREBASE_SERVICE_ACCOUNT_BASE64"; exit 1; }
