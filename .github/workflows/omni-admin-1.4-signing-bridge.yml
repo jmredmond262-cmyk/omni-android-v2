@@ -1,6 +1,6 @@
 name: OMNI Admin 1.4.5 - Original Signing Bridge # verified versionName 1.4.5
 # Dashboard cyber-neon redesign rebuild: validate OMNI Admin 1.4.5.
-# GeoActivity rebuild: live privacy-threshold map with OSM cartography and refresh.
+# GeoActivity rebuild: live locality-aware views and verified map refresh.
 
 on:
   workflow_dispatch:
