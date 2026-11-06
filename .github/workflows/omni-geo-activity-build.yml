@@ -98,10 +98,10 @@ jobs:
               values["default_web_client_id"] = web_client
           os.makedirs("admin/src/main/res/values", exist_ok=True)
           with open("admin/src/main/res/values/firebase_config.xml", "w", encoding="utf-8") as f:
-              f.write("<resources>\\n")
+              f.write("<resources>\n")
               for key, value in values.items():
-                  f.write(f'  <string name="{key}" translatable="false">{xml.escape(value)}</string>\\n')
-              f.write("</resources>\\n")
+                  f.write(f'  <string name="{key}" translatable="false">{xml.escape(value)}</string>\n')
+              f.write("</resources>\n")
           PY
           echo "Firebase OMNI Admin configurado."
 
@@ -138,7 +138,7 @@ jobs:
         run: |
           set -euo pipefail
           APK="app/build/outputs/apk/debug/app-debug.apk"
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.aistudio.omnihub.qtzmvd' versionCode='527' versionName='1.4.1'"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.aistudio.omnihub.qtzmvd' versionCode='528' versionName='1.4.1'"
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" > /tmp/omni-principal-certs.txt
           APK_SHA256="$(awk -F': ' '/certificate SHA-256 digest:/{print $2; exit}' /tmp/omni-principal-certs.txt | tr -d ':' | tr '[:lower:]' '[:upper:]')"
