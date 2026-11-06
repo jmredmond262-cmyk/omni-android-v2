@@ -1,5 +1,5 @@
 name: OMNI Admin 1.4.6 - WebView Canvas Resize (Original Signature)
-# Build OMNI Admin 1.4.5 with cyber-neon map render verification (code 84).
+# Build OMNI Admin 1.4.6 with WebView canvas resize correction (code 84, Kotlin listener API fixed).
 
 on:
   push:
