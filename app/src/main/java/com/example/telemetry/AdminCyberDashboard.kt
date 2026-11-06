@@ -18,7 +18,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 
@@ -31,18 +30,13 @@ val CyberGray = Color(0xFF7A889B)
 
 @Composable
 fun AdminCyberDashboardScreen() {
-    val auth = FirebaseAuth.getInstance()
-    var currentUser by remember { mutableStateOf(auth.currentUser) }
+    // Estado de autenticación local por PIN
+    var isUnlocked by remember { mutableStateOf(false) }
 
-    if (currentUser == null) {
-        // PANTALLA DE LOGIN CYBER-NEON
-        AdminLoginScreen(onLoginSuccess = { currentUser = auth.currentUser })
+    if (!isUnlocked) {
+        AdminLoginScreen(onLoginSuccess = { isUnlocked = true })
     } else {
-        // PANEL PRINCIPAL TÁCTICO
-        AdminDashboardContent(onLogout = {
-            auth.signOut()
-            currentUser = null
-        })
+        AdminDashboardContent(onLogout = { isUnlocked = false })
     }
 }
 
@@ -51,8 +45,8 @@ fun AdminLoginScreen(onLoginSuccess: () -> Unit) {
     var pinCode by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
 
-    // PIN MAESTRO DE ACCESO (Cámbialo aquí si deseas otro número)
-    val MASTER_PIN = "0000"
+    // PIN DE ACCESO MAESTRO
+    val MASTER_PIN = "1337"
 
     Column(
         modifier = Modifier
@@ -69,9 +63,8 @@ fun AdminLoginScreen(onLoginSuccess: () -> Unit) {
 
         OutlinedTextField(
             value = pinCode,
-            onValueChange = { if (it.length <= 8) pinCode = it },
+            onValueChange = { pinCode = it },
             label = { Text("PIN DE ACCESO", color = NeonCyan, fontFamily = FontFamily.Monospace) },
-            placeholder = { Text("Ej: 1337", color = CyberGray) },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
@@ -92,7 +85,7 @@ fun AdminLoginScreen(onLoginSuccess: () -> Unit) {
 
         Button(
             onClick = {
-                if (pinCode == MASTER_PIN) {
+                if (pinCode.trim() == MASTER_PIN.trim()) {
                     errorMessage = ""
                     onLoginSuccess()
                 } else {
