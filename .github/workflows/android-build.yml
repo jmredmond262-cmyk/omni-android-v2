@@ -74,9 +74,7 @@ jobs:
             sed -i 's/com.aistudio.omnihub.qtzmvd/com.aistudio.omnihub.qtzmvd.admin/g' app/google-services.json
           fi
       - name: Compilar APK
-        run: |
-          chmod +x gradlew
-          ./gradlew :app:assembleDebug
+        run: gradle :app:assembleDebug
       - name: Upload one-time signing keystore
         if: ${{ steps.signing.outputs.generated == 'true' }}
         uses: actions/upload-artifact@v4
