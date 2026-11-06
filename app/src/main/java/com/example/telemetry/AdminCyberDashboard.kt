@@ -15,8 +15,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 
@@ -29,6 +31,109 @@ val CyberGray = Color(0xFF7A889B)
 
 @Composable
 fun AdminCyberDashboardScreen() {
+    val auth = FirebaseAuth.getInstance()
+    var currentUser by remember { mutableStateOf(auth.currentUser) }
+
+    if (currentUser == null) {
+        // PANTALLA DE LOGIN CYBER-NEON
+        AdminLoginScreen(onLoginSuccess = { currentUser = auth.currentUser })
+    } else {
+        // PANEL PRINCIPAL TÁCTICO
+        AdminDashboardContent(onLogout = {
+            auth.signOut()
+            currentUser = null
+        })
+    }
+}
+
+@Composable
+fun AdminLoginScreen(onLoginSuccess: () -> Unit) {
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(CyberBlack)
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("CYBER COMMAND", color = NeonCyan, fontSize = 24.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+        Text("ACCESO RESTRINGIDO - ADMINISTRADOR", color = CyberGray, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("EMAIL ADMIN", color = NeonCyan, fontFamily = FontFamily.Monospace) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = NeonCyan,
+                unfocusedBorderColor = CyberGray,
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White
+            )
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text("PASSWORD", color = NeonCyan, fontFamily = FontFamily.Monospace) },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = NeonCyan,
+                unfocusedBorderColor = CyberGray,
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White
+            )
+        )
+
+        if (errorMessage.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = errorMessage, color = NeonMagenta, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Button(
+            onClick = {
+                if (email.isNotBlank() && password.isNotBlank()) {
+                    isLoading = true
+                    errorMessage = ""
+                    FirebaseAuth.getInstance().signInWithEmailAndPassword(email.trim(), password)
+                        .addOnSuccessListener {
+                            isLoading = false
+                            onLoginSuccess()
+                        }
+                        .addOnFailureListener {
+                            isLoading = false
+                            errorMessage = "ERROR: Credenciales no autorizadas"
+                        }
+                }
+            },
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = NeonCyan)
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(color = CyberBlack, modifier = Modifier.size(20.dp))
+            } else {
+                Text("INICIAR SESIÓN", color = CyberBlack, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+fun AdminDashboardContent(onLogout: () -> Unit) {
     var events by remember { mutableStateOf<List<TelemetryEvent>>(emptyList()) }
     var selectedEvent by remember { mutableStateOf<TelemetryEvent?>(null) }
 
@@ -60,28 +165,11 @@ fun AdminCyberDashboardScreen() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text(
-                    text = "CYBER COMMAND // ADMIN",
-                    color = NeonCyan,
-                    fontSize = 18.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "TELEMETRÍA & RASTREO TÁCTICO",
-                    color = CyberGray,
-                    fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace
-                )
+                Text("CYBER COMMAND // ADMIN", color = NeonCyan, fontSize = 18.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+                Text("TELEMETRÍA & RASTREO TÁCTICO", color = CyberGray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
             }
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(NeonGreen.copy(alpha = 0.15f))
-                    .border(1.dp, NeonGreen, RoundedCornerShape(4.dp))
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-            ) {
-                Text(text = "EN VIVO", color = NeonGreen, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+            TextButton(onClick = onLogout) {
+                Text("SALIR", color = NeonMagenta, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
             }
         }
 
@@ -95,20 +183,12 @@ fun AdminCyberDashboardScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            text = "REGISTRO DE SUCESOS (FORENSE)",
-            color = NeonCyan,
-            fontSize = 12.sp,
-            fontFamily = FontFamily.Monospace,
-            fontWeight = FontWeight.Bold
-        )
+        Text("REGISTRO DE SUCESOS (FORENSE)", color = NeonCyan, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
 
         Spacer(modifier = Modifier.height(8.dp))
 
         LazyColumn(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
+            modifier = Modifier.weight(1f).fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(events) { ev ->
@@ -122,12 +202,7 @@ fun AdminCyberDashboardScreen() {
             onDismissRequest = { selectedEvent = null },
             containerColor = CyberCardBg,
             title = {
-                Text(
-                    text = "DETALLE: ${ev.eventType}",
-                    color = NeonCyan,
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 14.sp
-                )
+                Text("DETALLE: ${ev.eventType}", color = NeonCyan, fontFamily = FontFamily.Monospace, fontSize = 14.sp)
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -197,12 +272,7 @@ fun EventCard(event: TelemetryEvent, onClick: () -> Unit) {
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold
                     )
-                    Text(
-                        text = "[${event.trackingMode}]",
-                        color = CyberGray,
-                        fontSize = 9.sp,
-                        fontFamily = FontFamily.Monospace
-                    )
+                    Text(text = "[${event.trackingMode}]", color = CyberGray, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
                 }
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
