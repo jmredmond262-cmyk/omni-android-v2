@@ -118,7 +118,7 @@ jobs:
       - name: Build OMNI Admin 1.4.5
         working-directory: source
         env:
-          OMNI_ADMIN_VERSION_CODE: "79
+          OMNI_ADMIN_VERSION_CODE: "79"
         run: gradle :admin:assembleDebug
 
       - name: Verify OMNI Admin package, version and signature
