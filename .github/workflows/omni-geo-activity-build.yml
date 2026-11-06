@@ -1,4 +1,4 @@
-name: OMNI GeoActivity - Principal and Admin Precise GPS Build
+name: OMNI GeoActivity - Final Exact Coordinate Map Build
 
 on:
   workflow_dispatch:
