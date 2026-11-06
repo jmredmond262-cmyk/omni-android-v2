@@ -1,5 +1,5 @@
-name: OMNI Admin 1.4.5 - Live Map Build (Original Signature)
-# Build OMNI Admin 1.4.5 with cyber-neon map render verification (code 83).
+name: OMNI Admin 1.4.6 - WebView Canvas Resize (Original Signature)
+# Build OMNI Admin 1.4.5 with cyber-neon map render verification (code 84).
 
 on:
   push:
@@ -118,7 +118,7 @@ jobs:
       - name: Build OMNI Admin 1.4.5
         working-directory: source
         env:
-          OMNI_ADMIN_VERSION_CODE: "83"
+          OMNI_ADMIN_VERSION_CODE: "84"
         run: gradle :admin:assembleDebug
 
       - name: Verify OMNI Admin package, version and signature
@@ -126,7 +126,7 @@ jobs:
         run: |
           set -euo pipefail
           APK="admin/build/outputs/apk/debug/admin-debug.apk"
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.omni.adminpanel' versionCode='83' versionName='1.4.5'"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.omni.adminpanel' versionCode='84' versionName='1.4.6'"
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" > /tmp/omni-admin-certs.txt
           APK_SHA256="$(awk -F': ' '/certificate SHA-256 digest:/{print $2; exit}' /tmp/omni-admin-certs.txt | tr -d ':' | tr '[:lower:]' '[:upper:]')"
@@ -137,7 +137,7 @@ jobs:
       - name: Upload OMNI Admin APK
         uses: actions/upload-artifact@v4
         with:
-          name: omni-admin-v1.4.5-live-map-original-signature
+          name: omni-admin-v1.4.6-live-map-canvas-fix-original-signature
           path: source/admin/build/outputs/apk/debug/admin-debug.apk
           if-no-files-found: error
           retention-days: 90
