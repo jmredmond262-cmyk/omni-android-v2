@@ -154,10 +154,10 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
-      - name: Build OMNI Admin 1.4.8
+      - name: Build OMNI Admin 1.4.9
         working-directory: source
         env:
-          OMNI_ADMIN_VERSION_CODE: "86"
+          OMNI_ADMIN_VERSION_CODE: "87"
         run: gradle :admin:assembleDebug
 
       - name: Verify OMNI Admin package, version and original signature
@@ -165,18 +165,18 @@ jobs:
         run: |
           set -euo pipefail
           APK="admin/build/outputs/apk/debug/admin-debug.apk"
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.omni.adminpanel' versionCode='86' versionName='1.4.8'"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.omni.adminpanel' versionCode='87' versionName='1.4.9'"
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" > /tmp/omni-admin-certs.txt
           APK_SHA256="$(awk -F': ' '/certificate SHA-256 digest:/{print $2; exit}' /tmp/omni-admin-certs.txt | tr -d ':' | tr '[:lower:]' '[:upper:]')"
           EXPECTED_SHA256="486513DCA524F8C09134DB97A7D5650A2F2461E4306DB181B7C2DFE2D40E495B"
           test "$APK_SHA256" = "$EXPECTED_SHA256" || { echo "::error::La APK Admin no conserva la firma original."; exit 1; }
-          echo "OMNI Admin 1.4.8 verificada."
+          echo "OMNI Admin 1.4.9 verificada."
 
       - name: Upload OMNI Admin APK
         uses: actions/upload-artifact@v4
         with:
-          name: omni-admin-v1.4.8-precise-live-map-v86
+          name: omni-admin-v1.4.9-neon-clusters-v87
           path: source/admin/build/outputs/apk/debug/admin-debug.apk
           if-no-files-found: error
           retention-days: 90
