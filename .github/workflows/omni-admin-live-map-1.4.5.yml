@@ -1,5 +1,5 @@
 name: OMNI Admin 1.4.5 - Live Map Build (Original Signature)
-# Build OMNI Admin 1.4.5 with the dedicated cyber-neon live map screen.
+# Build OMNI Admin 1.4.5 with cyber-neon map render verification (code 82).
 
 on:
   push:
