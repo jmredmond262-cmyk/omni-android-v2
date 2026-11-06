@@ -1,4 +1,4 @@
-name: Deploy OMNI Admin 1.4.5 API to Cloudflare
+name: Deploy OMNI Admin Precise GPS API to Cloudflare
 
 on:
   workflow_dispatch:
