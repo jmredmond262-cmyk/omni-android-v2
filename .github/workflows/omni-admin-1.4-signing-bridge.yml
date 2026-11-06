@@ -1,5 +1,5 @@
 name: OMNI Admin 1.4.5 - Original Signing Bridge # verified versionName 1.4.5
-# Audit trigger: rebuild only the Admin 1.4.5 source branch.
+# Dashboard cyber-neon redesign rebuild: validate OMNI Admin 1.4.5.
 # Map rendering rebuild: Leaflet with direct OSM/Google embedded fallback.
 
 on:
