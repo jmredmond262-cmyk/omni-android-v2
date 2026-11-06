@@ -2,7 +2,7 @@ name: OMNI Android Build
 
 on:
   push:
-    branches: [ "main", "omni-admin-rebuild" ]
+    branches: [ "main", "omni-admin-rebuild", "admin-cyber"]
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
@@ -68,7 +68,12 @@ jobs:
             echo "A one-time debug key was generated. Save the keystore artifact and configure OMNI_DEBUG_KEYSTORE_BASE64 to keep this signing identity."
           fi
           keytool -list -v -keystore debug.keystore -storepass android -alias androiddebugkey | grep -E 'SHA1:|SHA256:'
-      - name: Build debug APK
+      - name: Ajustar identificador Admin
+        run: |
+          if [ -f app/google-services.json ]; then
+            sed -i 's/com.aistudio.omnihub.qtzmvd/com.aistudio.omnihub.qtzmvd.admin/g' app/google-services.json
+          fi
+      - name: Compilar APK
         run: gradle :app:assembleDebug
       - name: Upload one-time signing keystore
         if: ${{ steps.signing.outputs.generated == 'true' }}
