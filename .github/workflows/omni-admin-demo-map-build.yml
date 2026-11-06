@@ -1,4 +1,4 @@
-name: OMNI Admin 1.4.10 - Demo map signed build (compile fix)
+name: OMNI Admin 1.4.10 - Demo map marker rendering fix
 
 on:
   workflow_dispatch:
