@@ -1,6 +1,6 @@
 name: OMNI Admin 1.4.5 - Original Signing Bridge # verified versionName 1.4.5
 # Dashboard cyber-neon redesign rebuild: validate OMNI Admin 1.4.5.
-# GeoActivity map repair: load OpenStreetMap directly as the WebView page; no external Leaflet CDN or nested map iframe.
+# GeoActivity map repair: use OpenStreetMap's dedicated embed view in Android WebView.
 
 on:
   workflow_dispatch:
