@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Fondo Negro Abisal Táctico -->
+    <path
+        android:fillColor="#070B14"
+        android:pathData="M0,0h108v108h-108z"/>
+
+    <!-- Círculos de Radar (Cian Neón) -->
+    <path
+        android:strokeColor="#00F0FF"
+        android:strokeWidth="1.8"
+        android:pathData="M54,18 A36,36 0 1,1 53.9,18"/>
+    <path
+        android:strokeColor="#00F0FF"
+        android:strokeWidth="1.5"
+        android:strokeAlpha="0.45"
+        android:pathData="M54,30 A24,24 0 1,1 53.9,30"/>
+
+    <!-- Cruz / Mirilla de Geolocalización -->
+    <path
+        android:strokeColor="#00F0FF"
+        android:strokeWidth="1.5"
+        android:pathData="M54,10 L54,98 M10,54 L98,54"/>
+
+    <!-- Núcleo Táctico Central (Verde Neón) -->
+    <path
+        android:fillColor="#00FF66"
+        android:pathData="M54,46 L62,54 L54,62 L46,54 Z"/>
+
+    <!-- Marco Exterior con Acento Magenta Láser -->
+    <path
+        android:strokeColor="#FF0055"
+        android:strokeWidth="3.5"
+        android:pathData="M18,10 H90 A8,8 0 0 1 98,18 V90 A8,8 0 0 1 90,98 H18 A8,8 0 0 1 10,90 V18 A8,8 0 0 1 18,10 Z"/>
+</vector>
