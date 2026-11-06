@@ -1,0 +1,143 @@
+name: OMNI Admin 1.4.5 - Live Map Build (Original Signature)
+# Build OMNI Admin 1.4.5 with the dedicated cyber-neon live map screen.
+
+on:
+  push:
+    branches: [feature/build-admin-live-map-145]
+    paths:
+      - '.github/workflows/omni-admin-live-map-1.4.5.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build:
+    name: Build and verify OMNI Admin 1.4.5 only
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout OMNI Advance source
+        uses: actions/checkout@v4
+        with:
+          repository: jmredmond262-cmyk/omni-advance-plataform-import
+          ref: feature/omni-admin-live-map-1.4.3-correct-base
+          token: ${{ secrets.OMNI_ADVANCE_READ_TOKEN }}
+          path: source
+          persist-credentials: false
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle 9.3.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.3.1"
+
+      - name: Configure Android SDK
+        run: |
+          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
+          echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "$ANDROID_SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
+
+      - name: Accept Android SDK licenses
+        run: yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+
+      - name: Install Android SDK packages
+        run: |
+          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36.1" "build-tools;36.0.0"
+
+      - name: Configure OMNI Admin Firebase
+        working-directory: source
+        env:
+          ADMIN_FIREBASE_JSON: ${{ secrets.OMNI_ADMIN_GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          set -euo pipefail
+          test -n "$ADMIN_FIREBASE_JSON" || { echo "::error::Falta OMNI_ADMIN_GOOGLE_SERVICES_JSON_BASE64 en el repositorio firmante."; exit 1; }
+          printf '%s' "$ADMIN_FIREBASE_JSON" | base64 --decode > admin/google-services.json
+          python3 - <<'PY'
+          import json
+          import os
+          import xml.sax.saxutils as xml
+
+          with open("admin/google-services.json", encoding="utf-8") as f:
+              data = json.load(f)
+          client = next(
+              item for item in data["client"]
+              if item["client_info"]["android_client_info"]["package_name"] == "com.omni.adminpanel"
+          )
+          project = data["project_info"]
+          values = {
+              "google_app_id": client["client_info"]["mobilesdk_app_id"],
+              "google_api_key": client["api_key"][0]["current_key"],
+              "project_id": project["project_id"],
+              "gcm_defaultSenderId": project["project_number"],
+              "google_storage_bucket": project.get("storage_bucket", ""),
+          }
+          web_client = next(
+              (oauth["client_id"] for item in data["client"]
+               for oauth in item.get("oauth_client", [])
+               if oauth.get("client_type") == 3),
+              None
+          )
+          if web_client:
+              values["default_web_client_id"] = web_client
+          os.makedirs("admin/src/main/res/values", exist_ok=True)
+          with open("admin/src/main/res/values/firebase_config.xml", "w", encoding="utf-8") as f:
+              f.write("<resources>\n")
+              for key, value in values.items():
+                  f.write(f'  <string name="{key}" translatable="false">{xml.escape(value)}</string>\n')
+              f.write("</resources>\n")
+          PY
+          echo "OMNI Admin Firebase resources configured."
+
+      - name: Configure optional API keys
+        working-directory: source
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: |
+          GEMINI_VALUE="${GEMINI_API_KEY:-NOT_CONFIGURED}"
+          printf 'GEMINI_API_KEY=%s\nGOOGLE_MAPS_API_KEY=%s\n' "$GEMINI_VALUE" "$GOOGLE_MAPS_API_KEY" > .env
+
+      - name: Configure and validate original OMNI signing identity
+        working-directory: source
+        env:
+          OMNI_DEBUG_KEYSTORE_BASE64: ${{ secrets.OMNI_DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          test -n "$OMNI_DEBUG_KEYSTORE_BASE64" || { echo "::error::Falta OMNI_DEBUG_KEYSTORE_BASE64 en el repositorio firmante."; exit 1; }
+          printf '%s' "$OMNI_DEBUG_KEYSTORE_BASE64" | base64 --decode > debug.keystore
+          EXPECTED_SHA256="486513DCA524F8C09134DB97A7D5650A2F2461E4306DB181B7C2DFE2D40E495B"
+          ACTUAL_SHA256="$(keytool -list -v -keystore debug.keystore -storepass android -alias androiddebugkey | awk '/SHA256:/{print $2; exit}' | tr -d ':')"
+          test "$ACTUAL_SHA256" = "$EXPECTED_SHA256" || { echo "::error::La firma no coincide con la identidad original. No se publicará la APK."; exit 1; }
+          echo "Original signing identity validated."
+
+      - name: Build OMNI Admin 1.4.5
+        working-directory: source
+        env:
+          OMNI_ADMIN_VERSION_CODE: "77"
+        run: gradle :admin:assembleDebug
+
+      - name: Verify OMNI Admin package, version and signature
+        working-directory: source
+        run: |
+          set -euo pipefail
+          APK="admin/build/outputs/apk/debug/admin-debug.apk"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.omni.adminpanel' versionCode='76' versionName='1.4.5'"
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" > /tmp/omni-admin-certs.txt
+          APK_SHA256="$(awk -F': ' '/certificate SHA-256 digest:/{print $2; exit}' /tmp/omni-admin-certs.txt | tr -d ':' | tr '[:lower:]' '[:upper:]')"
+          EXPECTED_SHA256="486513DCA524F8C09134DB97A7D5650A2F2461E4306DB181B7C2DFE2D40E495B"
+          test "$APK_SHA256" = "$EXPECTED_SHA256" || { echo "::error::La APK Admin no conserva la firma original."; exit 1; }
+          echo "OMNI Admin package, version and signature verified."
+
+      - name: Upload OMNI Admin APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: omni-admin-v1.4.5-live-map-original-signature
+          path: source/admin/build/outputs/apk/debug/admin-debug.apk
+          if-no-files-found: error
+          retention-days: 90
