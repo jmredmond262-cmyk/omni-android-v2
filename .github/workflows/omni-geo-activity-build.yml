@@ -3,7 +3,7 @@ name: OMNI GeoActivity - Principal Android Build
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [feature/build-admin-live-map-145]
     paths:
       - '.github/workflows/omni-geo-activity-build.yml'
 
@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: jmredmond262-cmyk/omni-advance-plataform-import
-          ref: omni-advance-1.4
+          ref: feature/omni-admin-live-map-1.4.3-correct-base
           token: ${{ secrets.OMNI_ADVANCE_READ_TOKEN }}
           path: source
           persist-credentials: false
@@ -70,6 +70,41 @@ jobs:
           print("Firebase OMNI Principal validado.")
           PY
 
+      - name: Configure OMNI Admin Firebase
+        working-directory: source
+        env:
+          ADMIN_FIREBASE_JSON: ${{ secrets.OMNI_ADMIN_GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          set -euo pipefail
+          test -n "$ADMIN_FIREBASE_JSON" || { echo "::error::Falta OMNI_ADMIN_GOOGLE_SERVICES_JSON_BASE64."; exit 1; }
+          printf '%s' "$ADMIN_FIREBASE_JSON" | base64 --decode > admin/google-services.json
+          python3 - <<'PY'
+          import json
+          import os
+          import xml.sax.saxutils as xml
+          with open("admin/google-services.json", encoding="utf-8") as f:
+              data = json.load(f)
+          client = next(item for item in data["client"] if item["client_info"]["android_client_info"]["package_name"] == "com.omni.adminpanel")
+          project = data["project_info"]
+          values = {
+              "google_app_id": client["client_info"]["mobilesdk_app_id"],
+              "google_api_key": client["api_key"][0]["current_key"],
+              "project_id": project["project_id"],
+              "gcm_defaultSenderId": project["project_number"],
+              "google_storage_bucket": project.get("storage_bucket", ""),
+          }
+          web_client = next((oauth["client_id"] for item in data["client"] for oauth in item.get("oauth_client", []) if oauth.get("client_type") == 3), None)
+          if web_client:
+              values["default_web_client_id"] = web_client
+          os.makedirs("admin/src/main/res/values", exist_ok=True)
+          with open("admin/src/main/res/values/firebase_config.xml", "w", encoding="utf-8") as f:
+              f.write("<resources>\\n")
+              for key, value in values.items():
+                  f.write(f'  <string name="{key}" translatable="false">{xml.escape(value)}</string>\\n')
+              f.write("</resources>\\n")
+          PY
+          echo "Firebase OMNI Admin configurado."
+
       - name: Configure optional API keys
         working-directory: source
         env:
@@ -95,7 +130,7 @@ jobs:
       - name: Build OMNI Principal
         working-directory: source
         env:
-          OMNI_VERSION_CODE: "527"
+          OMNI_VERSION_CODE: "528"
         run: gradle :app:assembleDebug
 
       - name: Verify OMNI Principal package, version and signature
@@ -114,7 +149,34 @@ jobs:
       - name: Upload OMNI Principal APK
         uses: actions/upload-artifact@v4
         with:
-          name: omni-principal-v1.4.1-geopresence-v527
+          name: omni-principal-v1.4.1-precise-geopresence-v528
           path: source/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Build OMNI Admin 1.4.8
+        working-directory: source
+        env:
+          OMNI_ADMIN_VERSION_CODE: "86"
+        run: gradle :admin:assembleDebug
+
+      - name: Verify OMNI Admin package, version and original signature
+        working-directory: source
+        run: |
+          set -euo pipefail
+          APK="admin/build/outputs/apk/debug/admin-debug.apk"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.omni.adminpanel' versionCode='86' versionName='1.4.8'"
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" > /tmp/omni-admin-certs.txt
+          APK_SHA256="$(awk -F': ' '/certificate SHA-256 digest:/{print $2; exit}' /tmp/omni-admin-certs.txt | tr -d ':' | tr '[:lower:]' '[:upper:]')"
+          EXPECTED_SHA256="486513DCA524F8C09134DB97A7D5650A2F2461E4306DB181B7C2DFE2D40E495B"
+          test "$APK_SHA256" = "$EXPECTED_SHA256" || { echo "::error::La APK Admin no conserva la firma original."; exit 1; }
+          echo "OMNI Admin 1.4.8 verificada."
+
+      - name: Upload OMNI Admin APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: omni-admin-v1.4.8-precise-live-map-v86
+          path: source/admin/build/outputs/apk/debug/admin-debug.apk
           if-no-files-found: error
           retention-days: 90
