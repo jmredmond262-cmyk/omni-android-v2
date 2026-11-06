@@ -48,10 +48,11 @@ fun AdminCyberDashboardScreen() {
 
 @Composable
 fun AdminLoginScreen(onLoginSuccess: () -> Unit) {
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    var pinCode by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
+
+    // PIN MAESTRO DE ACCESO (Cámbialo aquí si deseas otro número)
+    val MASTER_PIN = "0000"
 
     Column(
         modifier = Modifier
@@ -62,30 +63,15 @@ fun AdminLoginScreen(onLoginSuccess: () -> Unit) {
         verticalArrangement = Arrangement.Center
     ) {
         Text("CYBER COMMAND", color = NeonCyan, fontSize = 24.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
-        Text("ACCESO RESTRINGIDO - ADMINISTRADOR", color = CyberGray, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+        Text("ACCESO RESTRINGIDO // TERMINAL ADMIN", color = CyberGray, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
 
         Spacer(modifier = Modifier.height(32.dp))
 
         OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("EMAIL ADMIN", color = NeonCyan, fontFamily = FontFamily.Monospace) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = NeonCyan,
-                unfocusedBorderColor = CyberGray,
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White
-            )
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("PASSWORD", color = NeonCyan, fontFamily = FontFamily.Monospace) },
+            value = pinCode,
+            onValueChange = { if (it.length <= 8) pinCode = it },
+            label = { Text("PIN DE ACCESO", color = NeonCyan, fontFamily = FontFamily.Monospace) },
+            placeholder = { Text("Ej: 1337", color = CyberGray) },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
@@ -106,28 +92,17 @@ fun AdminLoginScreen(onLoginSuccess: () -> Unit) {
 
         Button(
             onClick = {
-                if (email.isNotBlank() && password.isNotBlank()) {
-                    isLoading = true
+                if (pinCode == MASTER_PIN) {
                     errorMessage = ""
-                    FirebaseAuth.getInstance().signInWithEmailAndPassword(email.trim(), password)
-                        .addOnSuccessListener {
-                            isLoading = false
-                            onLoginSuccess()
-                        }
-                        .addOnFailureListener {
-                            isLoading = false
-                            errorMessage = "ERROR: Credenciales no autorizadas"
-                        }
+                    onLoginSuccess()
+                } else {
+                    errorMessage = "ACCESO DENEGADO: PIN INVÁLIDO"
                 }
             },
             modifier = Modifier.fillMaxWidth().height(48.dp),
             colors = ButtonDefaults.buttonColors(containerColor = NeonCyan)
         ) {
-            if (isLoading) {
-                CircularProgressIndicator(color = CyberBlack, modifier = Modifier.size(20.dp))
-            } else {
-                Text("INICIAR SESIÓN", color = CyberBlack, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
-            }
+            Text("DESBLOQUEAR TERMINAL", color = CyberBlack, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
         }
     }
 }
