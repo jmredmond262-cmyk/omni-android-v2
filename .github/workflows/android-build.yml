@@ -2,7 +2,7 @@ name: OMNI Android Build
 
 on:
   push:
-    branches: [ "main", "omni-admin-rebuild" ]
+    branches: [ "main", "omni-admin-rebuild", "admin-cyber"]
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
