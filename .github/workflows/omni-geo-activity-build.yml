@@ -1,4 +1,4 @@
-name: OMNI GeoActivity - Principal Android Build
+name: OMNI GeoActivity - Principal and Admin Precise GPS Build
 
 on:
   workflow_dispatch:
