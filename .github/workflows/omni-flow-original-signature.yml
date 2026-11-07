@@ -125,4 +125,4 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-# Isolated FLOW build: source stays on feat/omni-momentos-expansion; signing stays in this repository.
+# Source checkout is pinned to the reviewed QR/OMNI Pay DEMO integration branch; signing stays in this repository.
