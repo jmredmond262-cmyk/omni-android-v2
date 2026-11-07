@@ -1,4 +1,4 @@
-name: OMNI principal + FLOW 1.4.5 - Original signing bridge
+name: OMNI principal + Mercado OMNI 1.4.5 - Original signing bridge
 
 on:
   push:
@@ -13,14 +13,14 @@ permissions:
 
 jobs:
   build:
-    name: Build OMNI 1.4.5 with complete QR DEMO sales cycle and verify original identity
+    name: Build OMNI 1.4.5 Mercado OMNI and verify original identity
     runs-on: ubuntu-latest
     steps:
       - name: Checkout OMNI FLOW source
         uses: actions/checkout@v4
         with:
           repository: jmredmond262-cmyk/omni-advance-plataform-import
-          ref: feat/omni-order-qr-full-demo-cycle-1.4.5
+          ref: feat/omni-marketplace-demo-commerce-cycle
           token: ${{ secrets.OMNI_ADVANCE_READ_TOKEN }}
           path: source
           persist-credentials: false
@@ -94,10 +94,10 @@ jobs:
           test "$ACTUAL_SHA256" = "$EXPECTED_SHA256" || { echo "::error::La identidad de firma no coincide. No se publicará ninguna APK."; exit 1; }
           echo "Original OMNI signing identity validated."
 
-      - name: Build OMNI principal + Momentos + complete QR sales + OMNI Pay DEMO 1.4.5
+      - name: Build OMNI principal + Mercado OMNI + QR sales + OMNI Pay DEMO 1.4.5
         working-directory: source
         env:
-          OMNI_VERSION_CODE: "550"
+          OMNI_VERSION_CODE: "551"
         run: gradle :app:assembleDebug
 
       - name: Verify OMNI package, version and original signature
@@ -108,7 +108,7 @@ jobs:
           BADGING="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK")"
           printf '%s\n' "$BADGING"
           printf '%s\n' "$BADGING" | grep -F "name='com.aistudio.omnihub.qtzmvd'"
-          printf '%s\n' "$BADGING" | grep -F "versionCode='550'"
+          printf '%s\n' "$BADGING" | grep -F "versionCode='551'"
           printf '%s\n' "$BADGING" | grep -F "versionName='1.4.5'"
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" > /tmp/omni-flow-certs.txt
@@ -120,9 +120,9 @@ jobs:
       - name: Upload OMNI Principal 1.4.5 APK
         uses: actions/upload-artifact@v4
         with:
-          name: omni-principal-qr-demo-sales-v1.4.5-code-550-original-signature
+          name: omni-principal-mercado-v1.4.5-code-551-original-signature
           path: source/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
 
-# Source checkout is pinned to the reviewed QR/OMNI Pay DEMO sales-cycle branch; final build includes compact QR payload validation, Admin correlation and payment-gated fulfillment.
+# Source checkout is pinned to the reviewed Mercado OMNI branch. The build uses versionCode 551 to install as an in-place update over versionCode 550, and validates the original signing certificate before publishing.
