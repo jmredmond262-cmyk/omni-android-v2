@@ -1,4 +1,4 @@
-name: OMNI Admin 1.4.5 - Original Signing Bridge # verified versionName 1.4.5
+name: OMNI Admin 1.4.14 - Original Signing Bridge # verified versionName 1.4.5
 # Dashboard cyber-neon redesign rebuild: validate OMNI Admin 1.4.5.
 # GeoActivity map repair: use OpenStreetMap's dedicated embed view in Android WebView. // Kotlin bounds fix rebuild
 
@@ -22,7 +22,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: jmredmond262-cmyk/omni-advance-plataform-import
-          ref: omni-advance-1.4
+          ref: feature/omni-admin-live-map-1.4.3-correct-base
           token: ${{ secrets.OMNI_ADVANCE_READ_TOKEN }}
           path: source
           persist-credentials: false
@@ -120,7 +120,7 @@ jobs:
       - name: Build OMNI Admin 1.4.5
         working-directory: source
         env:
-          OMNI_ADMIN_VERSION_CODE: "76"
+          OMNI_ADMIN_VERSION_CODE: "92"
         run: gradle :admin:assembleDebug
 
       - name: Verify OMNI Admin package, version and signature
@@ -128,7 +128,7 @@ jobs:
         run: |
           set -euo pipefail
           APK="admin/build/outputs/apk/debug/admin-debug.apk"
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.omni.adminpanel' versionCode='76' versionName='1.4.5'"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.omni.adminpanel' versionCode='92' versionName='1.4.14'"
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" > /tmp/omni-admin-certs.txt
           APK_SHA256="$(awk -F': ' '/certificate SHA-256 digest:/{print $2; exit}' /tmp/omni-admin-certs.txt | tr -d ':' | tr '[:lower:]' '[:upper:]')"
@@ -139,7 +139,7 @@ jobs:
       - name: Upload OMNI Admin APK
         uses: actions/upload-artifact@v4
         with:
-          name: omni-admin-v1.4.5-original-signature
+          name: omni-admin-v1.4.14-code-92-original-signature
           path: source/admin/build/outputs/apk/debug/admin-debug.apk
           if-no-files-found: error
           retention-days: 90
