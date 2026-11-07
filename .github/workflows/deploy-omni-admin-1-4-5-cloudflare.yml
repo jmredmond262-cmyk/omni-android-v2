@@ -22,11 +22,11 @@ jobs:
       - name: Checkout deployment repository
         uses: actions/checkout@v4
 
-      - name: Checkout OMNI Admin 1.4.5 source
+      - name: Checkout OMNI Admin 1.4.5 QR sales integration source
         uses: actions/checkout@v4
         with:
           repository: jmredmond262-cmyk/omni-advance-plataform-import
-          ref: omni-advance-1.4
+          ref: feat/omni-order-qr-full-demo-cycle-1.4.5
           path: source
           token: ${{ secrets.OMNI_ADVANCE_READ_TOKEN }}
 
