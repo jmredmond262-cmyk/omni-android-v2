@@ -1,4 +1,4 @@
-name: OMNI FLOW 1.4.1 - Original signing bridge
+name: OMNI principal + FLOW 1.4.2 - Original signing bridge
 
 on:
   push:
@@ -94,10 +94,10 @@ jobs:
           test "$ACTUAL_SHA256" = "$EXPECTED_SHA256" || { echo "::error::La identidad de firma no coincide. No se publicará ninguna APK."; exit 1; }
           echo "Original OMNI signing identity validated."
 
-      - name: Build OMNI FLOW 1.4.1
+      - name: Build OMNI principal + FLOW 1.4.2
         working-directory: source
         env:
-          OMNI_VERSION_CODE: "546"
+          OMNI_VERSION_CODE: "547"
         run: gradle :app:assembleDebug
 
       - name: Verify OMNI FLOW package, version and signature
@@ -105,7 +105,7 @@ jobs:
         run: |
           set -euo pipefail
           APK="app/build/outputs/apk/debug/app-debug.apk"
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.aistudio.omnihub.qtzmvd' versionCode='546' versionName='1.4.1'"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.aistudio.omnihub.qtzmvd' versionCode='547' versionName='1.4.2'"
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" > /tmp/omni-flow-certs.txt
           APK_SHA256="$(awk -F': ' '/certificate SHA-256 digest:/{print $2; exit}' /tmp/omni-flow-certs.txt | tr -d ':' | tr '[:lower:]' '[:upper:]')"
@@ -116,7 +116,7 @@ jobs:
       - name: Upload OMNI FLOW APK
         uses: actions/upload-artifact@v4
         with:
-          name: omni-flow-v1.4.1-code-546-original-signature
+          name: omni-principal-flow-v1.4.2-code-547-original-signature
           path: source/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
