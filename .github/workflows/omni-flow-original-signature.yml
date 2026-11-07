@@ -94,7 +94,7 @@ jobs:
           test "$ACTUAL_SHA256" = "$EXPECTED_SHA256" || { echo "::error::La identidad de firma no coincide. No se publicará ninguna APK."; exit 1; }
           echo "Original OMNI signing identity validated."
 
-      - name: Build OMNI principal + Momentos 1.4.4
+      - name: Build OMNI principal + Momentos 1.4.4 (existing and new reminder settings)
         working-directory: source
         env:
           OMNI_VERSION_CODE: "549"
