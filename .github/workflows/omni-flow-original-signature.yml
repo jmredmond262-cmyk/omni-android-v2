@@ -125,4 +125,4 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-# Source checkout is pinned to the reviewed QR/OMNI Pay DEMO sales-cycle branch; duplicate payments are blocked by stable create-only operation records.
+# Source checkout is pinned to the reviewed QR/OMNI Pay DEMO sales-cycle branch; this run includes the final Admin correlation and payment-gated fulfillment updates.
