@@ -105,7 +105,11 @@ jobs:
         run: |
           set -euo pipefail
           APK="app/build/outputs/apk/debug/app-debug.apk"
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.aistudio.omnihub.qtzmvd' versionCode='548' versionName='1.4.3'"
+          BADGING="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK")"
+          printf '%s\n' "$BADGING"
+          printf '%s\n' "$BADGING" | grep -F "name='com.aistudio.omnihub.qtzmvd'"
+          printf '%s\n' "$BADGING" | grep -F "versionCode='548'"
+          printf '%s\n' "$BADGING" | grep -F "versionName='1.4.3'"
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" > /tmp/omni-flow-certs.txt
           APK_SHA256="$(awk -F': ' '/certificate SHA-256 digest:/{print $2; exit}' /tmp/omni-flow-certs.txt | tr -d ':' | tr '[:lower:]' '[:upper:]')"
