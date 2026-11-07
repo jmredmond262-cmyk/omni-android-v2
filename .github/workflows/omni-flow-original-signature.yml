@@ -13,14 +13,14 @@ permissions:
 
 jobs:
   build:
-    name: Build OMNI Momentos and verify original identity
+    name: Build OMNI 1.4.4 with OMNI Pay DEMO idempotency fix and verify original identity
     runs-on: ubuntu-latest
     steps:
       - name: Checkout OMNI FLOW source
         uses: actions/checkout@v4
         with:
           repository: jmredmond262-cmyk/omni-advance-plataform-import
-          ref: feat/omni-momentos-expansion
+          ref: fix/omni-pay-demo-atomic-idempotency-1.4.4
           token: ${{ secrets.OMNI_ADVANCE_READ_TOKEN }}
           path: source
           persist-credentials: false
@@ -94,7 +94,7 @@ jobs:
           test "$ACTUAL_SHA256" = "$EXPECTED_SHA256" || { echo "::error::La identidad de firma no coincide. No se publicará ninguna APK."; exit 1; }
           echo "Original OMNI signing identity validated."
 
-      - name: Build OMNI principal + Momentos 1.4.4 (existing/new reminders and updated Momentos copy)
+      - name: Build OMNI principal + Momentos + QR checkout + OMNI Pay DEMO 1.4.4
         working-directory: source
         env:
           OMNI_VERSION_CODE: "549"
@@ -117,10 +117,10 @@ jobs:
           test "$APK_SHA256" = "$EXPECTED_SHA256" || { echo "::error::La APK no conserva la firma original de OMNI."; exit 1; }
           echo "OMNI package, version and original signature verified."
 
-      - name: Upload OMNI Momentos APK
+      - name: Upload OMNI Principal 1.4.4 APK
         uses: actions/upload-artifact@v4
         with:
-          name: omni-principal-flow-v1.4.4-code-548-original-signature
+          name: omni-principal-momentos-qr-pay-v1.4.4-code-549-original-signature
           path: source/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
