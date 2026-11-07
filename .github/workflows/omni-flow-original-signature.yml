@@ -1,4 +1,4 @@
-name: OMNI principal + FLOW 1.4.2 - Original signing bridge
+name: OMNI principal + FLOW 1.4.3 - Original signing bridge
 
 on:
   push:
@@ -13,14 +13,14 @@ permissions:
 
 jobs:
   build:
-    name: Build OMNI FLOW and verify original identity
+    name: Build OMNI Momentos and verify original identity
     runs-on: ubuntu-latest
     steps:
       - name: Checkout OMNI FLOW source
         uses: actions/checkout@v4
         with:
           repository: jmredmond262-cmyk/omni-advance-plataform-import
-          ref: feat/omni-flow-daily-briefing
+          ref: feat/omni-momentos-expansion
           token: ${{ secrets.OMNI_ADVANCE_READ_TOKEN }}
           path: source
           persist-credentials: false
@@ -94,31 +94,31 @@ jobs:
           test "$ACTUAL_SHA256" = "$EXPECTED_SHA256" || { echo "::error::La identidad de firma no coincide. No se publicará ninguna APK."; exit 1; }
           echo "Original OMNI signing identity validated."
 
-      - name: Build OMNI principal + FLOW 1.4.2
+      - name: Build OMNI principal + Momentos 1.4.3
         working-directory: source
         env:
-          OMNI_VERSION_CODE: "547"
+          OMNI_VERSION_CODE: "548"
         run: gradle :app:assembleDebug
 
-      - name: Verify OMNI FLOW package, version and signature
+      - name: Verify OMNI package, version and original signature
         working-directory: source
         run: |
           set -euo pipefail
           APK="app/build/outputs/apk/debug/app-debug.apk"
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.aistudio.omnihub.qtzmvd' versionCode='547' versionName='1.4.2'"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.aistudio.omnihub.qtzmvd' versionCode='548' versionName='1.4.3'"
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" > /tmp/omni-flow-certs.txt
           APK_SHA256="$(awk -F': ' '/certificate SHA-256 digest:/{print $2; exit}' /tmp/omni-flow-certs.txt | tr -d ':' | tr '[:lower:]' '[:upper:]')"
           EXPECTED_SHA256="486513DCA524F8C09134DB97A7D5650A2F2461E4306DB181B7C2DFE2D40E495B"
           test "$APK_SHA256" = "$EXPECTED_SHA256" || { echo "::error::La APK no conserva la firma original de OMNI."; exit 1; }
-          echo "OMNI FLOW package, version and original signature verified."
+          echo "OMNI package, version and original signature verified."
 
-      - name: Upload OMNI FLOW APK
+      - name: Upload OMNI Momentos APK
         uses: actions/upload-artifact@v4
         with:
-          name: omni-principal-flow-v1.4.2-code-547-original-signature
+          name: omni-principal-flow-v1.4.3-code-548-original-signature
           path: source/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
 
-# Isolated FLOW build: source stays on feat/omni-flow-daily-briefing; signing stays in this repository.
+# Isolated FLOW build: source stays on feat/omni-momentos-expansion; signing stays in this repository.
