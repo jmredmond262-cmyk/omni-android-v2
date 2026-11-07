@@ -120,3 +120,5 @@ jobs:
           path: source/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
+
+# Isolated FLOW build: source stays on feat/omni-flow-daily-briefing; signing stays in this repository.
