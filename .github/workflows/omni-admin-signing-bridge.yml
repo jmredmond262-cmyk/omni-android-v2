@@ -1,4 +1,4 @@
-name: OMNI Admin 1.4.19 - Original signing bridge
+name: OMNI Admin 1.4.19 - Original signing bridge (order audit)
 
 on:
   push:
