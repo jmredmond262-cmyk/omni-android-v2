@@ -1,5 +1,5 @@
-name: Deploy OMNI Admin 1.4.18 API to Cloudflare
-# OMNI Admin 1.4.18: publish order availability, receipt and admin diagnostics support.
+name: Deploy OMNI Admin 1.4.19 API to Cloudflare
+# OMNI Admin 1.4.19: publish order availability, receipt and admin diagnostics support.
 
 on:
   workflow_dispatch:
