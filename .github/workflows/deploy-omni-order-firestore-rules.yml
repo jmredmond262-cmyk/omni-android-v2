@@ -1,4 +1,4 @@
-name: Deploy OMNI order workflow Firestore rules 1.4.7
+name: Deploy OMNI order workflow Firestore rules 1.4.7 final
 
 on:
   push:
