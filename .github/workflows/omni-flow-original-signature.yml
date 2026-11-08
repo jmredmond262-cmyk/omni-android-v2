@@ -1,4 +1,4 @@
-name: OMNI Principal 1.4.8 - Original signing bridge
+name: OMNI Principal 1.4.9 - Original signing bridge
 
 on:
   push:
@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   build:
-    name: Build OMNI Principal 1.4.8 and verify original identity
+    name: Build OMNI Principal 1.4.9 and verify original identity
     runs-on: ubuntu-latest
     steps:
       - name: Checkout OMNI FLOW source
@@ -94,10 +94,10 @@ jobs:
           test "$ACTUAL_SHA256" = "$EXPECTED_SHA256" || { echo "::error::La identidad de firma no coincide. No se publicará ninguna APK."; exit 1; }
           echo "Original OMNI signing identity validated."
 
-      - name: Build OMNI Principal 1.4.7 with order availability review and DEMO receipts
+      - name: Build OMNI Principal 1.4.9 with guided order interface
         working-directory: source
         env:
-          OMNI_VERSION_CODE: "554"
+          OMNI_VERSION_CODE: "555"
         run: gradle :app:assembleDebug
 
       - name: Verify OMNI package, version and original signature
@@ -108,8 +108,8 @@ jobs:
           BADGING="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK")"
           printf '%s\n' "$BADGING"
           printf '%s\n' "$BADGING" | grep -F "name='com.aistudio.omnihub.qtzmvd'"
-          printf '%s\n' "$BADGING" | grep -F "versionCode='554'"
-          printf '%s\n' "$BADGING" | grep -F "versionName='1.4.8'"
+          printf '%s\n' "$BADGING" | grep -F "versionCode='555'"
+          printf '%s\n' "$BADGING" | grep -F "versionName='1.4.9'"
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" > /tmp/omni-flow-certs.txt
           APK_SHA256="$(awk -F': ' '/certificate SHA-256 digest:/{print $2; exit}' /tmp/omni-flow-certs.txt | tr -d ':' | tr '[:lower:]' '[:upper:]')"
@@ -117,10 +117,10 @@ jobs:
           test "$APK_SHA256" = "$EXPECTED_SHA256" || { echo "::error::La APK no conserva la firma original de OMNI."; exit 1; }
           echo "OMNI package, version and original signature verified."
 
-      - name: Upload OMNI Principal 1.4.8 APK
+      - name: Upload OMNI Principal 1.4.9 APK
         uses: actions/upload-artifact@v4
         with:
-          name: omni-principal-v1.4.8-code-554-original-signature
+          name: omni-principal-v1.4.9-code-555-original-signature
           path: source/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
