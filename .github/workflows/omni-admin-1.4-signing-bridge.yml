@@ -1,6 +1,7 @@
 name: OMNI Admin 1.4.16 - Original Signing Bridge
 # Dashboard cyber-neon redesign rebuild: validate OMNI Admin 1.4.5.
 # GeoActivity map repair: use OpenStreetMap's dedicated embed view in Android WebView. // Kotlin bounds fix rebuild
+# Refresh: include operation-level labels in the query diagnostics screen.
 
 on:
   workflow_dispatch:
