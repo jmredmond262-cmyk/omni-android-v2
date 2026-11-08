@@ -125,4 +125,4 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-# Build trigger refresh: build current reviewed branch after validating payment-gated delivery and DEMO self-consumption.
+# Build trigger refresh: current 1.4.6 includes exact routine alarms, query diagnostics and duplicate-read guards.
