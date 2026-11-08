@@ -1,0 +1,65 @@
+name: Deploy OMNI order workflow Firestore rules 1.4.7
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - ".github/workflows/deploy-omni-order-firestore-rules.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: omni-primary-firestore-rules
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Validate and publish OMNI Principal order rules
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout deployment repository
+        uses: actions/checkout@v4
+
+      - name: Checkout OMNI Principal 1.4.7 source
+        uses: actions/checkout@v4
+        with:
+          repository: jmredmond262-cmyk/omni-advance-plataform-import
+          ref: feat/omni-order-negotiation-receipts-1.4.7
+          token: ${{ secrets.OMNI_ADVANCE_READ_TOKEN }}
+          path: source
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Validate Firebase service identity and rules file
+        env:
+          FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.OMNI_PRIMARY_FIREBASE_SERVICE_ACCOUNT_BASE64 }}
+        run: |
+          set -euo pipefail
+          test -n "$FIREBASE_SERVICE_ACCOUNT_BASE64" || { echo "::error::No está disponible la identidad de servicio Firebase ya configurada."; exit 1; }
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT_BASE64" | base64 --decode > "$RUNNER_TEMP/omni-firebase-service-account.json"
+          python3 - <<'PY'
+          import json, os
+          path = os.path.join(os.environ["RUNNER_TEMP"], "omni-firebase-service-account.json")
+          with open(path, encoding="utf-8") as f:
+              account = json.load(f)
+          if account.get("project_id") != "omni-57f69":
+              raise SystemExit("La identidad de servicio no corresponde al proyecto principal omni-57f69.")
+          with open("firebase.json", "w", encoding="utf-8") as f:
+              json.dump({"firestore": {"rules": "source/firestore.rules"}}, f)
+          print("Proyecto y archivo de reglas validados.")
+          PY
+          test -s source/firestore.rules
+
+      - name: Install Firebase CLI
+        run: npm install --global firebase-tools
+
+      - name: Deploy Firestore rules only
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/omni-firebase-service-account.json
+        run: firebase deploy --only firestore:rules --project omni-57f69 --non-interactive
