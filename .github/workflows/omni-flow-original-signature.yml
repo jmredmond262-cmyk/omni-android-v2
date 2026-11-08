@@ -125,5 +125,4 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-# Build trigger refresh: compile the current reviewed Mercado OMNI branch after the DEMO self-consumption update.
-# Source checkout is pinned to the reviewed Mercado OMNI branch. The build uses versionCode 551 to install as an in-place update over versionCode 550, and validates the original signing certificate before publishing. Source branch includes the Compose transaction-detail import correction.
+# Build trigger refresh: build current reviewed branch after validating payment-gated delivery and DEMO self-consumption.
