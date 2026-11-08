@@ -1,5 +1,5 @@
-name: Deploy OMNI Admin 1.4.16 API to Cloudflare
-# Refresh: limit live GPS reads to recent consented coordinates and monitor sample to 100 docs.
+name: Deploy OMNI Admin 1.4.18 API to Cloudflare
+# OMNI Admin 1.4.18: publish corrected live-map profile resolution and diagnostics.
 
 on:
   workflow_dispatch:
@@ -23,11 +23,11 @@ jobs:
       - name: Checkout deployment repository
         uses: actions/checkout@v4
 
-      - name: Checkout OMNI Admin 1.4.16 diagnostic and GPS source
+      - name: Checkout OMNI Admin 1.4.18 corrected live-map source
         uses: actions/checkout@v4
         with:
           repository: jmredmond262-cmyk/omni-advance-plataform-import
-          ref: feat/omni-diagnostics-routine-alarm-1.4.6
+          ref: fix/admin-live-map-profile-names-diagnostics-1.4.17
           path: source
           token: ${{ secrets.OMNI_ADVANCE_READ_TOKEN }}
 
@@ -47,7 +47,7 @@ jobs:
           test -n "$CF_TOKEN" || { echo "::error::Falta CLOUDFLARE_API_TOKEN"; exit 1; }
           test -n "$CF_ACCOUNT" || { echo "::error::Falta CLOUDFLARE_ACCOUNT_ID"; exit 1; }
           test -n "$FIREBASE_SERVICE_ACCOUNT" || { echo "::error::Falta OMNI_PRIMARY_FIREBASE_SERVICE_ACCOUNT_BASE64"; exit 1; }
-          test -f source/workers/wrangler.toml || { echo "::error::No se encontró el wrangler.toml de OMNI Admin 1.4.16"; exit 1; }
+          test -f source/workers/wrangler.toml || { echo "::error::No se encontró el wrangler.toml de OMNI Admin 1.4.18"; exit 1; }
           test -f source/workers/src/index.js || { echo "::error::No se encontró el Worker de OMNI Admin"; exit 1; }
           echo "Credenciales y archivos de despliegue verificados."
 
