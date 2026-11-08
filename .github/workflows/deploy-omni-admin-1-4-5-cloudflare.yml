@@ -1,4 +1,4 @@
-name: Deploy OMNI Admin 1.4.5 API to Cloudflare
+name: Deploy OMNI Admin 1.4.16 API to Cloudflare
 
 on:
   workflow_dispatch:
@@ -22,11 +22,11 @@ jobs:
       - name: Checkout deployment repository
         uses: actions/checkout@v4
 
-      - name: Checkout OMNI Admin 1.4.5 QR sales integration source
+      - name: Checkout OMNI Admin 1.4.16 diagnostic and GPS source
         uses: actions/checkout@v4
         with:
           repository: jmredmond262-cmyk/omni-advance-plataform-import
-          ref: feat/omni-order-qr-full-demo-cycle-1.4.5
+          ref: feat/omni-diagnostics-routine-alarm-1.4.6
           path: source
           token: ${{ secrets.OMNI_ADVANCE_READ_TOKEN }}
 
@@ -46,7 +46,7 @@ jobs:
           test -n "$CF_TOKEN" || { echo "::error::Falta CLOUDFLARE_API_TOKEN"; exit 1; }
           test -n "$CF_ACCOUNT" || { echo "::error::Falta CLOUDFLARE_ACCOUNT_ID"; exit 1; }
           test -n "$FIREBASE_SERVICE_ACCOUNT" || { echo "::error::Falta OMNI_PRIMARY_FIREBASE_SERVICE_ACCOUNT_BASE64"; exit 1; }
-          test -f source/workers/wrangler.toml || { echo "::error::No se encontró el wrangler.toml de OMNI Admin 1.4.5"; exit 1; }
+          test -f source/workers/wrangler.toml || { echo "::error::No se encontró el wrangler.toml de OMNI Admin 1.4.16"; exit 1; }
           test -f source/workers/src/index.js || { echo "::error::No se encontró el Worker de OMNI Admin"; exit 1; }
           echo "Credenciales y archivos de despliegue verificados."
 
