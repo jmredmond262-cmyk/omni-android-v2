@@ -1,4 +1,5 @@
 name: Deploy OMNI Admin 1.4.16 API to Cloudflare
+# Refresh: limit live GPS reads to recent consented coordinates and monitor sample to 100 docs.
 
 on:
   workflow_dispatch:
