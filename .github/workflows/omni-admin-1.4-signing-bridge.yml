@@ -1,4 +1,4 @@
-name: OMNI Admin 1.4.15 - Original Signing Bridge
+name: OMNI Admin 1.4.16 - Original Signing Bridge
 # Dashboard cyber-neon redesign rebuild: validate OMNI Admin 1.4.5.
 # GeoActivity map repair: use OpenStreetMap's dedicated embed view in Android WebView. // Kotlin bounds fix rebuild
 
@@ -15,14 +15,14 @@ permissions:
 
 jobs:
   build:
-    name: Build and verify OMNI Admin 1.4.15 only
+    name: Build and verify OMNI Admin 1.4.16 only
     runs-on: ubuntu-latest
     steps:
       - name: Checkout OMNI Advance source
         uses: actions/checkout@v4
         with:
           repository: jmredmond262-cmyk/omni-advance-plataform-import
-          ref: feat/omni-order-qr-full-demo-cycle-1.4.5
+          ref: feat/omni-diagnostics-routine-alarm-1.4.6
           token: ${{ secrets.OMNI_ADVANCE_READ_TOKEN }}
           path: source
           persist-credentials: false
@@ -117,10 +117,10 @@ jobs:
           test "$ACTUAL_SHA256" = "$EXPECTED_SHA256" || { echo "::error::La firma no coincide con la identidad original. No se publicará la APK."; exit 1; }
           echo "Original signing identity validated."
 
-      - name: Build OMNI Admin 1.4.15
+      - name: Build OMNI Admin 1.4.16
         working-directory: source
         env:
-          OMNI_ADMIN_VERSION_CODE: "93"
+          OMNI_ADMIN_VERSION_CODE: "94"
         run: gradle :admin:assembleDebug
 
       - name: Verify OMNI Admin package, version and signature
@@ -128,7 +128,7 @@ jobs:
         run: |
           set -euo pipefail
           APK="admin/build/outputs/apk/debug/admin-debug.apk"
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.omni.adminpanel' versionCode='93' versionName='1.4.15'"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "name='com.omni.adminpanel' versionCode='94' versionName='1.4.16'"
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" > /tmp/omni-admin-certs.txt
           APK_SHA256="$(awk -F': ' '/certificate SHA-256 digest:/{print $2; exit}' /tmp/omni-admin-certs.txt | tr -d ':' | tr '[:lower:]' '[:upper:]')"
@@ -136,10 +136,10 @@ jobs:
           test "$APK_SHA256" = "$EXPECTED_SHA256" || { echo "::error::La APK Admin no conserva la firma original."; exit 1; }
           echo "OMNI Admin package, version and signature verified."
 
-      - name: Upload OMNI Admin APK
+      - name: Upload OMNI Admin 1.4.16 APK
         uses: actions/upload-artifact@v4
         with:
-          name: omni-admin-v1.4.15-code-93-original-signature
+          name: omni-admin-v1.4.16-code-94-original-signature
           path: source/admin/build/outputs/apk/debug/admin-debug.apk
           if-no-files-found: error
           retention-days: 90
