@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: omni-stage7-original-signature
+  group: omni-stage7-live-map-restoration
   cancel-in-progress: false
 
 jobs:
