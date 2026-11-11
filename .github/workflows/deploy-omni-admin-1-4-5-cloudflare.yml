@@ -1,5 +1,5 @@
 name: Deploy OMNI Admin live GPS map API to Cloudflare
-# Deploy the current audited source branch, including consented live GPS presence.
+# Deploy audited source with restored GPS marker feed, clustering and live map diagnostics.
 
 on:
   workflow_dispatch:
