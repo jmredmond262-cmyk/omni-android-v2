@@ -1,0 +1,144 @@
+name: OMNI Recovery - Original Firebase and signing identity
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - ".github/workflows/omni-recovery-original-identity.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Rebuild Principal and Admin with preserved identity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout current OMNI source
+        uses: actions/checkout@v4
+        with:
+          repository: jmredmond262-cmyk/omni-advance-plataform-import
+          ref: feat/omni-cashback-atomic-accrual-1.4.7
+          token: ${{ secrets.OMNI_ADVANCE_READ_TOKEN }}
+          path: source
+          persist-credentials: false
+
+      - name: Set up Java 17 and Gradle
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.3.1"
+
+      - name: Configure Android SDK
+        run: |
+          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
+          echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "$ANDROID_SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
+          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36.1" "build-tools;36.0.0"
+
+      - name: Restore existing Firebase configurations
+        working-directory: source
+        env:
+          PRINCIPAL_JSON: ${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON_BASE64 }}
+          ADMIN_JSON: ${{ secrets.OMNI_ADMIN_GOOGLE_SERVICES_JSON_BASE64 }}
+          ADMIN_PROJECT_ID: ${{ secrets.OMNI_ADMIN_AUTH_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$PRINCIPAL_JSON"
+          test -n "$ADMIN_JSON"
+          printf '%s' "$PRINCIPAL_JSON" | base64 --decode > app/google-services.json
+          printf '%s' "$ADMIN_JSON" | base64 --decode > admin/google-services.json
+          python3 - <<'PY'
+          import json, os, xml.sax.saxutils as xml
+          with open("app/google-services.json", encoding="utf-8") as f:
+              principal=json.load(f)
+          assert any(c.get("client_info",{}).get("android_client_info",{}).get("package_name")=="com.aistudio.omnihub.qtzmvd" for c in principal.get("client",[])), "Principal Firebase package mismatch"
+          with open("admin/google-services.json", encoding="utf-8") as f:
+              admin=json.load(f)
+          client=next(c for c in admin["client"] if c.get("client_info",{}).get("android_client_info",{}).get("package_name")=="com.omni.adminpanel")
+          project=admin["project_info"]
+          configured=os.environ.get("ADMIN_PROJECT_ID","").strip() or project["project_id"]
+          if configured != project["project_id"]:
+              raise SystemExit("Admin Firebase project ID mismatch")
+          values={
+            "google_app_id":client["client_info"]["mobilesdk_app_id"],
+            "google_api_key":client["api_key"][0]["current_key"],
+            "project_id":project["project_id"],
+            "gcm_defaultSenderId":project["project_number"],
+            "google_storage_bucket":project.get("storage_bucket","")
+          }
+          web=next((o["client_id"] for c in admin["client"] for o in c.get("oauth_client",[]) if o.get("client_type")==3),None)
+          if web: values["default_web_client_id"]=web
+          os.makedirs("admin/src/main/res/values",exist_ok=True)
+          with open("admin/src/main/res/values/firebase_config.xml","w",encoding="utf-8") as f:
+              f.write("<resources>\\n")
+              for k,v in values.items(): f.write(f'  <string name="{k}" translatable="false">{xml.escape(v)}</string>\\n')
+              f.write("</resources>\\n")
+          print("Existing Firebase configurations validated for both packages.")
+          PY
+
+      - name: Restore original OMNI signing identity
+        working-directory: source
+        env:
+          KEYSTORE: ${{ secrets.OMNI_DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE" || { echo "::error::Original signing key unavailable; refusing to build temporary signatures."; exit 1; }
+          printf '%s' "$KEYSTORE" | base64 --decode > debug.keystore
+          EXPECTED="486513DCA524F8C09134DB97A7D5650A2F2461E4306DB181B7C2DFE2D40E495B"
+          ACTUAL="$(keytool -list -v -keystore debug.keystore -storepass android -alias androiddebugkey | awk '/SHA256:/{print $2; exit}' | tr -d ':')"
+          test "$ACTUAL" = "$EXPECTED" || { echo "::error::Original signing certificate mismatch."; exit 1; }
+          echo "Original OMNI signing certificate confirmed."
+
+      - name: Configure demo environment
+        working-directory: source
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: |
+          printf 'GEMINI_API_KEY=%s\\nGOOGLE_MAPS_API_KEY=%s\\n' "${GEMINI_API_KEY:-NOT_CONFIGURED}" "${GOOGLE_MAPS_API_KEY:-}" > .env
+
+      - name: Run unit tests
+        working-directory: source
+        run: gradle :app:testDebugUnitTest :admin:testDebugUnitTest
+
+      - name: Build both APKs
+        working-directory: source
+        env:
+          OMNI_VERSION_CODE: "607"
+          OMNI_ADMIN_VERSION_CODE: "125"
+        run: gradle :app:assembleDebug :admin:assembleDebug
+
+      - name: Verify package, version and signature
+        working-directory: source
+        run: |
+          set -euo pipefail
+          for spec in "app/build/outputs/apk/debug/app-debug.apk|com.aistudio.omnihub.qtzmvd|607" "admin/build/outputs/apk/debug/admin-debug.apk|com.omni.adminpanel|125"; do
+            IFS='|' read -r apk package code <<< "$spec"
+            "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" | grep -F "name='$package' versionCode='$code'"
+            "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 "$apk"
+            "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk" > /tmp/certs.txt
+            actual="$(awk -F': ' '/certificate SHA-256 digest:/{print $2; exit}' /tmp/certs.txt | tr -d ':' | tr '[:lower:]' '[:upper:]')"
+            test "$actual" = "486513DCA524F8C09134DB97A7D5650A2F2461E4306DB181B7C2DFE2D40E495B"
+          done
+          echo "Both APKs passed package, version, alignment and original-signature checks."
+
+      - name: Upload Principal APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: OMNI-Principal-1.4-recovered-original-signature
+          path: source/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+      - name: Upload Admin APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: OMNI-Admin-1.4-recovered-original-signature
+          path: source/admin/build/outputs/apk/debug/admin-debug.apk
+          retention-days: 30
